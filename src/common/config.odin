@@ -41,6 +41,7 @@ Config :: struct {
 	enable_document_links:                   bool,
 	enable_comp_lit_signature_help:          bool,
 	enable_comp_lit_signature_help_use_docs: bool,
+	enable_invert_if_diagnostics:            bool,
 	disable_parser_errors:                   bool,
 	thread_count:                            int,
 	file_log:                                bool,

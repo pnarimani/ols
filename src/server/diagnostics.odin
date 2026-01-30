@@ -1,5 +1,6 @@
 package server
 
+import "base:runtime"
 import "core:log"
 import "core:slice"
 import "core:strings"
@@ -8,6 +9,7 @@ DiagnosticType :: enum {
 	Syntax,
 	Unused,
 	Check,
+	Hint,
 }
 
 diagnostics: [DiagnosticType]map[string][dynamic]Diagnostic

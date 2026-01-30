@@ -1074,6 +1074,7 @@ notification_did_open :: proc(
 	document := document_get(open_params.textDocument.uri)
 
 	check_unused_imports(document, config)
+	check_invert_if_suggestions(document, config)
 
 	push_diagnostics(writer)
 
@@ -1176,6 +1177,7 @@ notification_did_save :: proc(
 	document := document_get(save_params.textDocument.uri)
 	if document != nil {
 		check_unused_imports(document, config)
+		check_invert_if_suggestions(document, config)
 	}
 
 	push_diagnostics(writer)

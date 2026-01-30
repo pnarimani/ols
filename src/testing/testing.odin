@@ -100,6 +100,7 @@ setup :: proc(src: ^Source) {
 teardown :: proc(src: ^Source) {
 	server.free_index()
 	server.indexer.index = {}
+	server.diagnostics = {}
 	virtual.arena_destroy(src.document.allocator)
 }
 
@@ -568,6 +569,56 @@ expect_prepare_rename_range :: proc(t: ^testing.T, src: ^Source, expect_range: c
 
 	if !ok {
 		log.error("Received: %v\n", range)
+	}
+}
+
+// Test that a specific diagnostic is present in the document
+expect_diagnostic :: proc(t: ^testing.T, src: ^Source, code: string, message_contains: string = "") {
+	setup(src)
+	defer teardown(src)
+
+	// check_invert_if_suggestions was already called during document_refresh in setup()
+	// Use the same URI construction as the diagnostic function
+	path := src.document.uri.path
+	uri := common.create_uri(path, context.temp_allocator)
+	
+	// Check the diagnostics map for our document
+	found := false
+	diag_map := &server.diagnostics[.Hint]
+	if diag_arr, ok := diag_map[uri.uri]; ok {
+		for diag in diag_arr {
+			if diag.code == code {
+				if message_contains == "" || strings.contains(diag.message, message_contains) {
+					found = true
+					break
+				}
+			}
+		}
+	}
+
+	testing.expectf(t, found, "Expected diagnostic with code '%s' not found", code)
+}
+
+// Test that no diagnostic with specific code is present
+expect_no_diagnostic :: proc(t: ^testing.T, src: ^Source, code: string) {
+	setup(src)
+	defer teardown(src)
+
+	// check_invert_if_suggestions was already called during document_refresh in setup()
+	// Use the same URI construction as the diagnostic function
+	path := src.document.uri.path
+	uri := common.create_uri(path, context.temp_allocator)
+	
+	// Check the diagnostics map for our document
+	diag_map := &server.diagnostics[.Hint]
+	if diag_arr, ok := diag_map[uri.uri]; ok {
+		for diag in diag_arr {
+			if diag.code == code {
+				log.errorf("Expected no diagnostic with code '%s', but found one: %s", code, diag.message)
+				testing.expect(t, false)
+				return
+			}
+		}
 	}
 }
 
