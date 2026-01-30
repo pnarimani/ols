@@ -75,6 +75,7 @@ get_code_actions :: proc(document: ^Document, range: common.Range, config: ^comm
 	add_redundant_else_action(document, position_context.position, strings.clone(document.uri.uri), &actions)
 	add_extract_proc_action(document, &ast_context, range, strings.clone(document.uri.uri), &actions)
 	add_extract_variable_action(document, &ast_context, range, strings.clone(document.uri.uri), &actions)
+	add_inline_proc_action(document, &ast_context, range, strings.clone(document.uri.uri), &actions)
 
 	return actions[:], true
 }
