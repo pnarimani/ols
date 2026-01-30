@@ -41,17 +41,13 @@ add_invert_if_action :: proc(
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 	append(&textEdits, TextEdit{range = range, newText = new_text})
 
-	workspaceEdit: WorkspaceEdit
-	workspaceEdit.changes = make(map[string][]TextEdit, 0, context.temp_allocator)
-	workspaceEdit.changes[uri] = textEdits[:]
-
 	append(
 		actions,
 		CodeAction {
 			kind = "refactor.more",
 			isPreferred = false,
 			title = "Invert if",
-			edit = workspaceEdit,
+			edit = make_workspace_edit(uri, textEdits[:]),
 		},
 	)
 }
@@ -235,22 +231,6 @@ generate_inverted_if :: proc(document: ^Document, if_stmt: ^ast.If_Stmt) -> (str
 	}
 
 	return strings.to_string(sb), true
-}
-
-// Get the indentation (leading whitespace) of the line containing the given offset
-@(private = "package")
-get_line_indentation :: proc(src: string, offset: int) -> string {
-	line_start := offset
-	for line_start > 0 && src[line_start - 1] != '\n' {
-		line_start -= 1
-	}
-
-	indent_end := line_start
-	for indent_end < len(src) && (src[indent_end] == ' ' || src[indent_end] == '\t') {
-		indent_end += 1
-	}
-
-	return src[line_start:indent_end]
 }
 
 // Extract the body text from a block statement (without the braces)

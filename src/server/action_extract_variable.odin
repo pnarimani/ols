@@ -602,11 +602,7 @@ generate_extract_variable_edit :: proc(
 	// Replace the original expression with the variable name
 	append(&textEdits, TextEdit{range = selection_range, newText = DEFAULT_VARIABLE_NAME})
 
-	workspaceEdit: WorkspaceEdit
-	workspaceEdit.changes = make(map[string][]TextEdit, 0, context.temp_allocator)
-	workspaceEdit.changes[uri] = textEdits[:]
-
-	return workspaceEdit, true
+	return make_workspace_edit(uri, textEdits[:]), true
 }
 
 // Get type annotation for auto_cast expressions by looking at the target type

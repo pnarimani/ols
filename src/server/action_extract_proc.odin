@@ -1426,11 +1426,7 @@ generate_extract_edit :: proc(
 	append(&textEdits, TextEdit{range = selection_range, newText = call_text})
 	append(&textEdits, TextEdit{range = insert_range, newText = proc_text})
 
-	workspaceEdit: WorkspaceEdit
-	workspaceEdit.changes = make(map[string][]TextEdit, 0, context.temp_allocator)
-	workspaceEdit.changes[uri] = textEdits[:]
-
-	return workspaceEdit, true
+	return make_workspace_edit(uri, textEdits[:]), true
 }
 
 build_parameter_list :: proc(ctx: ^ExtractProcContext) -> [dynamic]ParamInfo {

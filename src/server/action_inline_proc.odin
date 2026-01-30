@@ -582,31 +582,11 @@ count_returns_in_stmt :: proc(stmt: ^ast.Stmt, count: ^int) {
 	}
 }
 
-// Check if a procedure body has top-level defer statements (direct children only)
-// We don't check inside nested blocks because they already have their own scope
-has_top_level_defer :: proc(body: ^ast.Block_Stmt) -> bool {
-	if body == nil {
-		return false
-	}
-	
-	for stmt in body.stmts {
-		if stmt == nil {
-			continue
-		}
-		#partial switch s in stmt.derived {
-		case ^ast.Defer_Stmt:
-			return true
-		}
-	}
-	return false
-}
-
 // Check if a procedure has defer statements
 has_defer_statements :: proc(proc_lit: ^ast.Proc_Lit) -> bool {
 	if proc_lit == nil || proc_lit.body == nil {
 		return false
 	}
-
 	return check_defer_in_stmt(proc_lit.body)
 }
 
@@ -655,6 +635,24 @@ check_defer_in_stmt :: proc(stmt: ^ast.Stmt) -> bool {
 		}
 	}
 
+	return false
+}
+
+// Check if a block has top-level defer statements (direct children only)
+has_top_level_defer :: proc(body: ^ast.Block_Stmt) -> bool {
+	if body == nil {
+		return false
+	}
+	
+	for stmt in body.stmts {
+		if stmt == nil {
+			continue
+		}
+		#partial switch _ in stmt.derived {
+		case ^ast.Defer_Stmt:
+			return true
+		}
+	}
 	return false
 }
 
@@ -712,11 +710,7 @@ generate_inline_edit :: proc(ctx: ^InlineProcContext, uri: string) -> (Workspace
 		return {}, false
 	}
 
-	workspaceEdit: WorkspaceEdit
-	workspaceEdit.changes = make(map[string][]TextEdit, 0, context.temp_allocator)
-	workspaceEdit.changes[uri] = textEdits[:]
-
-	return workspaceEdit, true
+	return make_workspace_edit(uri, textEdits[:]), true
 }
 
 // Generate the inline edit for a single call
@@ -1120,22 +1114,6 @@ find_outer_call :: proc(expr: ^ast.Expr, target: ^ast.Call_Expr) -> ^ast.Call_Ex
 	return nil
 }
 
-// Get the indentation string for a statement
-get_stmt_indentation :: proc(stmt: ^ast.Stmt, src: string) -> string {
-	if stmt == nil {
-		return ""
-	}
-	
-	// Find the start of the line
-	line_start := int(stmt.pos.offset)
-	for line_start > 0 && src[line_start - 1] != '\n' {
-		line_start -= 1
-	}
-	
-	// Extract whitespace from line start to statement start
-	return string(src[line_start:stmt.pos.offset])
-}
-
 // Reindent a multi-line string by stripping original indentation and applying new indentation
 reindent_text :: proc(text: string, base_indent: string, extra_indent: string) -> string {
 	sb := strings.builder_make(context.temp_allocator)
@@ -1189,6 +1167,54 @@ reindent_text :: proc(text: string, base_indent: string, extra_indent: string) -
 	}
 	
 	return strings.to_string(sb)
+}
+
+// Get the indentation string for a statement
+get_stmt_indentation :: proc(stmt: ^ast.Stmt, src: string) -> string {
+	if stmt == nil {
+		return ""
+	}
+	return get_line_indentation(src, int(stmt.pos.offset))
+}
+
+// Substitute an identifier in text with a new name (word-boundary aware)
+substitute_identifier :: proc(text: string, old_name: string, new_name: string) -> string {
+	sb := strings.builder_make(context.temp_allocator)
+	i := 0
+
+	for i < len(text) {
+		if is_identifier_start(text[i]) {
+			start := i
+			for i < len(text) && is_identifier_char(text[i]) {
+				i += 1
+			}
+			ident := text[start:i]
+
+			if ident == old_name {
+				is_field := start > 0 && text[start - 1] == '.'
+				if !is_field {
+					strings.write_string(&sb, new_name)
+				} else {
+					strings.write_string(&sb, ident)
+				}
+			} else {
+				strings.write_string(&sb, ident)
+			}
+		} else {
+			strings.write_byte(&sb, text[i])
+			i += 1
+		}
+	}
+
+	return strings.to_string(sb)
+}
+
+is_identifier_start :: proc(c: u8) -> bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
+}
+
+is_identifier_char :: proc(c: u8) -> bool {
+	return is_identifier_start(c) || (c >= '0' && c <= '9')
 }
 
 // Collect local variable names declared in a block
@@ -1397,50 +1423,6 @@ needs_parentheses :: proc(expr: string) -> bool {
 	}
 
 	return false
-}
-
-// Substitute an identifier in text (simple implementation)
-substitute_identifier :: proc(text: string, old_name: string, new_name: string) -> string {
-	sb := strings.builder_make(context.temp_allocator)
-	i := 0
-
-	for i < len(text) {
-		// Check if we're at the start of an identifier
-		if is_identifier_start(text[i]) {
-			// Find the end of the identifier
-			start := i
-			for i < len(text) && is_identifier_char(text[i]) {
-				i += 1
-			}
-			ident := text[start:i]
-
-			// Check if this identifier matches
-			if ident == old_name {
-				// Check that it's not part of a field access (preceded by .)
-				is_field := start > 0 && text[start - 1] == '.'
-				if !is_field {
-					strings.write_string(&sb, new_name)
-				} else {
-					strings.write_string(&sb, ident)
-				}
-			} else {
-				strings.write_string(&sb, ident)
-			}
-		} else {
-			strings.write_byte(&sb, text[i])
-			i += 1
-		}
-	}
-
-	return strings.to_string(sb)
-}
-
-is_identifier_start :: proc(c: u8) -> bool {
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
-}
-
-is_identifier_char :: proc(c: u8) -> bool {
-	return is_identifier_start(c) || (c >= '0' && c <= '9')
 }
 
 // Generate the edit to delete the procedure definition

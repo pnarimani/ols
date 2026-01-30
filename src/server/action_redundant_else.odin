@@ -81,17 +81,13 @@ add_redundant_else_action :: proc(
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 	append(&textEdits, TextEdit{range = range, newText = new_text})
 
-	workspaceEdit: WorkspaceEdit
-	workspaceEdit.changes = make(map[string][]TextEdit, 0, context.temp_allocator)
-	workspaceEdit.changes[uri] = textEdits[:]
-
 	append(
 		actions,
 		CodeAction {
 			kind = "refactor.more",
 			isPreferred = false,
 			title = REDUNDANT_ELSE_ACTION_TITLE,
-			edit = workspaceEdit,
+			edit = make_workspace_edit(uri, textEdits[:]),
 		},
 	)
 }
