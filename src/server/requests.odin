@@ -456,6 +456,8 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 	config.enable_fake_method = ols_config.enable_fake_methods.(bool) or_else config.enable_fake_method
 	config.enable_overload_resolution =
 		ols_config.enable_overload_resolution.(bool) or_else config.enable_overload_resolution
+	config.enable_invert_if_diagnostics =
+		ols_config.enable_invert_if_diagnostics.(bool) or_else config.enable_invert_if_diagnostics
 
 	// Delete overriding collections.
 	for it in ols_config.collections {
@@ -663,6 +665,7 @@ request_initialize :: proc(
 	config.enable_procedure_snippet = true
 	config.enable_checker_only_saved = true
 	config.enable_auto_import = true
+	config.enable_invert_if_diagnostics = true
 
 	read_ols_config :: proc(file: string, config: ^common.Config, uri: common.Uri) {
 		if data, ok := os.read_entire_file(file, context.temp_allocator); ok {
