@@ -14,6 +14,7 @@ DEFAULT_VARIABLE_NAME :: "extracted"
 
 ExtractVariableContext :: struct {
 	document:        ^Document,
+	ast_context:     ^AstContext,
 	selection_start: common.AbsolutePosition,
 	selection_end:   common.AbsolutePosition,
 	containing_proc: ^ast.Proc_Lit,
@@ -22,11 +23,14 @@ ExtractVariableContext :: struct {
 	stmt_start_pos:  common.Position,
 	// Variables that would go out of scope if we extract to before containing_stmt
 	out_of_scope_vars: [dynamic]string,
+	// Index of the selected expression in the values/rhs array (for multi-value assignments)
+	value_index:       int,
 }
 
 @(private = "package")
 add_extract_variable_action :: proc(
 	document: ^Document,
+	ast_context: ^AstContext,
 	range: common.Range,
 	uri: string,
 	actions: ^[dynamic]CodeAction,
@@ -35,7 +39,7 @@ add_extract_variable_action :: proc(
 		return
 	}
 
-	ctx, ok := create_extract_variable_context(document, range)
+	ctx, ok := create_extract_variable_context(document, ast_context, range)
 	if !ok {
 		return
 	}
@@ -188,6 +192,7 @@ collect_identifiers_recursive :: proc(expr: ^ast.Expr, idents: ^[dynamic]string)
 
 create_extract_variable_context :: proc(
 	document: ^Document,
+	ast_context: ^AstContext,
 	range: common.Range,
 ) -> (
 	ExtractVariableContext,
@@ -195,6 +200,7 @@ create_extract_variable_context :: proc(
 ) {
 	ctx := ExtractVariableContext {
 		document = document,
+		ast_context = ast_context,
 	}
 
 	start_pos, start_ok := common.get_absolute_position(range.start, document.text)
@@ -356,15 +362,17 @@ find_expression_in_stmt :: proc(stmt: ^ast.Stmt, ctx: ^ExtractVariableContext) -
 		}
 
 	case ^ast.Value_Decl:
-		for value in s.values {
+		for value, i in s.values {
 			if expr := find_matching_expression(value, ctx); expr != nil {
+				ctx.value_index = i
 				return expr, stmt
 			}
 		}
 
 	case ^ast.Assign_Stmt:
-		for rhs in s.rhs {
+		for rhs, i in s.rhs {
 			if expr := find_matching_expression(rhs, ctx); expr != nil {
+				ctx.value_index = i
 				return expr, stmt
 			}
 		}
@@ -422,7 +430,8 @@ collect_declared_vars_from_stmt :: proc(stmt: ^ast.Stmt, vars: ^[dynamic]string)
 	}
 }
 
-// Check if an expression exactly matches the selection, or search inside it
+// Check if an expression exactly matches the selection, or search inside it.
+// If no exact match is found, returns the smallest expression containing the entire selection.
 find_matching_expression :: proc(expr: ^ast.Expr, ctx: ^ExtractVariableContext) -> ^ast.Expr {
 	if expr == nil {
 		return nil
@@ -438,19 +447,25 @@ find_matching_expression :: proc(expr: ^ast.Expr, ctx: ^ExtractVariableContext) 
 		return nil
 	}
 
-	// Search inside compound expressions
+	// Search inside compound expressions for exact match first
 	#partial switch e in expr.derived {
 	case ^ast.Binary_Expr:
 		if result := find_matching_expression(e.left, ctx); result != nil {
 			return result
 		}
-		return find_matching_expression(e.right, ctx)
+		if result := find_matching_expression(e.right, ctx); result != nil {
+			return result
+		}
 
 	case ^ast.Unary_Expr:
-		return find_matching_expression(e.expr, ctx)
+		if result := find_matching_expression(e.expr, ctx); result != nil {
+			return result
+		}
 
 	case ^ast.Paren_Expr:
-		return find_matching_expression(e.expr, ctx)
+		if result := find_matching_expression(e.expr, ctx); result != nil {
+			return result
+		}
 
 	case ^ast.Call_Expr:
 		if result := find_matching_expression(e.expr, ctx); result != nil {
@@ -466,10 +481,14 @@ find_matching_expression :: proc(expr: ^ast.Expr, ctx: ^ExtractVariableContext) 
 		if result := find_matching_expression(e.expr, ctx); result != nil {
 			return result
 		}
-		return find_matching_expression(e.index, ctx)
+		if result := find_matching_expression(e.index, ctx); result != nil {
+			return result
+		}
 
 	case ^ast.Selector_Expr:
-		return find_matching_expression(e.expr, ctx)
+		if result := find_matching_expression(e.expr, ctx); result != nil {
+			return result
+		}
 
 	case ^ast.Ternary_If_Expr:
 		if result := find_matching_expression(e.cond, ctx); result != nil {
@@ -478,7 +497,9 @@ find_matching_expression :: proc(expr: ^ast.Expr, ctx: ^ExtractVariableContext) 
 		if result := find_matching_expression(e.x, ctx); result != nil {
 			return result
 		}
-		return find_matching_expression(e.y, ctx)
+		if result := find_matching_expression(e.y, ctx); result != nil {
+			return result
+		}
 
 	case ^ast.Comp_Lit:
 		for elem in e.elems {
@@ -497,23 +518,39 @@ find_matching_expression :: proc(expr: ^ast.Expr, ctx: ^ExtractVariableContext) 
 			}
 		}
 		if e.high != nil {
-			return find_matching_expression(e.high, ctx)
+			if result := find_matching_expression(e.high, ctx); result != nil {
+				return result
+			}
 		}
 
 	case ^ast.Deref_Expr:
-		return find_matching_expression(e.expr, ctx)
+		if result := find_matching_expression(e.expr, ctx); result != nil {
+			return result
+		}
 
 	case ^ast.Type_Cast:
-		return find_matching_expression(e.expr, ctx)
+		if result := find_matching_expression(e.expr, ctx); result != nil {
+			return result
+		}
 
 	case ^ast.Auto_Cast:
-		return find_matching_expression(e.expr, ctx)
+		if result := find_matching_expression(e.expr, ctx); result != nil {
+			return result
+		}
 
 	case ^ast.Or_Else_Expr:
 		if result := find_matching_expression(e.x, ctx); result != nil {
 			return result
 		}
-		return find_matching_expression(e.y, ctx)
+		if result := find_matching_expression(e.y, ctx); result != nil {
+			return result
+		}
+	}
+
+	// No exact match found inside; if this expression fully contains the selection,
+	// return it as the smallest containing expression (allows partial/semantic extraction)
+	if expr.pos.offset <= ctx.selection_start && expr.end.offset >= ctx.selection_end {
+		return expr
 	}
 
 	return nil
@@ -535,12 +572,24 @@ generate_extract_variable_edit :: proc(
 	// Get the indentation of the containing statement
 	indent := get_line_indentation(src, int(ctx.containing_stmt.pos.offset))
 
-	// Build the variable declaration: "<indent>extracted := <expr>\n<indent>"
-	// The trailing indent preserves the original statement's indentation
-	var_decl := strings.concatenate(
-		{indent, DEFAULT_VARIABLE_NAME, " := ", expr_text, "\n", indent},
-		context.temp_allocator,
-	)
+	// Check if we need an explicit type annotation (for auto_cast)
+	type_annotation := get_auto_cast_type_annotation(ctx)
+
+	// Build the variable declaration
+	var_decl: string
+	if type_annotation != "" {
+		// "<indent>extracted: <type> = <expr>\n<indent>"
+		var_decl = strings.concatenate(
+			{indent, DEFAULT_VARIABLE_NAME, ": ", type_annotation, " = ", expr_text, "\n", indent},
+			context.temp_allocator,
+		)
+	} else {
+		// "<indent>extracted := <expr>\n<indent>"
+		var_decl = strings.concatenate(
+			{indent, DEFAULT_VARIABLE_NAME, " := ", expr_text, "\n", indent},
+			context.temp_allocator,
+		)
+	}
 
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 
@@ -566,4 +615,61 @@ generate_extract_variable_edit :: proc(
 	workspaceEdit.changes[uri] = textEdits[:]
 
 	return workspaceEdit, true
+}
+
+// Get type annotation for auto_cast expressions by looking at the target type
+get_auto_cast_type_annotation :: proc(ctx: ^ExtractVariableContext) -> string {
+	// Check if the selected expression is an auto_cast
+	if ctx.selected_expr == nil {
+		return ""
+	}
+
+	_, is_auto_cast := ctx.selected_expr.derived.(^ast.Auto_Cast)
+	if !is_auto_cast {
+		return ""
+	}
+
+	// Get the target type from the containing statement
+	#partial switch s in ctx.containing_stmt.derived {
+	case ^ast.Value_Decl:
+		// For value declarations like `y: i32 = auto_cast x`, get the type annotation
+		if s.type != nil {
+			return node_to_string(s.type)
+		}
+
+	case ^ast.Assign_Stmt:
+		// For assignments like `y = auto_cast x`, look up the type of the LHS
+		if ctx.value_index < len(s.lhs) {
+			lhs := s.lhs[ctx.value_index]
+			if lhs != nil {
+				return resolve_lhs_type(ctx, lhs)
+			}
+		}
+	}
+
+	return ""
+}
+
+// Resolve the type of a left-hand side expression (typically an identifier)
+resolve_lhs_type :: proc(ctx: ^ExtractVariableContext, lhs: ^ast.Expr) -> string {
+	if lhs == nil || ctx.ast_context == nil {
+		return ""
+	}
+
+	// For simple identifiers, look up in locals first
+	if ident, ok := lhs.derived.(^ast.Ident); ok {
+		if local, found := get_local(ctx.ast_context^, ident^); found {
+			if local.type_expr != nil {
+				return node_to_string(local.type_expr)
+			}
+		}
+	}
+
+	// Fall back to general type expression resolution
+	symbol, ok := resolve_type_expression(ctx.ast_context, lhs)
+	if !ok || symbol.type_expr == nil {
+		return ""
+	}
+
+	return node_to_string(symbol.type_expr)
 }
