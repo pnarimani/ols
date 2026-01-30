@@ -50,14 +50,14 @@ check_invert_if_suggestions :: proc(document: ^Document, config: ^common.Config)
 }
 
 // Recursively search for if statements that could benefit from inversion
-find_invertible_ifs :: proc(node: ^ast.Node, document: ^Document, uri: string) {
+find_invertible_ifs :: proc(node: ^ast.Node, document: ^Document, uri: string, is_last_in_block := false) {
 	if node == nil || node.derived == nil {
 		return
 	}
 
 	#partial switch n in node.derived {
 	case ^ast.If_Stmt:
-		if should_suggest_inversion(n, document) {
+		if should_suggest_inversion(n, document, is_last_in_block) {
 			add_invert_if_diagnostic(n, document, uri)
 		}
 		// Also check inside the if body and else clause
@@ -69,8 +69,9 @@ find_invertible_ifs :: proc(node: ^ast.Node, document: ^Document, uri: string) {
 		}
 
 	case ^ast.Block_Stmt:
-		for stmt in n.stmts {
-			find_invertible_ifs(stmt, document, uri)
+		for stmt, i in n.stmts {
+			is_last := i == len(n.stmts) - 1
+			find_invertible_ifs(stmt, document, uri, is_last)
 		}
 
 	case ^ast.Proc_Lit:
@@ -104,8 +105,9 @@ find_invertible_ifs :: proc(node: ^ast.Node, document: ^Document, uri: string) {
 		}
 
 	case ^ast.Case_Clause:
-		for stmt in n.body {
-			find_invertible_ifs(stmt, document, uri)
+		for stmt, i in n.body {
+			is_last := i == len(n.body) - 1
+			find_invertible_ifs(stmt, document, uri, is_last)
 		}
 
 	case ^ast.When_Stmt:
@@ -124,7 +126,7 @@ find_invertible_ifs :: proc(node: ^ast.Node, document: ^Document, uri: string) {
 }
 
 // Determine if an if statement should be suggested for inversion
-should_suggest_inversion :: proc(if_stmt: ^ast.If_Stmt, document: ^Document) -> bool {
+should_suggest_inversion :: proc(if_stmt: ^ast.If_Stmt, document: ^Document, is_last_in_block := false) -> bool {
 	// Skip else-if chains - too complex to give simple advice
 	if is_else_if_chain(if_stmt) {
 		return false
@@ -139,8 +141,10 @@ should_suggest_inversion :: proc(if_stmt: ^ast.If_Stmt, document: ^Document) -> 
 
 	// Check for guard clause opportunity:
 	// if statement with no else, and the body is complex while
-	// an early exit could simplify the code
-	if if_stmt.else_stmt == nil {
+	// an early exit could simplify the code.
+	// IMPORTANT: Only suggest this if the if is the last statement in the block,
+	// otherwise inverting would skip code that comes after the if.
+	if if_stmt.else_stmt == nil && is_last_in_block {
 		body_complexity := get_body_complexity(if_stmt.body)
 		// If the body is complex (nested ifs, many statements), suggest guard clause
 		if body_complexity >= 3 {

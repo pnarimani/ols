@@ -111,6 +111,46 @@ main :: proc() {
 	} else {
 		baz()
 	}
+
+	for !rl.WindowShouldClose() {
+		mouse_position := rl.GetMousePosition()
+
+		if rl.IsKeyPressed(.SPACE) {
+			springs.bump(&scale_spring, rl.Vector3{2.5, 2.5, 0})
+			springs.bump(&rotation_spring, rl.Vector3{0, 0, 30})
+			springs.bump(&fade_spring, -10.7)
+		}
+
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.WHITE)
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_no_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE)
+}
+
+@(test)
+diagnostic_invert_if_no_suggestion_statements_after_if :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	for !rl.WindowShouldClose() {
+		mouse_position := rl.GetMousePosition()
+
+		if rl.IsKeyPressed(.SPACE) {
+			springs.bump(&scale_spring, rl.Vector3{2.5, 2.5, 0})
+			springs.bump(&rotation_spring, rl.Vector3{0, 0, 30})
+			springs.bump(&fade_spring, -10.7)
+		}
+
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.WHITE)
+	}
 }
 `,
 		packages = {},
