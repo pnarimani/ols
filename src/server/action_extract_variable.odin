@@ -44,10 +44,6 @@ add_extract_variable_action :: proc(
 		return
 	}
 
-	if ctx.selected_expr == nil {
-		return
-	}
-
 	// Don't extract simple identifiers or literals - not useful
 	if is_trivial_expr(ctx.selected_expr) {
 		return
@@ -512,15 +508,11 @@ find_matching_expression :: proc(expr: ^ast.Expr, ctx: ^ExtractVariableContext) 
 		if result := find_matching_expression(e.expr, ctx); result != nil {
 			return result
 		}
-		if e.low != nil {
-			if result := find_matching_expression(e.low, ctx); result != nil {
-				return result
-			}
+		if result := find_matching_expression(e.low, ctx); result != nil {
+			return result
 		}
-		if e.high != nil {
-			if result := find_matching_expression(e.high, ctx); result != nil {
-				return result
-			}
+		if result := find_matching_expression(e.high, ctx); result != nil {
+			return result
 		}
 
 	case ^ast.Deref_Expr:

@@ -749,6 +749,21 @@ main :: proc() {
 }
 
 @(test)
+action_extract_variable_not_available_when_selecting_entire_multi_assignment :: proc(t: ^testing.T) {
+	source := test.Source {
+		main     = `package test
+
+main :: proc() {
+	x, y := {<}42, 43{>}
+}
+`,
+		packages = {},
+	}
+
+	test.expect_action_excludes(t, &source, {EXTRACT_VARIABLE_ACTION})
+}
+
+@(test)
 action_extract_variable_not_available_for_string_literal :: proc(t: ^testing.T) {
 	source := test.Source {
 		main     = `package test
