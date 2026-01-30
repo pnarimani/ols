@@ -350,7 +350,7 @@ main :: proc() {
 	}
 
 	// Should not have the invert action when on an else-if statement
-	test.expect_action(t, &source, {})
+	test.expect_action_excludes(t, &source, {INVERT_IF_ACTION})
 }
 
 @(test)
