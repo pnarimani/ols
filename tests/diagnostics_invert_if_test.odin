@@ -1,10 +1,8 @@
 package tests
 
-import "core:log"
 import "core:testing"
 
 import test "src:testing"
-import "src:server"
 
 INVERT_IF_DIAGNOSTIC_CODE :: "InvertIf"
 
@@ -16,7 +14,7 @@ diagnostic_invert_if_negated_condition :: proc(t: ^testing.T) {
 
 main :: proc() {
 	x := true
-	if !x {
+	if {<}!x{>} {
 		y := 1
 	} else {
 		z := 2
@@ -27,7 +25,7 @@ main :: proc() {
 		config = {enable_invert_if_diagnostics = true},
 	}
 
-	test.expect_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "negation")
+	test.expect_diagnostic_at(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "negation")
 }
 
 // Test: complex if body with no else (guard clause opportunity)
@@ -38,7 +36,7 @@ diagnostic_invert_if_guard_clause_opportunity :: proc(t: ^testing.T) {
 
 main :: proc() {
 	x := get_value()
-	if x > 0 {
+	if {<}x > 0{>} {
 		step1()
 		step2()
 		if nested_condition() {
@@ -51,7 +49,7 @@ main :: proc() {
 		config = {enable_invert_if_diagnostics = true},
 	}
 
-	test.expect_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "guard clause")
+	test.expect_diagnostic_at(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "guard clause")
 }
 
 // Test: else body is early exit, if body is complex
@@ -62,7 +60,7 @@ diagnostic_invert_if_early_exit_pattern :: proc(t: ^testing.T) {
 
 main :: proc() {
 	x := get_value()
-	if x > 0 {
+	if {<}x > 0{>} {
 		step1()
 		step2()
 		step3()
@@ -75,7 +73,7 @@ main :: proc() {
 		config = {enable_invert_if_diagnostics = true},
 	}
 
-	test.expect_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "readability")
+	test.expect_diagnostic_at(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "readability")
 }
 
 // Test: simple if without else should NOT suggest inversion
