@@ -2501,7 +2501,6 @@ build_call_text :: proc(
 	indent: string,
 ) -> string {
 	sb := strings.builder_make(context.temp_allocator)
-
 	// Handle expression extraction - just output the call (no assignment needed)
 	if ctx.selected_expr != nil {
 		strings.write_string(&sb, DEFAULT_PROC_NAME)
