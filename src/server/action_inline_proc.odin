@@ -103,17 +103,16 @@ create_inline_proc_context :: proc(
 	ctx.call_expr = find_call_at_position(document.ast.decls[:], abs_pos)
 
 	if ctx.call_expr != nil {
-		// Get the procedure being called
 		proc_name := get_call_proc_name(ctx.call_expr)
-		if proc_name != "" {
-			ctx.proc_name = proc_name
-			// Find the procedure definition
-			ctx.proc_decl, ctx.proc_lit = find_proc_definition(document, ast_context, proc_name)
-			if ctx.proc_lit != nil {
-				return ctx, true
-			}
+		if proc_name == "" {
+			return ctx, false
 		}
-		return ctx, false
+		ctx.proc_name = proc_name
+		ctx.proc_decl, ctx.proc_lit = find_proc_definition(document, ast_context, proc_name)
+		if ctx.proc_lit == nil {
+			return ctx, false
+		}
+		return ctx, true
 	}
 
 	// Try to find if we're on a procedure definition
@@ -1149,21 +1148,21 @@ reindent_text :: proc(text: string, base_indent: string, extra_indent: string) -
 	}
 	
 	for line, i in lines {
-		if i > 0 {
-			strings.write_byte(&sb, '\n')
-			if len(strings.trim_space(line)) > 0 {
-				strings.write_string(&sb, base_indent)
-				strings.write_string(&sb, extra_indent)
-				// Strip original indentation
-				stripped := line
-				if len(line) >= min_indent {
-					stripped = line[min_indent:]
-				}
-				strings.write_string(&sb, stripped)
-			}
-		} else {
+		if i == 0 {
 			strings.write_string(&sb, line)
+			continue
 		}
+		strings.write_byte(&sb, '\n')
+		if len(strings.trim_space(line)) == 0 {
+			continue
+		}
+		strings.write_string(&sb, base_indent)
+		strings.write_string(&sb, extra_indent)
+		stripped := line
+		if len(line) >= min_indent {
+			stripped = line[min_indent:]
+		}
+		strings.write_string(&sb, stripped)
 	}
 	
 	return strings.to_string(sb)
@@ -1259,15 +1258,17 @@ collect_vars_before_stmt :: proc(stmt: ^ast.Stmt, target: ^ast.Stmt, vars: ^map[
 	
 	#partial switch s in stmt.derived {
 	case ^ast.Value_Decl:
-		// Check if any value is a proc containing the target
 		for value in s.values {
-			if proc_lit, is_proc := value.derived.(^ast.Proc_Lit); is_proc {
-				if proc_lit.body != nil && position_in_node(proc_lit.body, int(target.pos.offset)) {
-					// Target is inside this proc - collect vars in the proc body before target
-					collect_vars_before_stmt(proc_lit.body, target, vars)
-					return
-				}
+			proc_lit, is_proc := value.derived.(^ast.Proc_Lit)
+			if !is_proc {
+				continue
 			}
+			if proc_lit.body == nil || !position_in_node(proc_lit.body, int(target.pos.offset)) {
+				continue
+			}
+			// Target is inside this proc - collect vars in the proc body before target
+			collect_vars_before_stmt(proc_lit.body, target, vars)
+			return
 		}
 		// Only collect if this is before the target
 		if stmt.pos.offset < target.pos.offset {
@@ -1318,20 +1319,21 @@ generate_return_as_assignment :: proc(
 		}
 	}
 	
-	if target_name != "" && len(ret.results) > 0 {
-		// Generate: target_name := return_expr (for the final assignment)
-		result_text := string(src[ret.results[0].pos.offset:ret.results[0].end.offset])
-		substituted := substitute_params(result_text, param_to_arg, local_renames)
-		
-		if is_decl {
-			strings.write_string(sb, target_name)
-			strings.write_string(sb, " := ")
-		} else {
-			strings.write_string(sb, target_name)
-			strings.write_string(sb, " = ")
-		}
-		strings.write_string(sb, substituted)
+	if target_name == "" || len(ret.results) == 0 {
+		return
 	}
+	
+	result_text := string(src[ret.results[0].pos.offset:ret.results[0].end.offset])
+	substituted := substitute_params(result_text, param_to_arg, local_renames)
+	
+	if is_decl {
+		strings.write_string(sb, target_name)
+		strings.write_string(sb, " := ")
+	} else {
+		strings.write_string(sb, target_name)
+		strings.write_string(sb, " = ")
+	}
+	strings.write_string(sb, substituted)
 }
 
 // Check if a call is a standalone statement (not used as a value)
