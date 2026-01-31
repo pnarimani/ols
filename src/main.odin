@@ -69,11 +69,11 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 		logger = logger,
 	}
 
-	/*
-	tracking_allocator: mem.Tracking_Allocator
-    mem.tracking_allocator_init(&tracking_allocator, context.allocator)
-    context.allocator = mem.tracking_allocator(&tracking_allocator)
-	*/
+	when ODIN_DEBUG {
+		tracking_allocator: mem.Tracking_Allocator
+		mem.tracking_allocator_init(&tracking_allocator, context.allocator)
+		context.allocator = mem.tracking_allocator(&tracking_allocator)
+	}
 
 	server.requests = make([dynamic]server.Request, context.allocator)
 	server.deletings = make([dynamic]server.Request, context.allocator)
@@ -112,11 +112,11 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 
 	server.free_index()
 
-	/*
-    for key, value in tracking_allocator.allocation_map {
-        log.errorf("%v: Leaked %v bytes\n", value.location, value.size)
-    }	
-	*/
+	when ODIN_DEBUG {
+		for key, value in tracking_allocator.allocation_map {
+			log.errorf("%v: Leaked %v bytes\n", value.location, value.size)
+		}
+	}
 }
 
 end :: proc() {
