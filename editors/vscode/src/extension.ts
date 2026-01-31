@@ -51,6 +51,22 @@ const TCP_RETRY_INTERVAL_MS = 1000;
 const TCP_RETRY_TIMEOUT_MS = 60000;
 
 let isReconnecting = false;
+let currentClient: LanguageClient | null = null;
+let currentConfig: Config | null = null;
+
+function triggerReconnect() {
+	if (!isReconnecting && currentClient && currentConfig && currentConfig.connectionMode === "tcp") {
+		isReconnecting = true;
+		log.info("TCP connection lost, attempting to reconnect...");
+		setTimeout(async () => {
+			try {
+				await currentClient!.stop();
+			} catch (e) {
+			}
+			currentClient!.start();
+		}, TCP_RETRY_INTERVAL_MS);
+	}
+}
 
 function connectToTcpServer(port: number): Promise<StreamInfo> {
 	return new Promise((resolve, reject) => {
@@ -58,23 +74,35 @@ function connectToTcpServer(port: number): Promise<StreamInfo> {
 
 		function tryConnect() {
 			const socket = net.connect({ port, host: '127.0.0.1' });
+			let connected = false;
 
 			socket.on('connect', () => {
 				log.info(`Connected to OLS on port ${port}`);
+				connected = true;
 				isReconnecting = false;
+
+				socket.on('close', (hadError) => {
+					log.info(`Socket closed (hadError: ${hadError})`);
+					triggerReconnect();
+				});
+
 				resolve({ reader: socket, writer: socket });
 			});
 
 			socket.on('error', (err) => {
-				socket.destroy();
-				const elapsed = Date.now() - startTime;
+				if (!connected) {
+					socket.destroy();
+					const elapsed = Date.now() - startTime;
 
-				if (elapsed < TCP_RETRY_TIMEOUT_MS) {
-					log.info(`Connection failed, retrying in ${TCP_RETRY_INTERVAL_MS}ms...`);
-					setTimeout(tryConnect, TCP_RETRY_INTERVAL_MS);
+					if (elapsed < TCP_RETRY_TIMEOUT_MS) {
+						log.info(`Connection failed, retrying in ${TCP_RETRY_INTERVAL_MS}ms...`);
+						setTimeout(tryConnect, TCP_RETRY_INTERVAL_MS);
+					} else {
+						isReconnecting = false;
+						reject(new Error(`Failed to connect to OLS on port ${port} after ${TCP_RETRY_TIMEOUT_MS / 1000}s: ${err.message}`));
+					}
 				} else {
-					isReconnecting = false;
-					reject(new Error(`Failed to connect to OLS on port ${port} after ${TCP_RETRY_TIMEOUT_MS / 1000}s: ${err.message}`));
+					log.info(`Socket error after connection: ${err.message}`);
 				}
 			});
 		}
@@ -84,13 +112,12 @@ function connectToTcpServer(port: number): Promise<StreamInfo> {
 }
 
 function setupTcpReconnection(client: LanguageClient, config: Config) {
+	currentClient = client;
+	currentConfig = config;
+
 	client.onDidChangeState((event) => {
 		if (event.newState === State.Stopped && config.connectionMode === "tcp" && !isReconnecting) {
-			isReconnecting = true;
-			log.info("TCP connection lost, attempting to reconnect...");
-			setTimeout(() => {
-				client.start();
-			}, TCP_RETRY_INTERVAL_MS);
+			triggerReconnect();
 		}
 	});
 }
