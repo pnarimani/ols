@@ -395,3 +395,86 @@ main :: proc() {
 		INVERT_IF_ACTION,
 	)
 }
+@(test)
+action_invert_if_with_ok_pattern_to_or_continue :: proc(t: ^testing.T) {
+	test.expect_code_action_diff(
+		t,
+		`package test
+
+main :: proc() {
+	for i in 0..<10 {
+-		{*}if value, ok := get_value(); ok {
+-			process(value)
+-		}
++		value := get_value() or_continue
++		process(value)
+	}
+}
+`,
+		INVERT_IF_ACTION,
+	)
+}
+
+@(test)
+action_invert_if_with_ok_pattern_multiple_statements :: proc(t: ^testing.T) {
+	test.expect_code_action_diff(
+		t,
+		`package test
+
+main :: proc() {
+	for item in items {
+-		{*}if data, ok := item.get_data(); ok {
+-			first(data)
+-			second(data)
+-			third(data)
+-		}
++		data := item.get_data() or_continue
++		first(data)
++		second(data)
++		third(data)
+	}
+}
+`,
+		INVERT_IF_ACTION,
+	)
+}
+
+@(test)
+action_invert_if_with_ok_pattern_to_or_return :: proc(t: ^testing.T) {
+	test.expect_code_action_diff(
+		t,
+		`package test
+
+main :: proc() {
+-	{*}if value, ok := get_value(); ok {
+-		process(value)
+-	}
++	value := get_value() or_return
++	process(value)
+}
+`,
+		INVERT_IF_ACTION,
+	)
+}
+
+@(test)
+action_invert_if_with_ok_pattern_to_or_return_multiple_statements :: proc(t: ^testing.T) {
+	test.expect_code_action_diff(
+		t,
+		`package test
+
+main :: proc() {
+-	{*}if data, ok := fetch_data(); ok {
+-		validate(data)
+-		transform(data)
+-		save(data)
+-	}
++	data := fetch_data() or_return
++	validate(data)
++	transform(data)
++	save(data)
+}
+`,
+		INVERT_IF_ACTION,
+	)
+}

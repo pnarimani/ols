@@ -33,6 +33,7 @@ Inversion_Strategy :: enum {
 	Move_Following_Stmts,     // No else, following stmts exist, body ends with control flow
 	Insert_Early_Return,      // No else, can early return
 	Create_Empty_Branch,      // No else, cannot early return
+	Use_Or_Branch,            // Pattern: if x, ok := expr; ok { ... } -> x := expr or_continue/or_return
 }
 
 Block_Text_Options :: struct {
@@ -247,7 +248,7 @@ extract_node_text :: proc(src: string, node: ^ast.Node) -> string {
 	return src[node.pos.offset:node.end.offset]
 }
 
-determine_strategy :: proc(if_stmt: ^ast.If_Stmt, following_stmts: []^ast.Stmt, can_early_return: bool) -> Inversion_Strategy {
+determine_strategy :: proc(if_stmt: ^ast.If_Stmt, following_stmts: []^ast.Stmt, can_early_return: bool, control_flow_ctx: Control_Flow_Context) -> Inversion_Strategy {
 	has_else := if_stmt.else_stmt != nil
 	body_has_control_flow := body_ends_with_control_flow(if_stmt.body)
 	has_following := len(following_stmts) > 0
@@ -259,6 +260,11 @@ determine_strategy :: proc(if_stmt: ^ast.If_Stmt, following_stmts: []^ast.Stmt, 
 		return .Swap_Branches
 	}
 	
+	// Check for the or_continue/or_return pattern: if x, ok := expr; ok { ... }
+	if can_use_or_branch(if_stmt, control_flow_ctx, can_early_return) {
+		return .Use_Or_Branch
+	}
+	
 	if body_has_control_flow && has_following {
 		return .Move_Following_Stmts
 	}
@@ -268,6 +274,84 @@ determine_strategy :: proc(if_stmt: ^ast.If_Stmt, following_stmts: []^ast.Stmt, 
 	}
 	
 	return .Create_Empty_Branch
+}
+
+// Check if the if statement matches the pattern: if x, ok := expr; ok { ... }
+// which can be converted to: x := expr or_continue (in loop) or x := expr or_return (in proc)
+can_use_or_branch :: proc(if_stmt: ^ast.If_Stmt, control_flow_ctx: Control_Flow_Context, can_early_return: bool) -> bool {
+	// Must have init statement and no else clause
+	if if_stmt.init == nil || if_stmt.else_stmt != nil {
+		return false
+	}
+	
+	// For loops: always can use or_continue
+	// For procs: only if can_early_return (meaning the if is last in its block)
+	if control_flow_ctx == .Proc && !can_early_return {
+		return false
+	}
+	
+	// The init must be a value declaration
+	value_decl, ok := if_stmt.init.derived.(^ast.Value_Decl)
+	if !ok {
+		return false
+	}
+	
+	// Must have exactly 2 names (e.g., symbol, ok)
+	if len(value_decl.names) != 2 {
+		return false
+	}
+	
+	// The condition must be a simple identifier
+	cond_ident, cond_ok := if_stmt.cond.derived.(^ast.Ident)
+	if !cond_ok {
+		return false
+	}
+	
+	// The second name in the declaration must match the condition
+	second_name, name_ok := value_decl.names[1].derived.(^ast.Ident)
+	if !name_ok {
+		return false
+	}
+	
+	// Check if the condition identifier matches the second declaration name (the "ok" variable)
+	return cond_ident.name == second_name.name
+}
+
+// Generate or_continue/or_return transformation
+// Transforms: if symbol, ok := expr; ok { body } 
+// To: symbol := expr or_continue \n body
+generate_or_branch :: proc(sb: ^strings.Builder, ctx: ^If_Inversion_Context) -> (string, bool) {
+	value_decl := ctx.if_stmt.init.derived.(^ast.Value_Decl)
+	
+	// Get the first name (the actual value, not the ok)
+	first_name, ok := value_decl.names[0].derived.(^ast.Ident)
+	if !ok {
+		return "", false
+	}
+	
+	// Get the expression being assigned
+	if len(value_decl.values) == 0 {
+		return "", false
+	}
+	expr_text := extract_node_text(ctx.src, value_decl.values[0])
+	
+	// Determine which or_* to use
+	or_branch := ctx.control_flow_ctx == .For_Loop ? "or_continue" : "or_return"
+	
+	// Write: name := expr or_continue
+	strings.write_string(sb, first_name.name)
+	strings.write_string(sb, " := ")
+	strings.write_string(sb, expr_text)
+	strings.write_string(sb, " ")
+	strings.write_string(sb, or_branch)
+	strings.write_string(sb, "\n")
+	
+	// Write the body statements at the base indent level
+	then_body_text := get_block_body_text_at_indent(ctx.src, ctx.if_stmt.body, ctx.base_indent)
+	then_body_text = strings.trim_right(then_body_text, "\n")
+	strings.write_string(sb, then_body_text)
+	
+	return strings.to_string(sb^), true
 }
 
 // Write the if statement header (label, init, condition)
@@ -381,9 +465,14 @@ generate_empty_branch :: proc(sb: ^strings.Builder, ctx: ^If_Inversion_Context) 
 
 generate_inverted_if :: proc(inv_ctx: ^If_Inversion_Context) -> (string, bool) {
 	inv_ctx.base_indent = get_line_indentation(inv_ctx.src, inv_ctx.if_stmt.pos.offset)
-	inv_ctx.strategy = determine_strategy(inv_ctx.if_stmt, inv_ctx.following_stmts, inv_ctx.can_early_return)
+	inv_ctx.strategy = determine_strategy(inv_ctx.if_stmt, inv_ctx.following_stmts, inv_ctx.can_early_return, inv_ctx.control_flow_ctx)
 
 	sb := strings.builder_make(context.temp_allocator)
+
+	// For or_branch strategy, we generate completely different output
+	if inv_ctx.strategy == .Use_Or_Branch {
+		return generate_or_branch(&sb, inv_ctx)
+	}
 
 	if !write_if_header(&sb, inv_ctx) {
 		return "", false
@@ -400,6 +489,8 @@ generate_inverted_if :: proc(inv_ctx: ^If_Inversion_Context) -> (string, bool) {
 		generate_early_return(&sb, inv_ctx)
 	case .Create_Empty_Branch:
 		generate_empty_branch(&sb, inv_ctx)
+	case .Use_Or_Branch:
+		// Already handled above
 	}
 
 	return strings.to_string(sb), true
