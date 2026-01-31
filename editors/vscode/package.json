@@ -91,6 +91,24 @@
 						"Use [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)",
 						"Use [MS C++ tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)"
 					]
+				},
+				"ols.server.connectionMode": {
+					"type": "string",
+					"enum": [
+						"stdio",
+						"tcp"
+					],
+					"default": "stdio",
+					"description": "Connection mode for the language server. Use 'tcp' to connect to an existing OLS instance for debugging.",
+					"markdownEnumDescriptions": [
+						"Launch OLS as a subprocess and communicate via stdio (default)",
+						"Connect to an existing OLS instance over TCP (useful for debugging)"
+					]
+				},
+				"ols.server.tcpPort": {
+					"type": "number",
+					"default": null,
+					"description": "TCP port to connect to when using 'tcp' connection mode. Required when connectionMode is 'tcp'."
 				}
 			}
 		},
