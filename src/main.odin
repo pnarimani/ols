@@ -54,19 +54,13 @@ os_write :: proc(handle: rawptr, data: []byte) -> (int, int) {
 
 request_thread: ^thread.Thread
 
-logger: ^log.Logger
-
-
 run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 	common.config.collections = make(map[string]string)
 	common.config.running = true
 
-	logger = new(log.Logger)
-
 	request_thread_data := server.RequestThreadData {
 		reader = reader,
 		writer = writer,
-		logger = logger,
 	}
 
 	when ODIN_DEBUG {
@@ -80,23 +74,9 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 
 	request_thread = thread.create_and_start_with_data(cast(rawptr)&request_thread_data, server.thread_request_main)
 
-	logger^ = server.create_lsp_logger(writer, log.Level.Error)
-
-	{
-		context.logger = logger^
-		log.error("Starting Odin Language Server", VERSION)
-	}
+	log.info("Starting Odin Language Server", VERSION)
 
 	for common.config.running {
-		if common.config.verbose {
-			//Currently letting verbose use error, since some ast prints causes crashes - most likely a bug in core:fmt.
-			logger^ = server.create_lsp_logger(writer, log.Level.Error)
-		} else {
-			logger^ = server.create_lsp_logger(writer, log.Level.Error)
-		}
-
-		context.logger = logger^
-
 		server.consume_requests(&common.config, writer)
 	}
 
@@ -111,6 +91,7 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 	server.document_storage_shutdown()
 
 	server.free_index()
+	server.shutdown_file_logger()
 
 	when ODIN_DEBUG {
 		for key, value in tracking_allocator.allocation_map {
@@ -208,6 +189,10 @@ main :: proc() {
 	}
 
 	init_global_temporary_allocator(mem.Megabyte * 100)
+
+	logger := server.init_file_logger(common.config.verbose)
+	defer server.shutdown_file_logger()
+	context.logger = logger
 
 	if use_tcp {
 		run_tcp(port)

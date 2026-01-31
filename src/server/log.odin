@@ -3,59 +3,80 @@ package server
 import "core:fmt"
 import "core:log"
 import "core:os"
-import "core:strings"
-import "core:time"
+import "core:path/filepath"
+import "core:sync"
 
-Default_Console_Logger_Opts ::
-	log.Options{.Level, .Terminal_Color, .Short_File_Path, .Line, .Procedure} | log.Full_Timestamp_Opts
-
-Lsp_Logger_Data :: struct {
-	writer: ^Writer,
+File_Logger_Data :: struct {
+	file_handle: os.Handle,
+	mutex:       sync.Mutex,
 }
 
-create_lsp_logger :: proc(
-	writer: ^Writer,
-	lowest := log.Level.Debug,
-	opt := Default_Console_Logger_Opts,
-) -> log.Logger {
-	data := new(Lsp_Logger_Data)
-	data.writer = writer
-	return log.Logger{lsp_logger_proc, data, lowest, opt}
+@(private = "file")
+g_logger_data: File_Logger_Data
+
+init_file_logger :: proc(verbose: bool) -> log.Logger {
+	exe_path := os.args[0]
+	exe_dir := filepath.dir(exe_path, context.temp_allocator)
+	log_path := filepath.join({exe_dir, "ols.log"}, context.temp_allocator)
+
+	file_handle, err := os.open(log_path, os.O_WRONLY | os.O_CREATE | os.O_TRUNC)
+	if err != nil {
+		fmt.eprintln("Failed to open log file:", log_path)
+		file_handle = os.INVALID_HANDLE
+	}
+
+	g_logger_data.file_handle = file_handle
+
+	lowest := log.Level.Error
+	when ODIN_DEBUG {
+		lowest = log.Level.Debug
+	} else {
+		if verbose {
+			lowest = log.Level.Debug
+		}
+	}
+
+	return log.Logger{file_logger_proc, &g_logger_data, lowest, {}}
 }
 
-destroy_lsp_logger :: proc(log: ^log.Logger) {
-	free(log.data)
+shutdown_file_logger :: proc() {
+	if g_logger_data.file_handle != os.INVALID_HANDLE {
+		os.close(g_logger_data.file_handle)
+	}
 }
 
-lsp_logger_proc :: proc(
+@(private = "file")
+file_logger_proc :: proc(
 	logger_data: rawptr,
 	level: log.Level,
 	text: string,
 	options: log.Options,
 	location := #caller_location,
 ) {
+	data := cast(^File_Logger_Data)logger_data
+	if data == nil || data.file_handle == os.INVALID_HANDLE {
+		return
+	}
 
-	data := cast(^Lsp_Logger_Data)logger_data
+	sync.lock(&data.mutex)
+	defer sync.unlock(&data.mutex)
 
-	message := fmt.tprintf("%s", text)
+	thread_id := os.current_thread_id()
 
-	message_type: DiagnosticSeverity
+	level_str: string
 	switch level {
 	case .Debug:
-		message_type = DiagnosticSeverity.Hint
+		level_str = "DEBUG"
 	case .Info:
-		message_type = DiagnosticSeverity.Information
+		level_str = "INFO"
 	case .Warning:
-		message_type = DiagnosticSeverity.Warning
-	case .Error, .Fatal:
-		message_type = DiagnosticSeverity.Error
+		level_str = "WARN"
+	case .Error:
+		level_str = "ERROR"
+	case .Fatal:
+		level_str = "FATAL"
 	}
 
-	notification := Notification {
-		jsonrpc = "2.0",
-		method = "window/logMessage",
-		params = NotificationLoggingParams{type = message_type, message = message},
-	}
-
-	send_notification(notification, data.writer)
+	message := fmt.tprintf("[%d] [%s] %s\n", thread_id, level_str, text)
+	os.write_string(data.file_handle, message)
 }

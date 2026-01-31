@@ -48,7 +48,6 @@ make_response_message_error :: proc(id: RequestId, error: ResponseError) -> Resp
 RequestThreadData :: struct {
 	reader: ^Reader,
 	writer: ^Writer,
-	logger: ^log.Logger,
 }
 
 Request :: struct {
@@ -68,8 +67,6 @@ thread_request_main :: proc(data: rawptr) {
 	request_data := cast(^RequestThreadData)data
 
 	for common.config.running {
-		context.logger = request_data.logger^
-
 		header, success := read_and_parse_header(request_data.reader)
 
 		if (!success) {
@@ -379,7 +376,6 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 	config.enable_comp_lit_signature_help_use_docs =
 		ols_config.enable_comp_lit_signature_help_use_docs.(bool) or_else config.enable_comp_lit_signature_help_use_docs
 	config.verbose = ols_config.verbose.(bool) or_else config.verbose
-	config.file_log = ols_config.file_log.(bool) or_else config.file_log
 
 	config.enable_procedure_snippet =
 		ols_config.enable_procedure_snippet.(bool) or_else config.enable_procedure_snippet
@@ -658,7 +654,6 @@ request_initialize :: proc(
 	config.enable_document_links = true
 	config.enable_comp_lit_signature_help = false
 	config.verbose = false
-	config.file_log = false
 	config.odin_command = ""
 	config.checker_args = ""
 	config.enable_fake_method = false

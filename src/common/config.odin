@@ -44,7 +44,6 @@ Config :: struct {
 	enable_invert_if_diagnostics:            bool,
 	disable_parser_errors:                   bool,
 	thread_count:                            int,
-	file_log:                                bool,
 	odin_command:                            string,
 	odin_root_override:                      string,
 	checker_args:                            string,

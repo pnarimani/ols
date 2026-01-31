@@ -439,7 +439,6 @@ OlsConfig :: struct {
 	enable_invert_if_diagnostics:            Maybe(bool),
 	disable_parser_errors:                   Maybe(bool),
 	verbose:                                 Maybe(bool),
-	file_log:                                Maybe(bool),
 	odin_command:                            string,
 	odin_root_override:                      string,
 	checker_args:                            string,
