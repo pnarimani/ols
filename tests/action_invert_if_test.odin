@@ -532,3 +532,59 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 		INVERT_IF_ACTION,
 	)
 }
+
+@(test)
+action_invert_if_real_code_2 :: proc(t: ^testing.T) {
+	test.expect_code_action_diff(
+		t,
+		`package test
+
+get_hover_information :: proc(document: ^Document, position: common.Position) -> (Hover, bool, bool) {
+	if position_context.field_value != nil &&
+	   position_in_node(position_context.field_value.field, position_context.position) {
+		hover.range = common.get_token_range(position_context.field_value.field^, document.ast.src)
+		if position_context.comp_lit != nil {
+			if comp_symbol, ok := resolve_comp_literal(&ast_context, &position_context); ok {
+				if field, ok := position_context.field_value.field.derived.(^ast.Ident); ok {
+					if position_in_node(field, position_context.position) {
+						if v, ok := comp_symbol.value.(SymbolStructValue); ok {
+							for name, i in v.names {
+-   							{*}if name == field.name {
+-   								symbol := resolve_type_expression(&ast_context, v.types[i]) or_continue
+-   								construct_struct_field_symbol(&symbol, comp_symbol.name, v, i)
+-   								build_documentation(&ast_context, &symbol, true)
+-   								hover.contents = write_hover_content(&ast_context, symbol)
+-   								return hover, true, true
+-   							}
++   							if name != field.name {
++   								continue
++   							} 
++   							symbol := resolve_type_expression(&ast_context, v.types[i]) or_continue
++   							construct_struct_field_symbol(&symbol, comp_symbol.name, v, i)
++   							build_documentation(&ast_context, &symbol, true)
++   							hover.contents = write_hover_content(&ast_context, symbol)
++   							return hover, true, true
+							}
+						}
+					} else if v, ok := comp_symbol.value.(SymbolBitFieldValue); ok {
+						for name, i in v.names {
+							if name == field.name {
+								if symbol, ok := resolve_type_expression(&ast_context, v.types[i]); ok {
+									construct_bit_field_field_symbol(&symbol, comp_symbol.name, v, i)
+									hover.contents = write_hover_content(&ast_context, symbol)
+									return hover, true, true
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return hover, false, true
+}
+`,
+		INVERT_IF_ACTION,
+	)
+}

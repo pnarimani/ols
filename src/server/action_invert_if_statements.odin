@@ -208,8 +208,9 @@ handle_if_stmt_search :: proc(
 	}
 
 	if n.body != nil && position_in_node(n.body, position) {
-		body_is_last := is_last_in_parent && n.else_stmt == nil
-		if find_if_stmt_in_node(inv_ctx, n.body, position, false, flow_ctx, body_is_last) {
+		// If we're inside the body of this if, we can early return if this if is last in its parent.
+		// The else clause (if any) won't execute since we're in the body (then branch).
+		if find_if_stmt_in_node(inv_ctx, n.body, position, false, flow_ctx, is_last_in_parent) {
 			return true
 		}
 		return false
@@ -235,8 +236,12 @@ search_block_stmts :: proc(
 	for stmt, i in stmts {
 		is_last := i == len(stmts) - 1
 		if find_if_stmt_in_node(inv_ctx, stmt, position, false, flow_ctx, is_last && is_last_in_parent) {
-			inv_ctx.following_stmts = stmts[i + 1:]
-			inv_ctx.can_early_return = is_last && is_last_in_parent
+			// Only update following_stmts and can_early_return if the found if statement
+			// is directly in this block (not nested inside another statement)
+			if inv_ctx.if_stmt != nil && cast(^ast.Node)inv_ctx.if_stmt == cast(^ast.Node)stmt {
+				inv_ctx.following_stmts = stmts[i + 1:]
+				inv_ctx.can_early_return = is_last && is_last_in_parent
+			}
 			return true
 		}
 	}
