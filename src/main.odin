@@ -63,11 +63,6 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 		writer = writer,
 	}
 
-	when ODIN_DEBUG {
-		tracking_allocator: mem.Tracking_Allocator
-		mem.tracking_allocator_init(&tracking_allocator, context.allocator)
-		context.allocator = mem.tracking_allocator(&tracking_allocator)
-	}
 
 	server.requests = make([dynamic]server.Request, context.allocator)
 	server.deletings = make([dynamic]server.Request, context.allocator)
@@ -93,11 +88,6 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 	server.free_index()
 	server.shutdown_file_logger()
 
-	when ODIN_DEBUG {
-		for key, value in tracking_allocator.allocation_map {
-			log.errorf("%v: Leaked %v bytes\n", value.location, value.size)
-		}
-	}
 }
 
 end :: proc() {
@@ -190,6 +180,12 @@ main :: proc() {
 
 	init_global_temporary_allocator(mem.Megabyte * 100)
 
+	when ODIN_DEBUG {
+		tracking_allocator: mem.Tracking_Allocator
+		mem.tracking_allocator_init(&tracking_allocator, context.allocator)
+		context.allocator = mem.tracking_allocator(&tracking_allocator)
+	}
+
 	logger := server.init_file_logger(common.config.verbose)
 	defer server.shutdown_file_logger()
 	context.logger = logger
@@ -198,5 +194,11 @@ main :: proc() {
 		run_tcp(port)
 	} else {
 		run_stdio()
+	}
+
+	when ODIN_DEBUG {
+		for key, value in tracking_allocator.allocation_map {
+			log.errorf("%v: Leaked %v bytes\n", value.location, value.size)
+		}
 	}
 }
