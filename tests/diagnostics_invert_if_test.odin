@@ -184,6 +184,40 @@ main :: proc() {
 	test.expect_no_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE)
 }
 
+@(test)
+diagnostic_invert_if_no_suggestion_remaining_statements :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+with_return_value :: proc() -> int {
+	x := get_value()
+	if x > 0 {
+		foo()
+		bar()
+
+		if another_condition() {
+			if nested () {
+				return 1
+			}
+		}
+	}
+
+	if final_check() {
+		qux()
+		bruh()
+		something()
+	}
+
+	return 2
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_no_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE)
+}
+
 // Test: feature disabled should not produce diagnostics
 @(test)
 diagnostic_invert_if_disabled :: proc(t: ^testing.T) {

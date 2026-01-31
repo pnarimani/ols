@@ -50,83 +50,89 @@ check_invert_if_suggestions :: proc(document: ^Document, config: ^common.Config)
 }
 
 // Recursively search for if statements that could benefit from inversion
-find_invertible_ifs :: proc(node: ^ast.Node, document: ^Document, uri: string, is_last_in_block := false) {
+// is_last_in_block: whether this node is the last statement in its containing block
+// in_if_body: whether we're currently inside the body of an if statement (nested)
+find_invertible_ifs :: proc(node: ^ast.Node, document: ^Document, uri: string, is_last_in_block := false, in_if_body := false) {
 	if node == nil || node.derived == nil {
 		return
 	}
 
 	#partial switch n in node.derived {
 	case ^ast.If_Stmt:
-		if should_suggest_inversion(n, document, is_last_in_block) {
+		if should_suggest_inversion(n, document, is_last_in_block, in_if_body) {
 			add_invert_if_diagnostic(n, document, uri)
 		}
 		// Also check inside the if body and else clause
+		// Mark that we're now inside an if body
 		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri)
+			find_invertible_ifs(n.body, document, uri, false, true)
 		}
 		if n.else_stmt != nil {
-			find_invertible_ifs(n.else_stmt, document, uri)
+			find_invertible_ifs(n.else_stmt, document, uri, false, true)
 		}
 
 	case ^ast.Block_Stmt:
 		for stmt, i in n.stmts {
 			is_last := i == len(n.stmts) - 1
-			find_invertible_ifs(stmt, document, uri, is_last)
+			find_invertible_ifs(stmt, document, uri, is_last, in_if_body)
 		}
 
 	case ^ast.Proc_Lit:
 		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri)
+			// Fresh scope for procedure - reset in_if_body to false
+			find_invertible_ifs(n.body, document, uri, false, false)
 		}
 
 	case ^ast.Value_Decl:
 		for value in n.values {
-			find_invertible_ifs(value, document, uri)
+			find_invertible_ifs(value, document, uri, false, in_if_body)
 		}
 
 	case ^ast.For_Stmt:
 		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri)
+			// Loop body is a fresh context - reset in_if_body
+			find_invertible_ifs(n.body, document, uri, false, false)
 		}
 
 	case ^ast.Range_Stmt:
 		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri)
+			// Loop body is a fresh context - reset in_if_body
+			find_invertible_ifs(n.body, document, uri, false, false)
 		}
 
 	case ^ast.Switch_Stmt:
 		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri)
+			find_invertible_ifs(n.body, document, uri, false, in_if_body)
 		}
 
 	case ^ast.Type_Switch_Stmt:
 		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri)
+			find_invertible_ifs(n.body, document, uri, false, in_if_body)
 		}
 
 	case ^ast.Case_Clause:
 		for stmt, i in n.body {
 			is_last := i == len(n.body) - 1
-			find_invertible_ifs(stmt, document, uri, is_last)
+			find_invertible_ifs(stmt, document, uri, is_last, in_if_body)
 		}
 
 	case ^ast.When_Stmt:
 		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri)
+			find_invertible_ifs(n.body, document, uri, false, in_if_body)
 		}
 		if n.else_stmt != nil {
-			find_invertible_ifs(n.else_stmt, document, uri)
+			find_invertible_ifs(n.else_stmt, document, uri, false, in_if_body)
 		}
 
 	case ^ast.Defer_Stmt:
 		if n.stmt != nil {
-			find_invertible_ifs(n.stmt, document, uri)
+			find_invertible_ifs(n.stmt, document, uri, false, in_if_body)
 		}
 	}
 }
 
 // Determine if an if statement should be suggested for inversion
-should_suggest_inversion :: proc(if_stmt: ^ast.If_Stmt, document: ^Document, is_last_in_block := false) -> bool {
+should_suggest_inversion :: proc(if_stmt: ^ast.If_Stmt, document: ^Document, is_last_in_block := false, in_if_body := false) -> bool {
 	// Skip else-if chains - too complex to give simple advice
 	if is_else_if_chain(if_stmt) {
 		return false
@@ -144,7 +150,9 @@ should_suggest_inversion :: proc(if_stmt: ^ast.If_Stmt, document: ^Document, is_
 	// an early exit could simplify the code.
 	// IMPORTANT: Only suggest this if the if is the last statement in the block,
 	// otherwise inverting would skip code that comes after the if.
-	if if_stmt.else_stmt == nil && is_last_in_block {
+	// ALSO: Don't suggest guard clauses for if statements nested inside other if bodies,
+	// as the guard clause pattern only makes sense at the top level of a function/loop.
+	if if_stmt.else_stmt == nil && is_last_in_block && !in_if_body {
 		body_complexity := get_body_complexity(if_stmt.body)
 		// If the body is complex (nested ifs, many statements), suggest guard clause
 		if body_complexity >= 3 {
