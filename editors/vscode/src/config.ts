@@ -43,6 +43,10 @@ export class Config {
 
 	get debugEngine() { return this.get<string>("debug.engine"); }
 
+	get connectionMode() { return this.get<string>("server.connectionMode") ?? "stdio"; }
+
+	get tcpPort() { return this.get<number | null>("server.tcpPort"); }
+
     get askCreateOLS() {  return this.get<boolean>("prompt.AskCreateOLS"); }
 
 	public updateAskCreateOLS(ask: boolean) {
