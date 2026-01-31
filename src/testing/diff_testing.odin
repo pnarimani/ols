@@ -229,10 +229,11 @@ position_to_offset :: proc(source: string, pos: common.Position) -> int {
 	return -1
 }
 
-// Normalize source code for comparison (trim trailing whitespace from lines, normalize line endings).
 @(private = "file")
 normalize_source :: proc(source: string) -> string {
-	lines := strings.split_lines(source, context.temp_allocator)
+	source_no_tabs, _ := strings.replace_all(source, "\t", "    ", context.temp_allocator)
+
+	lines := strings.split_lines(source_no_tabs, context.temp_allocator)
 	builder := strings.builder_make(context.temp_allocator)
 
 	// Find the last non-empty line to avoid trailing blank lines

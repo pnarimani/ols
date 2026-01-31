@@ -588,3 +588,42 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 		INVERT_IF_ACTION,
 	)
 }
+
+@(test)
+action_invert_if_real_code_3 :: proc(t: ^testing.T) {
+	test.expect_code_action_diff(
+		t,
+		`package test
+
+search_block_stmts :: proc(
+	inv_ctx: ^If_Inversion_Context,
+	stmts: []^ast.Stmt,
+	position: common.AbsolutePosition,
+	flow_ctx: Control_Flow_Context,
+	is_last_in_parent: bool,
+) -> bool {
+	for stmt, i in stmts {
+		is_last := i == len(stmts) - 1
+-		{*}if find_if_stmt_in_node(inv_ctx, stmt, position, false, flow_ctx, is_last && is_last_in_parent) {
+-			if inv_ctx.if_stmt != nil && cast(^ast.Node)inv_ctx.if_stmt == cast(^ast.Node)stmt {
+-				inv_ctx.following_stmts = stmts[i + 1:]
+-				inv_ctx.can_early_return = is_last && is_last_in_parent
+-			}
+-			return true
+-		}
++		if !find_if_stmt_in_node(inv_ctx, stmt, position, false, flow_ctx, is_last && is_last_in_parent) {
++			continue
++		}
++		if inv_ctx.if_stmt != nil && cast(^ast.Node)inv_ctx.if_stmt == cast(^ast.Node)stmt {
++			inv_ctx.following_stmts = stmts[i + 1:]
++			inv_ctx.can_early_return = is_last && is_last_in_parent
++		}
++		return true
+	}
+	return false
+}
+
+`,
+		INVERT_IF_ACTION,
+	)
+}

@@ -286,6 +286,33 @@ extract_node_text :: proc(src: string, node: ^ast.Node) -> string {
 	return src[node.pos.offset:node.end.offset]
 }
 
+// Re-indent multi-line text from original_indent to target_indent
+reindent_text :: proc(text: string, original_indent: string, target_indent: string) -> string {
+	if original_indent == target_indent {
+		return text
+	}
+
+	sb := strings.builder_make(context.temp_allocator)
+	lines := strings.split_lines(text, context.temp_allocator)
+
+	for line, i in lines {
+		if i > 0 {
+			strings.write_string(&sb, "\n")
+		}
+
+		// Check if line starts with original indent and replace it
+		if strings.has_prefix(line, original_indent) {
+			strings.write_string(&sb, target_indent)
+			strings.write_string(&sb, line[len(original_indent):])
+		} else {
+			// Line has different indentation (possibly less), try to adjust relatively
+			strings.write_string(&sb, line)
+		}
+	}
+
+	return strings.to_string(sb)
+}
+
 determine_strategy :: proc(
 	if_stmt: ^ast.If_Stmt,
 	following_stmts: []^ast.Stmt,
@@ -574,9 +601,16 @@ extract_block_text :: proc(src: string, stmt: ^ast.Stmt, options: Block_Text_Opt
 		for s in stmts_to_process {
 			if s == nil do continue
 
-			indent := options.preserve_indent ? get_line_indentation(src, s.pos.offset) : options.target_indent
+			original_indent := get_line_indentation(src, s.pos.offset)
+			target_indent := options.preserve_indent ? original_indent : options.target_indent
 			stmt_text := extract_node_text(src, s)
-			strings.write_string(&sb, indent)
+
+			// Re-indent multi-line statements
+			if !options.preserve_indent && original_indent != target_indent {
+				stmt_text = reindent_text(stmt_text, original_indent, target_indent)
+			}
+
+			strings.write_string(&sb, target_indent)
 			strings.write_string(&sb, stmt_text)
 			strings.write_string(&sb, "\n")
 		}
