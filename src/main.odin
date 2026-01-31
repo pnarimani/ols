@@ -66,6 +66,8 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 
 	server.requests = make([dynamic]server.Request, context.allocator)
 	server.deletings = make([dynamic]server.Request, context.allocator)
+	defer delete(server.requests)
+	defer delete(server.deletings)
 
 	request_thread = thread.create_and_start_with_data(cast(rawptr)&request_thread_data, server.thread_request_main)
 
