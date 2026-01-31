@@ -17,10 +17,6 @@ FuzzyResult :: struct {
 	score:  f32,
 }
 
-clear_index_cache :: proc() {
-	memory_index_clear_cache(&indexer.index)
-}
-
 should_skip_private_symbol :: proc(symbol: Symbol, current_pkg, current_file: string) -> bool {
 	if .PrivateFile not_in symbol.flags && .PrivatePackage not_in symbol.flags {
 		return false

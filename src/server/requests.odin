@@ -290,7 +290,6 @@ consume_requests :: proc(config: ^common.Config, writer: ^Writer) -> bool {
 	for ; request_index < len(temp_requests); request_index += 1 {
 		request := temp_requests[request_index]
 		call(request.value, request.id, writer, config)
-		clear_index_cache()
 		free_all(context.temp_allocator)
 	}
 

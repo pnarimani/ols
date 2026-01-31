@@ -7,34 +7,17 @@ import "core:strings"
 import "src:common"
 
 MemoryIndex :: struct {
-	collection:        SymbolCollection,
-	last_package_name: string,
-	last_package:      ^map[string]Symbol,
+	collection: SymbolCollection,
 }
 
 make_memory_index :: proc(collection: SymbolCollection) -> MemoryIndex {
 	return MemoryIndex{collection = collection}
 }
 
-memory_index_clear_cache :: proc(index: ^MemoryIndex) {
-	index.last_package_name = ""
-	index.last_package = nil
-}
-
 memory_index_lookup :: proc(index: ^MemoryIndex, name: string, pkg: string) -> (Symbol, bool) {
-	if index.last_package_name == pkg && index.last_package != nil {
-		return index.last_package[name]
-	}
-
 	if _pkg, ok := &index.collection.packages[pkg]; ok {
-		index.last_package = &_pkg.symbols
-		index.last_package_name = pkg
 		return _pkg.symbols[name]
-	} else {
-		index.last_package = nil
-		index.last_package_name = ""
 	}
-
 	return {}, false
 }
 

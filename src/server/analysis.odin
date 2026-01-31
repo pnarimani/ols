@@ -3396,8 +3396,8 @@ get_package_from_node :: proc(node: ast.Node) -> string {
 
 get_package_from_filepath :: proc(file_path: string) -> string {
 	slashed, _ := filepath.to_slash(file_path, context.temp_allocator)
-	ret := path.dir(slashed, context.temp_allocator)
-	return ret
+	ret := path.dir(slashed, context.allocator)
+	return strings.clone(ret)
 }
 
 wrap_pointer :: proc(expr: ^ast.Expr, times: int) -> ^ast.Expr {
