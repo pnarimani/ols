@@ -239,6 +239,7 @@ get_full_symbol_from_selector :: proc(
 	full_symbol: Symbol,
 	ok: bool,
 ) {
+	if ast_context == nil do return
 	if selector_expr == nil do return
 
 	selector := selector_expr.derived.(^ast.Selector_Expr) or_return
@@ -261,6 +262,7 @@ get_full_symbol_from_identifier :: proc(
 	full_symbol: Symbol,
 	ok: bool,
 ) {
+	if ast_context == nil do return
 	if position_context.identifier == nil || symbol.value != nil do return
 
 	// For identifiers (non-selector), the symbol from resolve_location_identifier may not have
