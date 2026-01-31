@@ -248,37 +248,6 @@ search_block_stmts :: proc(
 	return false
 }
 
-body_ends_with_control_flow :: proc(stmt: ^ast.Stmt) -> bool {
-	if stmt == nil {
-		return false
-	}
-
-	#partial switch block in stmt.derived {
-	case ^ast.Block_Stmt:
-		if len(block.stmts) == 0 {
-			return false
-		}
-		last_stmt := block.stmts[len(block.stmts) - 1]
-		if last_stmt == nil {
-			return false
-		}
-		return is_control_flow_stmt(last_stmt)
-	}
-
-	return is_control_flow_stmt(stmt)
-}
-
-is_control_flow_stmt :: proc(stmt: ^ast.Stmt) -> bool {
-	if stmt == nil {
-		return false
-	}
-	#partial switch _ in stmt.derived {
-	case ^ast.Return_Stmt, ^ast.Branch_Stmt:
-		return true
-	}
-	return false
-}
-
 extract_node_text :: proc(src: string, node: ^ast.Node) -> string {
 	if node == nil {
 		return ""

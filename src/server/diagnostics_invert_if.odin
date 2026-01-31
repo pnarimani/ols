@@ -1,7 +1,7 @@
+#+private file
 package server
 
 import "core:odin/ast"
-import "core:strings"
 
 import "src:common"
 
@@ -23,181 +23,165 @@ import "src:common"
 
 INVERT_IF_DIAGNOSTIC_CODE :: "InvertIf"
 
+// Minimum body complexity score to suggest inversion for guard clause pattern
+COMPLEXITY_THRESHOLD :: 3
+
+NEGATION_MESSAGE :: "Consider inverting this if statement to remove the negation"
+GUARD_CLAUSE_MESSAGE :: "Consider inverting this if statement to use a guard clause"
+READABILITY_MESSAGE :: "Consider inverting this if statement for better readability"
+
+Diagnostic_Reason :: enum {
+	None,
+	Negated_Condition,     // if !x { ... } else { ... }
+	Guard_Clause_Opportunity, // Complex body, no else, last in block
+	Early_Exit_In_Else,    // Complex if body, else is just return/break
+}
+
+Invert_If_Visitor_Data :: struct {
+	document: ^Document,
+	uri:      string,
+}
+
 // Check document for if statements that could benefit from inversion
+@(private = "package")
 check_invert_if_suggestions :: proc(document: ^Document, config: ^common.Config) {
-	if !config.enable_invert_if_diagnostics {
+	if config == nil || !config.enable_invert_if_diagnostics {
 		return
 	}
 
-	if document == nil || document.ast.decls == nil {
+	if document == nil {
 		return
 	}
 
+	if document.ast.decls == nil {
+		return
+	}
+
+	// Build URI with platform-specific path handling
 	path := document.uri.path
-
 	when ODIN_OS == .Windows {
 		path = common.get_case_sensitive_path(path, context.temp_allocator)
 	}
-
 	uri := common.create_uri(path, context.temp_allocator)
 
-	remove_diagnostics(.Hint, uri.uri)
-
-	// Find all if statements that could benefit from inversion
-	for decl in document.ast.decls {
-		find_invertible_ifs(decl, document, uri.uri)
+	visitor_data := Invert_If_Visitor_Data {
+		document = document,
+		uri      = uri.uri,
 	}
+
+	visit_ast_nodes(document.ast.decls[:], invert_if_visitor, &visitor_data)
 }
 
-// Recursively search for if statements that could benefit from inversion
-// is_last_in_block: whether this node is the last statement in its containing block
-// in_if_body: whether we're currently inside the body of an if statement (nested)
-find_invertible_ifs :: proc(node: ^ast.Node, document: ^Document, uri: string, is_last_in_block := false, in_if_body := false) {
-	if node == nil || node.derived == nil {
-		return
-	}
-
-	#partial switch n in node.derived {
-	case ^ast.If_Stmt:
-		if should_suggest_inversion(n, document, is_last_in_block, in_if_body) {
-			add_invert_if_diagnostic(n, document, uri)
-		}
-		// Also check inside the if body and else clause
-		// Mark that we're now inside an if body
-		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri, false, true)
-		}
-		if n.else_stmt != nil {
-			find_invertible_ifs(n.else_stmt, document, uri, false, true)
-		}
-
-	case ^ast.Block_Stmt:
-		for stmt, i in n.stmts {
-			is_last := i == len(n.stmts) - 1
-			find_invertible_ifs(stmt, document, uri, is_last, in_if_body)
-		}
-
-	case ^ast.Proc_Lit:
-		if n.body != nil {
-			// Fresh scope for procedure - reset in_if_body to false
-			find_invertible_ifs(n.body, document, uri, false, false)
-		}
-
-	case ^ast.Value_Decl:
-		for value in n.values {
-			find_invertible_ifs(value, document, uri, false, in_if_body)
-		}
-
-	case ^ast.For_Stmt:
-		if n.body != nil {
-			// Loop body is a fresh context - reset in_if_body
-			find_invertible_ifs(n.body, document, uri, false, false)
-		}
-
-	case ^ast.Range_Stmt:
-		if n.body != nil {
-			// Loop body is a fresh context - reset in_if_body
-			find_invertible_ifs(n.body, document, uri, false, false)
-		}
-
-	case ^ast.Switch_Stmt:
-		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri, false, in_if_body)
-		}
-
-	case ^ast.Type_Switch_Stmt:
-		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri, false, in_if_body)
-		}
-
-	case ^ast.Case_Clause:
-		for stmt, i in n.body {
-			is_last := i == len(n.body) - 1
-			find_invertible_ifs(stmt, document, uri, is_last, in_if_body)
-		}
-
-	case ^ast.When_Stmt:
-		if n.body != nil {
-			find_invertible_ifs(n.body, document, uri, false, in_if_body)
-		}
-		if n.else_stmt != nil {
-			find_invertible_ifs(n.else_stmt, document, uri, false, in_if_body)
-		}
-
-	case ^ast.Defer_Stmt:
-		if n.stmt != nil {
-			find_invertible_ifs(n.stmt, document, uri, false, in_if_body)
-		}
-	}
-}
-
-// Determine if an if statement should be suggested for inversion
-should_suggest_inversion :: proc(if_stmt: ^ast.If_Stmt, document: ^Document, is_last_in_block := false, in_if_body := false) -> bool {
-	// Skip else-if chains - too complex to give simple advice
-	if is_else_if_chain(if_stmt) {
+invert_if_visitor :: proc(node: ^ast.Node, ctx: ^AST_Visitor_Context, user_data: rawptr) -> bool {
+	if node == nil || ctx == nil || user_data == nil {
 		return false
 	}
 
-	// Check for negated condition pattern: if !condition { ... }
-	has_neg := has_negated_condition(if_stmt)
-	has_else := if_stmt.else_stmt != nil
-	if has_neg && has_else {
-		return true
+	// Only process if statements
+	if_stmt, ok := node.derived.(^ast.If_Stmt)
+	if !ok {
+		return false // Continue traversal
 	}
 
-	// Check for guard clause opportunity:
-	// if statement with no else, and the body is complex while
-	// an early exit could simplify the code.
-	// IMPORTANT: Only suggest this if the if is the last statement in the block,
-	// otherwise inverting would skip code that comes after the if.
-	// ALSO: Don't suggest guard clauses for if statements nested inside other if bodies,
-	// as the guard clause pattern only makes sense at the top level of a function/loop.
-	if if_stmt.else_stmt == nil && is_last_in_block && !in_if_body {
-		body_complexity := get_body_complexity(if_stmt.body)
-		// If the body is complex (nested ifs, many statements), suggest guard clause
-		if body_complexity >= 3 {
-			return true
-		}
+	data := cast(^Invert_If_Visitor_Data)user_data
+	if data.document == nil {
+		return false
 	}
 
-	// Check if else body is much simpler than if body (early exit pattern)
-	if if_stmt.else_stmt != nil {
-		if_complexity := get_body_complexity(if_stmt.body)
-		else_complexity := get_body_complexity(if_stmt.else_stmt)
-
-		// If else is an early exit (1 statement) and if body is complex
-		if else_complexity == 1 && if_complexity >= 3 {
-			if is_early_exit(if_stmt.else_stmt) {
-				return true
-			}
-		}
+	// Check if this if statement should suggest inversion
+	reason := get_inversion_reason(if_stmt, ctx.is_last_in_block, ctx.in_if_body)
+	if reason == .None {
+		return false // Continue traversal
 	}
 
-	return false
+	// Add the diagnostic
+	add_invert_if_diagnostic(if_stmt, data.document, data.uri, reason)
+
+	return false // Continue to find more
 }
 
-// Check if the if statement is part of an else-if chain
-is_else_if_chain :: proc(if_stmt: ^ast.If_Stmt) -> bool {
+// Determine if and why an if statement should be suggested for inversion
+get_inversion_reason :: proc(if_stmt: ^ast.If_Stmt, is_last_in_block: bool, in_if_body: bool) -> Diagnostic_Reason {
+	if if_stmt == nil {
+		return .None
+	}
+
+	// Skip else-if chains - too complex to give simple advice
+	if is_else_if_chain(if_stmt) {
+		return .None
+	}
+
+	// Check for negated condition pattern: if !condition { ... } else { ... }
+	if check_negated_condition_pattern(if_stmt) {
+		return .Negated_Condition
+	}
+
+	// Check for guard clause opportunity
+	if check_guard_clause_pattern(if_stmt, is_last_in_block, in_if_body) {
+		return .Guard_Clause_Opportunity
+	}
+
+	// Check for early exit in else pattern
+	if check_early_exit_pattern(if_stmt) {
+		return .Early_Exit_In_Else
+	}
+
+	return .None
+}
+
+// Pattern: if !condition { ... } else { ... }
+// Suggests removing the negation by swapping branches
+check_negated_condition_pattern :: proc(if_stmt: ^ast.If_Stmt) -> bool {
+	has_neg := has_negated_condition(if_stmt)
+	has_else := if_stmt.else_stmt != nil
+	return has_neg && has_else
+}
+
+// Pattern: Complex body with no else, last in block, not nested in if
+// Suggests using a guard clause for early exit
+check_guard_clause_pattern :: proc(if_stmt: ^ast.If_Stmt, is_last_in_block: bool, in_if_body: bool) -> bool {
+	if if_stmt.else_stmt != nil {
+		return false
+	}
+
+	// Must be last statement in the block
+	// Otherwise inverting would skip code that comes after
+	if !is_last_in_block {
+		return false
+	}
+
+	// Don't suggest for nested if statements
+	// Guard clause pattern only makes sense at top level of function/loop
+	if in_if_body {
+		return false
+	}
+
+	// Body must be complex enough to warrant a guard clause
+	body_complexity := get_body_complexity(if_stmt.body)
+	return body_complexity >= COMPLEXITY_THRESHOLD
+}
+
+// Pattern: Complex if body, else is just a simple early exit (return/break)
+// Suggests inverting to put the early exit first
+check_early_exit_pattern :: proc(if_stmt: ^ast.If_Stmt) -> bool {
 	if if_stmt.else_stmt == nil {
 		return false
 	}
-	_, is_else_if := if_stmt.else_stmt.derived.(^ast.If_Stmt)
-	return is_else_if
-}
 
-// Check if condition is negated (starts with !)
-has_negated_condition :: proc(if_stmt: ^ast.If_Stmt) -> bool {
-	if if_stmt.cond == nil {
+	if_complexity := get_body_complexity(if_stmt.body)
+	else_complexity := get_body_complexity(if_stmt.else_stmt)
+
+	// Else must be a simple early exit (1 statement)
+	// If body must be complex
+	if else_complexity != 1 || if_complexity < COMPLEXITY_THRESHOLD {
 		return false
 	}
-	unary, ok := if_stmt.cond.derived.(^ast.Unary_Expr)
-	if !ok {
-		return false
-	}
-	return unary.op.kind == .Not
+
+	return is_early_exit(if_stmt.else_stmt)
 }
 
 // Get a complexity score for a body (rough heuristic)
+// Higher scores indicate more complex code that might benefit from refactoring
 get_body_complexity :: proc(stmt: ^ast.Stmt) -> int {
 	if stmt == nil {
 		return 0
@@ -245,39 +229,33 @@ is_early_exit :: proc(stmt: ^ast.Stmt) -> bool {
 	#partial switch s in stmt.derived {
 	case ^ast.Block_Stmt:
 		if len(s.stmts) == 1 {
-			return is_early_exit_stmt(s.stmts[0])
+			return is_control_flow_stmt(s.stmts[0])
 		}
-	}
-
-	return is_early_exit_stmt(stmt)
-}
-
-is_early_exit_stmt :: proc(stmt: ^ast.Stmt) -> bool {
-	if stmt == nil {
 		return false
 	}
 
-	#partial switch s in stmt.derived {
-	case ^ast.Return_Stmt:
-		return true
-	case ^ast.Branch_Stmt:
-		return true // break, continue, fallthrough
-	}
-
-	return false
+	return is_control_flow_stmt(stmt)
 }
 
 // Add a diagnostic for an if statement that should be inverted
-add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, document: ^Document, uri: string) {
-	if if_stmt == nil || if_stmt.cond == nil {
+add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, document: ^Document, uri: string, reason: Diagnostic_Reason) {
+	if if_stmt == nil {
 		return
 	}
 
-	if document == nil || document.ast.src == "" {
+	if if_stmt.cond == nil {
 		return
 	}
 
-	message := get_diagnostic_message(if_stmt)
+	if document == nil {
+		return
+	}
+
+	if document.ast.src == "" {
+		return
+	}
+
+	message := get_diagnostic_message(reason)
 
 	add_diagnostics(
 		.Hint,
@@ -292,15 +270,16 @@ add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, document: ^Document, uri
 	)
 }
 
-// Generate an appropriate message based on why inversion is suggested
-get_diagnostic_message :: proc(if_stmt: ^ast.If_Stmt) -> string {
-	if has_negated_condition(if_stmt) {
-		return "Consider inverting this if statement to remove the negation"
+get_diagnostic_message :: proc(reason: Diagnostic_Reason) -> string {
+	switch reason {
+	case .Negated_Condition:
+		return NEGATION_MESSAGE
+	case .Guard_Clause_Opportunity:
+		return GUARD_CLAUSE_MESSAGE
+	case .Early_Exit_In_Else:
+		return READABILITY_MESSAGE
+	case .None:
+		return READABILITY_MESSAGE
 	}
-
-	if if_stmt.else_stmt == nil {
-		return "Consider inverting this if statement to use a guard clause"
-	}
-
-	return "Consider inverting this if statement for better readability"
+	return READABILITY_MESSAGE
 }

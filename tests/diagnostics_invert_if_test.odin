@@ -239,3 +239,208 @@ main :: proc() {
 
 	test.expect_no_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE)
 }
+
+// Test: nested if inside loop body should NOT suggest guard clause
+// (guard clause pattern only makes sense at top level)
+@(test)
+diagnostic_invert_if_nested_in_loop :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	for item in items {
+		if condition {
+			step1()
+			step2()
+			step3()
+		}
+		more_work()
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_no_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE)
+}
+
+// Test: deeply nested if inside another if body should NOT suggest guard clause
+// The inner if is complex but is nested inside another if's body
+@(test)
+diagnostic_invert_if_deeply_nested :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	if outer {
+		// This inner if should NOT trigger because it's in an if body
+		if inner {
+			step1()
+			step2()
+			step3()
+		}
+	} else {
+		// Adding else to outer prevents outer from triggering guard clause
+		other_work()
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_no_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE)
+}
+
+// Test: negated condition in switch case SHOULD suggest inversion
+@(test)
+diagnostic_invert_if_in_switch_case :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	switch x {
+	case 1:
+		if {<}!condition{>} {
+			work()
+		} else {
+			other()
+		}
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_diagnostic_at(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "negation")
+}
+
+// Test: negated condition in inline proc literal SHOULD suggest inversion
+@(test)
+diagnostic_invert_if_in_inline_proc :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	callback := proc() {
+		if {<}!x{>} {
+			handle()
+		} else {
+			process()
+		}
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_diagnostic_at(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "negation")
+}
+
+// Test: empty if body should NOT suggest inversion (nothing to gain)
+@(test)
+diagnostic_invert_if_empty_body :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	if x > 0 {
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_no_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE)
+}
+
+// Test: if in defer statement with negated condition SHOULD suggest
+@(test)
+diagnostic_invert_if_in_defer :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	defer {
+		if {<}!cleanup_needed{>} {
+			skip()
+		} else {
+			cleanup()
+		}
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_diagnostic_at(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "negation")
+}
+
+// Test: complexity exactly at threshold - 2 statements should NOT trigger
+@(test)
+diagnostic_invert_if_complexity_below_threshold :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	if x > 0 {
+		step1()
+		step2()
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_no_diagnostic(t, &source, INVERT_IF_DIAGNOSTIC_CODE)
+}
+
+// Test: complexity at threshold - 3 statements SHOULD trigger for guard clause
+@(test)
+diagnostic_invert_if_complexity_at_threshold :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	if {<}x > 0{>} {
+		step1()
+		step2()
+		step3()
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_diagnostic_at(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "guard clause")
+}
+
+// Test: guard clause opportunity at end of loop (top-level in loop)
+@(test)
+diagnostic_invert_if_guard_clause_in_loop :: proc(t: ^testing.T) {
+	source := test.Source {
+		main = `package test
+
+main :: proc() {
+	for item in items {
+		if {<}should_process(item){>} {
+			step1(item)
+			step2(item)
+			step3(item)
+		}
+	}
+}
+`,
+		packages = {},
+		config = {enable_invert_if_diagnostics = true},
+	}
+
+	test.expect_diagnostic_at(t, &source, INVERT_IF_DIAGNOSTIC_CODE, "guard clause")
+}
