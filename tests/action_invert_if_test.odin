@@ -241,11 +241,11 @@ main :: proc() {
 -		statement3()
 -	}
 +	if x <= 0 {
-+	if x < 0 {
-+		statement2()
-+	} else {
-+		statement3()
-+	}
++		if x < 0 {
++			statement2()
++		} else {
++			statement3()
++		}
 +	} else {
 +		statement1()
 +	}
@@ -266,9 +266,8 @@ main :: proc() {
 		statement1()
 	} else if x{*} < 0 {
 		statement2()
-	} else {
-		statement3()
 	}
+	statement3()
 }
 `,
 		packages = {},
@@ -301,27 +300,55 @@ main :: proc() {
 
 @(test)
 action_invert_if_nested_in_else_if_body :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
 	x := something()
 	if x > 0 {
 		statement1()
 	} else if x < 0 {
-		if y{*} > 0 {
-			statement2()
-		}
+-		if y{*} > 0 {
+-			statement2()
+-		}
++		if y <= 0 {
++			return
++		}
++		statement2()
 	} else {
 		statement3()
 	}
 }
 `,
-		packages = {},
-	}
+		INVERT_IF_ACTION,
+	)
+}
 
-	// Should have the invert action for an if statement nested inside an else-if body
-	test.expect_action(t, &source, {INVERT_IF_ACTION})
+@(test)
+action_invert_if_nested_in_else_if_body_with_trailing_stmt :: proc(t: ^testing.T) {
+	test.expect_code_action_diff(
+		t,
+		`package test
+
+main :: proc() {
+	x := something()
+	if x > 0 {
+		statement1()
+	} else if x < 0 {
+-		if y{*} > 0 {
+-			statement2()
+-		}
++		if y <= 0 {
++		} else {
++			statement2()
++		}
+	}
+	statement3()
+}
+`,
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
