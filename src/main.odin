@@ -5,13 +5,38 @@ import "base:intrinsics"
 import "core:fmt"
 import "core:log"
 import "core:mem"
+import "core:net"
 import "core:os"
+import "core:strconv"
+import "core:strings"
 import "core:thread"
 
 import "src:common"
 import "src:server"
 
 VERSION := #config(VERSION, "dev")
+
+Tcp_Context :: struct {
+	socket: net.TCP_Socket,
+}
+
+tcp_read :: proc(handle: rawptr, data: []byte) -> (int, int) {
+	ctx := cast(^Tcp_Context)handle
+	bytes_read, err := net.recv_tcp(ctx.socket, data)
+	if err != nil {
+		return 0, 1
+	}
+	return bytes_read, 0
+}
+
+tcp_write :: proc(handle: rawptr, data: []byte) -> (int, int) {
+	ctx := cast(^Tcp_Context)handle
+	bytes_written, err := net.send_tcp(ctx.socket, data)
+	if err != nil {
+		return 0, 1
+	}
+	return bytes_written, 0
+}
 
 os_read :: proc(handle: rawptr, data: []byte) -> (int, int) {
 	ptr := cast(^os.Handle)handle
@@ -97,25 +122,96 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 end :: proc() {
 }
 
-main :: proc() {
-	if len(os.args) > 1 && os.args[1] == "version" {
-		fmt.println("ols version", VERSION)
-		os.exit(0)
-	}
-	reader := server.make_reader(os_read, cast(rawptr)&os.stdin)
-	writer := server.make_writer(os_write, cast(rawptr)&os.stdout)
+parse_args :: proc() -> (use_tcp: bool, port: int, ok: bool) {
+	use_tcp = false
+	port = 0
+	ok = true
 
-	/*
-	fh, err := os.open("log.txt", os.O_RDWR|os.O_CREATE) 
-	
-	if err != os.ERROR_NONE {
+	for arg in os.args[1:] {
+		switch {
+		case arg == "version":
+			fmt.println("ols version", VERSION)
+			os.exit(0)
+		case arg == "--stdio":
+			use_tcp = false
+		case arg == "--tcp":
+			use_tcp = true
+		case strings.has_prefix(arg, "--port="):
+			port_str := strings.trim_prefix(arg, "--port=")
+			parsed_port, parse_ok := strconv.parse_int(port_str)
+			if !parse_ok || parsed_port <= 0 || parsed_port > 65535 {
+				fmt.eprintln("Invalid port number:", port_str)
+				ok = false
+				return
+			}
+			port = parsed_port
+		case:
+			fmt.eprintln("Unknown argument:", arg)
+			ok = false
+			return
+		}
+	}
+
+	if use_tcp && port == 0 {
+		fmt.eprintln("TCP mode requires --port=<number> argument")
+		ok = false
 		return
 	}
-	
-	context.logger = log.create_file_logger(fh, log.Level.Info)
-	*/
+
+	return
+}
+
+run_stdio :: proc() {
+	reader := server.make_reader(os_read, cast(rawptr)&os.stdin)
+	writer := server.make_writer(os_write, cast(rawptr)&os.stdout)
+	run(&reader, &writer)
+}
+
+run_tcp :: proc(port: int) {
+	endpoint := net.Endpoint {
+		address = net.IP4_Loopback,
+		port    = port,
+	}
+
+	listen_socket, listen_err := net.listen_tcp(endpoint)
+	if listen_err != nil {
+		fmt.eprintln("Failed to listen on port", port, ":", listen_err)
+		os.exit(1)
+	}
+	defer net.close(listen_socket)
+
+	fmt.println("OLS listening on 127.0.0.1:", port)
+
+	client_socket, _, accept_err := net.accept_tcp(listen_socket)
+	if accept_err != nil {
+		fmt.eprintln("Failed to accept connection:", accept_err)
+		os.exit(1)
+	}
+	defer net.close(client_socket)
+
+	fmt.println("Client connected")
+
+	tcp_ctx := Tcp_Context {
+		socket = client_socket,
+	}
+
+	reader := server.make_reader(tcp_read, cast(rawptr)&tcp_ctx)
+	writer := server.make_writer(tcp_write, cast(rawptr)&tcp_ctx)
+
+	run(&reader, &writer)
+}
+
+main :: proc() {
+	use_tcp, port, args_ok := parse_args()
+	if !args_ok {
+		os.exit(1)
+	}
 
 	init_global_temporary_allocator(mem.Megabyte * 100)
 
-	run(&reader, &writer)
+	if use_tcp {
+		run_tcp(port)
+	} else {
+		run_stdio()
+	}
 }

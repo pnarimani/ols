@@ -5,6 +5,7 @@
 import * as vscode from 'vscode';
 import * as path from "path";
 import * as os from "os";
+import * as net from "net";
 import { promises as fs, constants, writeFileSync } from "fs";
 
 var AdmZip = require('adm-zip');
@@ -12,7 +13,9 @@ var AdmZip = require('adm-zip');
 import {
 	LanguageClient,
 	LanguageClientOptions,
-	ServerOptions
+	ServerOptions,
+	StreamInfo,
+	State
 } from 'vscode-languageclient/node';
 
 import { log, assert, isValidExecutable } from './util';
@@ -43,6 +46,81 @@ const defaultConfig = JSON.stringify(
 let ctx: Ctx;
 
 let outputChannel: vscode.LogOutputChannel;
+
+const TCP_RETRY_INTERVAL_MS = 1000;
+const TCP_RETRY_TIMEOUT_MS = 60000;
+
+let isReconnecting = false;
+let currentClient: LanguageClient | null = null;
+let currentConfig: Config | null = null;
+
+function triggerReconnect() {
+	if (!isReconnecting && currentClient && currentConfig && currentConfig.connectionMode === "tcp") {
+		isReconnecting = true;
+		log.info("TCP connection lost, attempting to reconnect...");
+		setTimeout(async () => {
+			try {
+				await currentClient!.stop();
+			} catch (e) {
+			}
+			currentClient!.start();
+		}, TCP_RETRY_INTERVAL_MS);
+	}
+}
+
+function connectToTcpServer(port: number): Promise<StreamInfo> {
+	return new Promise((resolve, reject) => {
+		const startTime = Date.now();
+
+		function tryConnect() {
+			const socket = net.connect({ port, host: '127.0.0.1' });
+			let connected = false;
+
+			socket.on('connect', () => {
+				log.info(`Connected to OLS on port ${port}`);
+				connected = true;
+				isReconnecting = false;
+
+				socket.on('close', (hadError) => {
+					log.info(`Socket closed (hadError: ${hadError})`);
+					triggerReconnect();
+				});
+
+				resolve({ reader: socket, writer: socket });
+			});
+
+			socket.on('error', (err) => {
+				if (!connected) {
+					socket.destroy();
+					const elapsed = Date.now() - startTime;
+
+					if (elapsed < TCP_RETRY_TIMEOUT_MS) {
+						log.info(`Connection failed, retrying in ${TCP_RETRY_INTERVAL_MS}ms...`);
+						setTimeout(tryConnect, TCP_RETRY_INTERVAL_MS);
+					} else {
+						isReconnecting = false;
+						reject(new Error(`Failed to connect to OLS on port ${port} after ${TCP_RETRY_TIMEOUT_MS / 1000}s: ${err.message}`));
+					}
+				} else {
+					log.info(`Socket error after connection: ${err.message}`);
+				}
+			});
+		}
+
+		tryConnect();
+	});
+}
+
+function setupTcpReconnection(client: LanguageClient, config: Config) {
+	currentClient = client;
+	currentConfig = config;
+
+	client.onDidChangeState((event) => {
+		if (event.newState === State.Stopped && config.connectionMode === "tcp" && !isReconnecting) {
+			triggerReconnect();
+		}
+	});
+}
 
 export async function activate(context: vscode.ExtensionContext) {
 
@@ -94,13 +172,25 @@ export async function activate(context: vscode.ExtensionContext) {
 		return;
 	}
 
-	let serverOptions: ServerOptions = {
-		command: serverPath,
-		args: [],
-		options: {
-			cwd: path.dirname(serverPath),
-		},
-	};
+	let serverOptions: ServerOptions;
+
+	if (config.connectionMode === "tcp") {
+		const port = config.tcpPort;
+		if (!port) {
+			vscode.window.showErrorMessage("TCP mode requires 'ols.server.tcpPort' to be set");
+			return;
+		}
+
+		serverOptions = () => connectToTcpServer(port);
+	} else {
+		serverOptions = {
+			command: serverPath,
+			args: [],
+			options: {
+				cwd: path.dirname(serverPath),
+			},
+		};
+	}
 
 
 	outputChannel = vscode.window.createOutputChannel("Odin Language Server", { log: true });
@@ -117,6 +207,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		serverOptions,
 		clientOptions
 	);
+
+	if (config.connectionMode === "tcp") {
+		setupTcpReconnection(client, config);
+	}
 
 	ctx = await Ctx.create(config, client, context, serverPath, workspaceFolder.uri.fsPath);
 
