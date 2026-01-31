@@ -26,17 +26,29 @@ add_invert_if_action :: proc(
 	uri: string,
 	actions: ^[dynamic]CodeAction,
 ) {
-	if_stmt := find_if_stmt_at_position(document.ast.decls[:], position)
+	if_stmt, ctx, following_stmts := find_if_stmt_at_position(document.ast.decls[:], position)
 	if if_stmt == nil {
 		return
 	}
 
-	new_text, ok := generate_inverted_if(document, if_stmt)
+	new_text, ok := generate_inverted_if(document, if_stmt, ctx, following_stmts)
 	if !ok {
 		return
 	}
 
-	range := common.get_token_range(if_stmt^, document.ast.src)
+	// Compute the range - if we have following statements and the body ends with control flow,
+	// we need to include those in the range
+	range: common.Range
+	if len(following_stmts) > 0 && body_ends_with_control_flow(if_stmt.body) && if_stmt.else_stmt == nil {
+		// Extend range to include all following statements
+		last_stmt := following_stmts[len(following_stmts) - 1]
+		range.start = common.token_pos_to_position(if_stmt.pos, document.ast.src)
+		end_pos := last_stmt.end
+		end_pos.offset -= 1
+		range.end = common.token_pos_to_position(end_pos, document.ast.src)
+	} else {
+		range = common.get_token_range(if_stmt^, document.ast.src)
+	}
 
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 	append(&textEdits, TextEdit{range = range, newText = new_text})
@@ -55,25 +67,26 @@ add_invert_if_action :: proc(
 // Find the innermost if statement that contains the given position
 // This will NOT return else-if statements, only top-level if statements
 // Also will not return an if statement if the position is in its else clause
-find_if_stmt_at_position :: proc(stmts: []^ast.Stmt, position: common.AbsolutePosition) -> ^ast.If_Stmt {
+// Also returns the control flow context (proc or loop) and any statements following the if in the parent block
+find_if_stmt_at_position :: proc(stmts: []^ast.Stmt, position: common.AbsolutePosition) -> (^ast.If_Stmt, Control_Flow_Context, []^ast.Stmt) {
 	for stmt in stmts {
 		if stmt == nil {
 			continue
 		}
-		if result := find_if_stmt_in_node(stmt, position, false); result != nil {
-			return result
+		if result, ctx, following := find_if_stmt_in_node(stmt, position, false, .Proc); result != nil {
+			return result, ctx, following
 		}
 	}
-	return nil
+	return nil, .Proc, nil
 }
 
-find_if_stmt_in_node :: proc(node: ^ast.Node, position: common.AbsolutePosition, in_else_clause: bool) -> ^ast.If_Stmt {
+find_if_stmt_in_node :: proc(node: ^ast.Node, position: common.AbsolutePosition, in_else_clause: bool, ctx: Control_Flow_Context) -> (^ast.If_Stmt, Control_Flow_Context, []^ast.Stmt) {
 	if node == nil {
-		return nil
+		return nil, ctx, nil
 	}
 
 	if !(node.pos.offset <= position && position <= node.end.offset) {
-		return nil
+		return nil, ctx, nil
 	}
 
 	#partial switch n in node.derived {
@@ -82,100 +95,144 @@ find_if_stmt_in_node :: proc(node: ^ast.Node, position: common.AbsolutePosition,
 		if n.else_stmt != nil && position_in_node(n.else_stmt, position) {
 			// Position is in the else clause - look for nested ifs inside it
 			// but mark that we're in an else clause
-			if nested := find_if_stmt_in_node(n.else_stmt, position, true); nested != nil {
-				return nested
+			if nested, nested_ctx, following := find_if_stmt_in_node(n.else_stmt, position, true, ctx); nested != nil {
+				return nested, nested_ctx, following
 			}
 			// Position is in else clause but not on a valid nested if
 			// Don't return the current if statement
-			return nil
+			return nil, ctx, nil
 		}
 
 		if n.body != nil && position_in_node(n.body, position) {
-			if nested := find_if_stmt_in_node(n.body, position, false); nested != nil {
-				return nested
+			if nested, nested_ctx, following := find_if_stmt_in_node(n.body, position, false, ctx); nested != nil {
+				return nested, nested_ctx, following
 			}
 			// Position is inside the body but no nested if found
 			// Don't return the current if statement
-			return nil
+			return nil, ctx, nil
 		}
 
 		// Position is in the condition/init part or we're the closest if
 		// Only return this if statement if we're NOT in an else clause
 		// (i.e., this is not an else-if)
 		if !in_else_clause {
-			return n
+			// Note: following statements will be filled in by the Block_Stmt case that called us
+			return n, ctx, nil
 		}
-		return nil
+		return nil, ctx, nil
 
 	case ^ast.Block_Stmt:
-		for stmt in n.stmts {
-			if result := find_if_stmt_in_node(stmt, position, false); result != nil {
-				return result
+		for stmt, i in n.stmts {
+			if result, result_ctx, _ := find_if_stmt_in_node(stmt, position, false, ctx); result != nil {
+				// Return the following statements in this block
+				following := n.stmts[i+1:]
+				return result, result_ctx, following
 			}
 		}
 
 	case ^ast.Proc_Lit:
 		if n.body != nil {
-			return find_if_stmt_in_node(n.body, position, false)
+			return find_if_stmt_in_node(n.body, position, false, .Proc)
 		}
 
 	case ^ast.Value_Decl:
 		for value in n.values {
-			if result := find_if_stmt_in_node(value, position, false); result != nil {
-				return result
+			if result, result_ctx, following := find_if_stmt_in_node(value, position, false, ctx); result != nil {
+				return result, result_ctx, following
 			}
 		}
 
 	case ^ast.For_Stmt:
 		if n.body != nil {
-			return find_if_stmt_in_node(n.body, position, false)
+			return find_if_stmt_in_node(n.body, position, false, .For_Loop)
 		}
 
 	case ^ast.Range_Stmt:
 		if n.body != nil {
-			return find_if_stmt_in_node(n.body, position, false)
+			return find_if_stmt_in_node(n.body, position, false, .For_Loop)
 		}
 
 	case ^ast.Switch_Stmt:
 		if n.body != nil {
-			return find_if_stmt_in_node(n.body, position, false)
+			return find_if_stmt_in_node(n.body, position, false, ctx)
 		}
 
 	case ^ast.Type_Switch_Stmt:
 		if n.body != nil {
-			return find_if_stmt_in_node(n.body, position, false)
+			return find_if_stmt_in_node(n.body, position, false, ctx)
 		}
 
 	case ^ast.Case_Clause:
-		for stmt in n.body {
-			if result := find_if_stmt_in_node(stmt, position, false); result != nil {
-				return result
+		for stmt, i in n.body {
+			if result, result_ctx, _ := find_if_stmt_in_node(stmt, position, false, ctx); result != nil {
+				following := n.body[i+1:]
+				return result, result_ctx, following
 			}
 		}
 
 	case ^ast.When_Stmt:
 		if n.body != nil {
-			if result := find_if_stmt_in_node(n.body, position, false); result != nil {
-				return result
+			if result, result_ctx, following := find_if_stmt_in_node(n.body, position, false, ctx); result != nil {
+				return result, result_ctx, following
 			}
 		}
 		if n.else_stmt != nil {
-			if result := find_if_stmt_in_node(n.else_stmt, position, false); result != nil {
-				return result
+			if result, result_ctx, following := find_if_stmt_in_node(n.else_stmt, position, false, ctx); result != nil {
+				return result, result_ctx, following
 			}
 		}
 
 	case ^ast.Defer_Stmt:
 		if n.stmt != nil {
-			return find_if_stmt_in_node(n.stmt, position, false)
+			return find_if_stmt_in_node(n.stmt, position, false, ctx)
 		}
 	}
 
-	return nil
+	return nil, ctx, nil
+}
+
+// Check if a block body ends with a control flow statement (return, continue, break, fallthrough)
+body_ends_with_control_flow :: proc(stmt: ^ast.Stmt) -> bool {
+	if stmt == nil {
+		return false
+	}
+
+	#partial switch block in stmt.derived {
+	case ^ast.Block_Stmt:
+		if len(block.stmts) == 0 {
+			return false
+		}
+		last_stmt := block.stmts[len(block.stmts) - 1]
+		if last_stmt == nil {
+			return false
+		}
+		return is_control_flow_stmt(last_stmt)
+	}
+
+	return is_control_flow_stmt(stmt)
+}
+
+// Check if a statement is a control flow statement
+is_control_flow_stmt :: proc(stmt: ^ast.Stmt) -> bool {
+	if stmt == nil {
+		return false
+	}
+	#partial switch _ in stmt.derived {
+	case ^ast.Return_Stmt, ^ast.Branch_Stmt:
+		return true
+	}
+	return false
+}
+
+// Context type for determining which control flow statement to use
+Control_Flow_Context :: enum {
+	Proc,      // Use return
+	For_Loop,  // Use continue
+	// Can be extended for break, etc.
 }
 
 // Generate the inverted if statement text
-generate_inverted_if :: proc(document: ^Document, if_stmt: ^ast.If_Stmt) -> (string, bool) {
+generate_inverted_if :: proc(document: ^Document, if_stmt: ^ast.If_Stmt, ctx: Control_Flow_Context = .Proc, following_stmts: []^ast.Stmt = nil) -> (string, bool) {
 	src := document.ast.src
 
 	indent := get_line_indentation(src, if_stmt.pos.offset)
@@ -209,25 +266,89 @@ generate_inverted_if :: proc(document: ^Document, if_stmt: ^ast.If_Stmt) -> (str
 	// Now we need to swap the bodies
 
 	if if_stmt.else_stmt != nil {
-		else_body_text := get_block_body_text(src, if_stmt.else_stmt, indent)
-		then_body_text := get_block_body_text(src, if_stmt.body, indent)
+		// Check if the then-body (which becomes else after inversion) ends with a control flow statement
+		// If so, we can remove the redundant else block
+		if body_ends_with_control_flow(if_stmt.body) {
+			// The then-body ends with control flow, so after inversion:
+			// - Put the else-body in the if block
+			// - Unwrap the then-body after the if statement
+			else_body_text := get_block_body_text(src, if_stmt.else_stmt, indent)
+			then_body_text := get_block_body_text_at_indent(src, if_stmt.body, indent)
+			// Remove trailing newline to avoid double-newline with source
+			then_body_text = strings.trim_right(then_body_text, "\n")
 
+			strings.write_string(&sb, "{\n")
+			strings.write_string(&sb, else_body_text)
+			strings.write_string(&sb, indent)
+			strings.write_string(&sb, "}\n")
+			// Append the original then-body after the if statement (unwrapped)
+			strings.write_string(&sb, then_body_text)
+		} else {
+			// Standard swap: else becomes then, then becomes else
+			else_body_text := get_block_body_text(src, if_stmt.else_stmt, indent)
+			then_body_text := get_block_body_text(src, if_stmt.body, indent)
+
+			strings.write_string(&sb, "{\n")
+			strings.write_string(&sb, else_body_text)
+			strings.write_string(&sb, indent)
+			strings.write_string(&sb, "} else {\n")
+			strings.write_string(&sb, then_body_text)
+			strings.write_string(&sb, indent)
+			strings.write_string(&sb, "}")
+		}
+	} else if body_ends_with_control_flow(if_stmt.body) && len(following_stmts) > 0 {
+		// Special case: no else block, but body ends with control flow and there are following statements
+		// The following statements act as the implicit "else" branch
+		// After inversion:
+		// - New if body: following statements + control flow from original body
+		// - New following: original body without the control flow
+		
+		// Get the original body statements without the trailing control flow
+		then_body_without_control := get_block_body_without_last_stmt_at_indent(src, if_stmt.body, indent)
+		then_body_without_control = strings.trim_right(then_body_without_control, "\n")
+		
+		// Get the control flow statement from the original body
+		control_flow_text := get_last_stmt_text(src, if_stmt.body, indent)
+		
+		// Build the new if body: following statements + control flow
 		strings.write_string(&sb, "{\n")
-		strings.write_string(&sb, else_body_text)
+		for s in following_stmts {
+			if s == nil {
+				continue
+			}
+			stmt_text := src[s.pos.offset:s.end.offset]
+			strings.write_string(&sb, indent)
+			strings.write_string(&sb, "\t")
+			strings.write_string(&sb, stmt_text)
+			strings.write_string(&sb, "\n")
+		}
 		strings.write_string(&sb, indent)
-		strings.write_string(&sb, "} else {\n")
-		strings.write_string(&sb, then_body_text)
+		strings.write_string(&sb, "\t")
+		strings.write_string(&sb, control_flow_text)
+		strings.write_string(&sb, "\n")
 		strings.write_string(&sb, indent)
-		strings.write_string(&sb, "}")
+		strings.write_string(&sb, "}\n")
+		
+		// Append the original body (without control flow) after the if
+		strings.write_string(&sb, then_body_without_control)
 	} else {
-		then_body_text := get_block_body_text(src, if_stmt.body, indent)
+		// No else block: use early return/continue pattern
+		// Get the body text at the if-statement's indentation level (one level less than body)
+		then_body_text := get_block_body_text_at_indent(src, if_stmt.body, indent)
+		// Remove trailing newline to avoid double-newline with source
+		then_body_text = strings.trim_right(then_body_text, "\n")
+		
+		control_flow_stmt := ctx == .For_Loop ? "continue" : "return"
 
 		strings.write_string(&sb, "{\n")
 		strings.write_string(&sb, indent)
-		strings.write_string(&sb, "} else {\n")
-		strings.write_string(&sb, then_body_text)
+		strings.write_string(&sb, "\t")
+		strings.write_string(&sb, control_flow_stmt)
+		strings.write_string(&sb, "\n")
 		strings.write_string(&sb, indent)
-		strings.write_string(&sb, "}")
+		strings.write_string(&sb, "}\n")
+		// Append the original body after the if statement (unwrapped)
+		strings.write_string(&sb, then_body_text)
 	}
 
 	return strings.to_string(sb), true
@@ -271,6 +392,89 @@ get_block_body_text :: proc(src: string, stmt: ^ast.Stmt, base_indent: string) -
 	// Fallback: just return the statement text
 	stmt_text := src[stmt.pos.offset:stmt.end.offset]
 	return fmt.tprintf("%s%s\n", base_indent, stmt_text)
+}
+
+// Extract the body text at a specific indentation level (for unwrapping)
+get_block_body_text_at_indent :: proc(src: string, stmt: ^ast.Stmt, target_indent: string) -> string {
+	if stmt == nil {
+		return ""
+	}
+
+	#partial switch block in stmt.derived {
+	case ^ast.Block_Stmt:
+		if len(block.stmts) == 0 {
+			return ""
+		}
+
+		sb := strings.builder_make(context.temp_allocator)
+
+		for s in block.stmts {
+			if s == nil {
+				continue
+			}
+			stmt_text := src[s.pos.offset:s.end.offset]
+			strings.write_string(&sb, target_indent)
+			strings.write_string(&sb, stmt_text)
+			strings.write_string(&sb, "\n")
+		}
+
+		return strings.to_string(sb)
+	}
+
+	// Fallback: just return the statement text at target indent
+	stmt_text := src[stmt.pos.offset:stmt.end.offset]
+	return fmt.tprintf("%s%s\n", target_indent, stmt_text)
+}
+
+// Extract the body text at a specific indentation level, excluding the last statement
+get_block_body_without_last_stmt_at_indent :: proc(src: string, stmt: ^ast.Stmt, target_indent: string) -> string {
+	if stmt == nil {
+		return ""
+	}
+
+	#partial switch block in stmt.derived {
+	case ^ast.Block_Stmt:
+		if len(block.stmts) <= 1 {
+			return ""
+		}
+
+		sb := strings.builder_make(context.temp_allocator)
+
+		for s in block.stmts[:len(block.stmts)-1] {
+			if s == nil {
+				continue
+			}
+			stmt_text := src[s.pos.offset:s.end.offset]
+			strings.write_string(&sb, target_indent)
+			strings.write_string(&sb, stmt_text)
+			strings.write_string(&sb, "\n")
+		}
+
+		return strings.to_string(sb)
+	}
+
+	return ""
+}
+
+// Get the text of the last statement in a block
+get_last_stmt_text :: proc(src: string, stmt: ^ast.Stmt, target_indent: string) -> string {
+	if stmt == nil {
+		return ""
+	}
+
+	#partial switch block in stmt.derived {
+	case ^ast.Block_Stmt:
+		if len(block.stmts) == 0 {
+			return ""
+		}
+		last_stmt := block.stmts[len(block.stmts) - 1]
+		if last_stmt == nil {
+			return ""
+		}
+		return src[last_stmt.pos.offset:last_stmt.end.offset]
+	}
+
+	return ""
 }
 
 // For else-if chains, we don't invert them, just preserve

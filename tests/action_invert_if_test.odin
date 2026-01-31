@@ -8,128 +8,67 @@ INVERT_IF_ACTION :: "Invert if"
 
 @(test)
 action_invert_if_simple :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
 	x := 5
-	if x{*} >= 0 {
-		foo()
-	}
+-	if x{*} >= 0 {
+-		foo()
+-	}
++	if x < 0 {
++		return
++	}
++	foo()
 }
 `,
-		packages = {},
-	}
-
-	test.expect_action(t, &source, {INVERT_IF_ACTION})
-}
-
-@(test)
-action_invert_if_simple_edit :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
-
-main :: proc() {
-	x := 5
-	if x{*} >= 0 {
-		foo()
-	}
-}
-`,
-		packages = {},
-	}
-
-	expected := `if x < 0 {
-	} else {
-		foo()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
 action_invert_if_with_else :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
 	x := 5
-	if x{*} == 0 {
-		foo()
-	} else {
-		bar()
-	}
+-	if x{*} == 0 {
+-		foo()
+-	} else {
+-		bar()
+-	}
++	if x != 0 {
++		bar()
++	} else {
++		foo()
++	}
 }
 `,
-		packages = {},
-	}
-
-	test.expect_action(t, &source, {INVERT_IF_ACTION})
-}
-
-@(test)
-action_invert_if_with_else_edit :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
-
-main :: proc() {
-	x := 5
-	if x{*} == 0 {
-		foo()
-	} else {
-		bar()
-	}
-}
-`,
-		packages = {},
-	}
-
-	expected := `if x != 0 {
-		bar()
-	} else {
-		foo()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
 action_invert_if_with_init :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
-	if x{*} := foo(); x < 0 {
-		bar()
-	}
+-	if x{*} := foo(); x < 0 {
+-		bar()
+-	}
++	if x := foo(); x >= 0 {
++		return
++	}
++	bar()
 }
 `,
-		packages = {},
-	}
-
-	test.expect_action(t, &source, {INVERT_IF_ACTION})
-}
-
-@(test)
-action_invert_if_with_init_edit :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
-
-main :: proc() {
-	if x{*} := foo(); x < 0 {
-		bar()
-	}
-}
-`,
-		packages = {},
-	}
-
-	expected := `if x := foo(); x >= 0 {
-	} else {
-		bar()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
@@ -168,166 +107,152 @@ main :: proc() {
 
 @(test)
 action_invert_if_not_eq :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
-	if x{*} != 0 {
-		foo()
-	}
+-	if x{*} != 0 {
+-		foo()
+-	}
++	if x == 0 {
++		return
++	}
++	foo()
 }
 `,
-		packages = {},
-	}
-
-	expected := `if x == 0 {
-	} else {
-		foo()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
 action_invert_if_lt :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
-	if x{*} < 5 {
-		foo()
-	}
+-	if x{*} < 5 {
+-		foo()
+-	}
++	if x >= 5 {
++		return
++	}
++	foo()
 }
 `,
-		packages = {},
-	}
-
-	expected := `if x >= 5 {
-	} else {
-		foo()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
 action_invert_if_gt :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
-	if x{*} > 5 {
-		foo()
-	}
+-	if x{*} > 5 {
+-		foo()
+-	}
++	if x <= 5 {
++		return
++	}
++	foo()
 }
 `,
-		packages = {},
-	}
-
-	expected := `if x <= 5 {
-	} else {
-		foo()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
 action_invert_if_le :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
-	if x{*} <= 5 {
-		foo()
-	}
+-	if x{*} <= 5 {
+-		foo()
+-	}
++	if x > 5 {
++		return
++	}
++	foo()
 }
 `,
-		packages = {},
-	}
-
-	expected := `if x > 5 {
-	} else {
-		foo()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
 action_invert_if_negated :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
-	if !x{*} {
-		foo()
-	}
+-	if !x{*} {
+-		foo()
+-	}
++	if x {
++		return
++	}
++	foo()
 }
 `,
-		packages = {},
-	}
-
-	expected := `if x {
-	} else {
-		foo()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
 action_invert_if_boolean :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
-	if x{*} {
-		foo()
-	}
+-	if x{*} {
+-		foo()
+-	}
++	if !x {
++		return
++	}
++	foo()
 }
 `,
-		packages = {},
-	}
-
-	expected := `if !x {
-	} else {
-		foo()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
 action_invert_if_else_if_chain :: proc(t: ^testing.T) {
-	source := test.Source {
-		main = `package test
+	test.expect_code_action_diff(
+		t,
+		`package test
 
 main :: proc() {
 	x := something()
-	if x{*} > 0 {
-		statement1()
-	} else if x < 0 {
-		statement2()
-	} else {
-		statement3()
-	}
+-	if x{*} > 0 {
+-		statement1()
+-	} else if x < 0 {
+-		statement2()
+-	} else {
+-		statement3()
+-	}
++	if x <= 0 {
++	if x < 0 {
++		statement2()
++	} else {
++		statement3()
++	}
++	} else {
++		statement1()
++	}
 }
 `,
-		packages = {},
-	}
-
-	expected := `if x <= 0 {
-	if x < 0 {
-		statement2()
-	} else {
-		statement3()
-	}
-	} else {
-		statement1()
-	}`
-
-	test.expect_action_with_edit(t, &source, INVERT_IF_ACTION, expected)
+		INVERT_IF_ACTION,
+	)
 }
 
 @(test)
@@ -397,4 +322,49 @@ main :: proc() {
 
 	// Should have the invert action for an if statement nested inside an else-if body
 	test.expect_action(t, &source, {INVERT_IF_ACTION})
+}
+
+@(test)
+action_invert_if_with_else_and_return_in_body :: proc(t: ^testing.T) {
+	test.expect_code_action_diff(
+		t,
+		`package test
+
+main :: proc() {
+-	if x{*} == 0 {
+-		foo()
+-		return
+-	}
+-	bar()
++	if x != 0 {
++		bar()
++		return
++	}
++	foo()
+}
+`,
+		INVERT_IF_ACTION,
+	)
+}
+
+@(test)
+action_invert_if_in_loop_with_continue :: proc(t: ^testing.T) {
+	test.expect_code_action_diff(
+		t,
+		`package test
+
+main :: proc() {
+	for i in 0..<10 {
+-		if x{*} < 0 {
+-			foo()
+-		}
++		if x >= 0 {
++			continue
++		}
++		foo()
+	}
+}
+`,
+		INVERT_IF_ACTION,
+	)
 }
