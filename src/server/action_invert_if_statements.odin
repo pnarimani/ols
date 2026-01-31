@@ -23,37 +23,37 @@ If_Inversion_Context :: struct {
 }
 
 Control_Flow_Context :: enum {
-	Proc,      // Use return
-	For_Loop,  // Use continue
+	Proc, // Use return
+	For_Loop, // Use continue
 }
 
 Inversion_Strategy :: enum {
-	Swap_Branches,            // Has else, normal swap
+	Swap_Branches, // Has else, normal swap
 	Unwrap_After_Control_Flow, // Has else, then ends with control flow
-	Move_Following_Stmts,     // No else, following stmts exist, body ends with control flow
-	Insert_Early_Return,      // No else, can early return
-	Create_Empty_Branch,      // No else, cannot early return
-	Use_Or_Branch,            // Pattern: if x, ok := expr; ok { ... } -> x := expr or_continue/or_return
+	Move_Following_Stmts, // No else, following stmts exist, body ends with control flow
+	Insert_Early_Return, // No else, can early return
+	Create_Empty_Branch, // No else, cannot early return
+	Use_Or_Branch, // Pattern: if x, ok := expr; ok { ... } -> x := expr or_continue/or_return
 }
 
 Block_Text_Options :: struct {
-	preserve_indent: bool,  // Use original indentation
+	preserve_indent: bool, // Use original indentation
 	target_indent:   string, // Target indentation (when not preserving)
 	base_indent:     string, // Base indentation for the containing block (for else-if formatting)
-	exclude_last:    bool,  // Exclude the last statement
+	exclude_last:    bool, // Exclude the last statement
 }
 
-@(private="package")
+@(private = "package")
 add_invert_if_action :: proc(
 	document: ^Document,
 	position: common.AbsolutePosition,
 	uri: string,
 	actions: ^[dynamic]CodeAction,
 ) {
-	inv_ctx := If_Inversion_Context{
+	inv_ctx := If_Inversion_Context {
 		src = document.ast.src,
 	}
-	
+
 	if !find_if_stmt_at_position(&inv_ctx, document.ast.decls[:], position) {
 		return
 	}
@@ -63,10 +63,8 @@ add_invert_if_action :: proc(
 		return
 	}
 
-	// if there are statements after the if and the if body ends with control flow
-	// we need to include those statements in the range since they will be moved
 	range: common.Range
-	if len(inv_ctx.following_stmts) > 0 && body_ends_with_control_flow(inv_ctx.if_stmt.body) && inv_ctx.if_stmt.else_stmt == nil {
+	if should_edit_statements_after_if(inv_ctx) {
 		last_stmt := inv_ctx.following_stmts[len(inv_ctx.following_stmts) - 1]
 		range.start = common.token_pos_to_position(inv_ctx.if_stmt.pos, document.ast.src)
 		end_pos := last_stmt.end
@@ -90,11 +88,26 @@ add_invert_if_action :: proc(
 	)
 }
 
+should_edit_statements_after_if :: proc(inv_ctx: If_Inversion_Context) -> bool {
+	// if there are statements after the if and the if body ends with control flow
+	// we need to include those statements in the range since they will be moved
+	// BUT only for Move_Following_Stmts strategy, not for Use_Or_Branch
+	return(
+		len(inv_ctx.following_stmts) > 0 &&
+		body_ends_with_control_flow(inv_ctx.if_stmt.body) &&
+		inv_ctx.if_stmt.else_stmt == nil &&
+		inv_ctx.strategy != .Use_Or_Branch \
+	)
+}
 // Find the innermost if statement that contains the given position
 // This will NOT return else-if statements, only top-level if statements
 // Also will not return an if statement if the position is in its else clause
 // Populates the context with the if statement, control flow context, following statements, and early return capability
-find_if_stmt_at_position :: proc(ctx: ^If_Inversion_Context, stmts: []^ast.Stmt, position: common.AbsolutePosition) -> bool {
+find_if_stmt_at_position :: proc(
+	ctx: ^If_Inversion_Context,
+	stmts: []^ast.Stmt,
+	position: common.AbsolutePosition,
+) -> bool {
 	for stmt in stmts {
 		if stmt == nil {
 			continue
@@ -106,7 +119,14 @@ find_if_stmt_at_position :: proc(ctx: ^If_Inversion_Context, stmts: []^ast.Stmt,
 	return false
 }
 
-find_if_stmt_in_node :: proc(inv_ctx: ^If_Inversion_Context, node: ^ast.Node, position: common.AbsolutePosition, in_else_clause: bool, flow_ctx: Control_Flow_Context, is_last_in_parent: bool) -> bool {
+find_if_stmt_in_node :: proc(
+	inv_ctx: ^If_Inversion_Context,
+	node: ^ast.Node,
+	position: common.AbsolutePosition,
+	in_else_clause: bool,
+	flow_ctx: Control_Flow_Context,
+	is_last_in_parent: bool,
+) -> bool {
 	if node == nil {
 		return false
 	}
@@ -172,7 +192,14 @@ find_if_stmt_in_node :: proc(inv_ctx: ^If_Inversion_Context, node: ^ast.Node, po
 	return false
 }
 
-handle_if_stmt_search :: proc(inv_ctx: ^If_Inversion_Context, n: ^ast.If_Stmt, position: common.AbsolutePosition, in_else_clause: bool, flow_ctx: Control_Flow_Context, is_last_in_parent: bool) -> bool {
+handle_if_stmt_search :: proc(
+	inv_ctx: ^If_Inversion_Context,
+	n: ^ast.If_Stmt,
+	position: common.AbsolutePosition,
+	in_else_clause: bool,
+	flow_ctx: Control_Flow_Context,
+	is_last_in_parent: bool,
+) -> bool {
 	if n.else_stmt != nil && position_in_node(n.else_stmt, position) {
 		if find_if_stmt_in_node(inv_ctx, n.else_stmt, position, true, flow_ctx, is_last_in_parent) {
 			return true
@@ -198,11 +225,17 @@ handle_if_stmt_search :: proc(inv_ctx: ^If_Inversion_Context, n: ^ast.If_Stmt, p
 	return true
 }
 
-search_block_stmts :: proc(inv_ctx: ^If_Inversion_Context, stmts: []^ast.Stmt, position: common.AbsolutePosition, flow_ctx: Control_Flow_Context, is_last_in_parent: bool) -> bool {
+search_block_stmts :: proc(
+	inv_ctx: ^If_Inversion_Context,
+	stmts: []^ast.Stmt,
+	position: common.AbsolutePosition,
+	flow_ctx: Control_Flow_Context,
+	is_last_in_parent: bool,
+) -> bool {
 	for stmt, i in stmts {
 		is_last := i == len(stmts) - 1
 		if find_if_stmt_in_node(inv_ctx, stmt, position, false, flow_ctx, is_last && is_last_in_parent) {
-			inv_ctx.following_stmts = stmts[i+1:]
+			inv_ctx.following_stmts = stmts[i + 1:]
 			inv_ctx.can_early_return = is_last && is_last_in_parent
 			return true
 		}
@@ -248,96 +281,105 @@ extract_node_text :: proc(src: string, node: ^ast.Node) -> string {
 	return src[node.pos.offset:node.end.offset]
 }
 
-determine_strategy :: proc(if_stmt: ^ast.If_Stmt, following_stmts: []^ast.Stmt, can_early_return: bool, control_flow_ctx: Control_Flow_Context) -> Inversion_Strategy {
+determine_strategy :: proc(
+	if_stmt: ^ast.If_Stmt,
+	following_stmts: []^ast.Stmt,
+	can_early_return: bool,
+	control_flow_ctx: Control_Flow_Context,
+) -> Inversion_Strategy {
 	has_else := if_stmt.else_stmt != nil
 	body_has_control_flow := body_ends_with_control_flow(if_stmt.body)
 	has_following := len(following_stmts) > 0
-	
+
 	if has_else {
 		if body_has_control_flow {
 			return .Unwrap_After_Control_Flow
 		}
 		return .Swap_Branches
 	}
-	
+
 	// Check for the or_continue/or_return pattern: if x, ok := expr; ok { ... }
 	if can_use_or_branch(if_stmt, control_flow_ctx, can_early_return) {
 		return .Use_Or_Branch
 	}
-	
+
 	if body_has_control_flow && has_following {
 		return .Move_Following_Stmts
 	}
-	
+
 	if can_early_return {
 		return .Insert_Early_Return
 	}
-	
+
 	return .Create_Empty_Branch
 }
 
 // Check if the if statement matches the pattern: if x, ok := expr; ok { ... }
 // which can be converted to: x := expr or_continue (in loop) or x := expr or_return (in proc)
-can_use_or_branch :: proc(if_stmt: ^ast.If_Stmt, control_flow_ctx: Control_Flow_Context, can_early_return: bool) -> bool {
+can_use_or_branch :: proc(
+	if_stmt: ^ast.If_Stmt,
+	control_flow_ctx: Control_Flow_Context,
+	can_early_return: bool,
+) -> bool {
 	// Must have init statement and no else clause
 	if if_stmt.init == nil || if_stmt.else_stmt != nil {
 		return false
 	}
-	
+
 	// For loops: always can use or_continue
 	// For procs: only if can_early_return (meaning the if is last in its block)
 	if control_flow_ctx == .Proc && !can_early_return {
 		return false
 	}
-	
+
 	// The init must be a value declaration
 	value_decl, ok := if_stmt.init.derived.(^ast.Value_Decl)
 	if !ok {
 		return false
 	}
-	
+
 	// Must have exactly 2 names (e.g., symbol, ok)
 	if len(value_decl.names) != 2 {
 		return false
 	}
-	
+
 	// The condition must be a simple identifier
 	cond_ident, cond_ok := if_stmt.cond.derived.(^ast.Ident)
 	if !cond_ok {
 		return false
 	}
-	
+
 	// The second name in the declaration must match the condition
 	second_name, name_ok := value_decl.names[1].derived.(^ast.Ident)
 	if !name_ok {
 		return false
 	}
-	
+
 	// Check if the condition identifier matches the second declaration name (the "ok" variable)
 	return cond_ident.name == second_name.name
 }
 
 // Generate or_continue/or_return transformation
-// Transforms: if symbol, ok := expr; ok { body } 
+// Transforms: if symbol, ok := expr; ok { body }
 // To: symbol := expr or_continue \n body
 generate_or_branch :: proc(sb: ^strings.Builder, ctx: ^If_Inversion_Context) -> (string, bool) {
 	value_decl := ctx.if_stmt.init.derived.(^ast.Value_Decl)
-	
+
 	// Get the first name (the actual value, not the ok)
 	first_name, ok := value_decl.names[0].derived.(^ast.Ident)
 	if !ok {
 		return "", false
 	}
-	
+
 	// Get the expression being assigned
 	if len(value_decl.values) == 0 {
 		return "", false
 	}
 	expr_text := extract_node_text(ctx.src, value_decl.values[0])
-	
+
 	// Determine which or_* to use
 	or_branch := ctx.control_flow_ctx == .For_Loop ? "or_continue" : "or_return"
-	
+
 	// Write: name := expr or_continue
 	strings.write_string(sb, first_name.name)
 	strings.write_string(sb, " := ")
@@ -345,12 +387,12 @@ generate_or_branch :: proc(sb: ^strings.Builder, ctx: ^If_Inversion_Context) -> 
 	strings.write_string(sb, " ")
 	strings.write_string(sb, or_branch)
 	strings.write_string(sb, "\n")
-	
+
 	// Write the body statements at the base indent level
 	then_body_text := get_block_body_text_at_indent(ctx.src, ctx.if_stmt.body, ctx.base_indent)
 	then_body_text = strings.trim_right(then_body_text, "\n")
 	strings.write_string(sb, then_body_text)
-	
+
 	return strings.to_string(sb^), true
 }
 
@@ -413,9 +455,9 @@ generate_unwrap_optimization :: proc(sb: ^strings.Builder, ctx: ^If_Inversion_Co
 generate_move_following_stmts :: proc(sb: ^strings.Builder, ctx: ^If_Inversion_Context) {
 	then_body_without_control := get_block_body_without_last_stmt_at_indent(ctx.src, ctx.if_stmt.body, ctx.base_indent)
 	then_body_without_control = strings.trim_right(then_body_without_control, "\n")
-	
+
 	control_flow_text := get_last_stmt_text(ctx.src, ctx.if_stmt.body, ctx.base_indent)
-	
+
 	strings.write_string(sb, "{\n")
 	for s in ctx.following_stmts {
 		if s == nil do continue
@@ -438,7 +480,7 @@ generate_move_following_stmts :: proc(sb: ^strings.Builder, ctx: ^If_Inversion_C
 generate_early_return :: proc(sb: ^strings.Builder, ctx: ^If_Inversion_Context) {
 	then_body_text := get_block_body_text_at_indent(ctx.src, ctx.if_stmt.body, ctx.base_indent)
 	then_body_text = strings.trim_right(then_body_text, "\n")
-	
+
 	control_flow_stmt := ctx.control_flow_ctx == .For_Loop ? "continue" : "return"
 
 	strings.write_string(sb, "{\n")
@@ -465,7 +507,12 @@ generate_empty_branch :: proc(sb: ^strings.Builder, ctx: ^If_Inversion_Context) 
 
 generate_inverted_if :: proc(inv_ctx: ^If_Inversion_Context) -> (string, bool) {
 	inv_ctx.base_indent = get_line_indentation(inv_ctx.src, inv_ctx.if_stmt.pos.offset)
-	inv_ctx.strategy = determine_strategy(inv_ctx.if_stmt, inv_ctx.following_stmts, inv_ctx.can_early_return, inv_ctx.control_flow_ctx)
+	inv_ctx.strategy = determine_strategy(
+		inv_ctx.if_stmt,
+		inv_ctx.following_stmts,
+		inv_ctx.can_early_return,
+		inv_ctx.control_flow_ctx,
+	)
 
 	sb := strings.builder_make(context.temp_allocator)
 
@@ -490,7 +537,7 @@ generate_inverted_if :: proc(inv_ctx: ^If_Inversion_Context) -> (string, bool) {
 	case .Create_Empty_Branch:
 		generate_empty_branch(&sb, inv_ctx)
 	case .Use_Or_Branch:
-		// Already handled above
+	// Already handled above
 	}
 
 	return strings.to_string(sb), true
@@ -510,7 +557,7 @@ extract_block_text :: proc(src: string, stmt: ^ast.Stmt, options: Block_Text_Opt
 
 		stmts_to_process := block.stmts
 		if options.exclude_last && len(stmts_to_process) > 0 {
-			stmts_to_process = stmts_to_process[:len(stmts_to_process)-1]
+			stmts_to_process = stmts_to_process[:len(stmts_to_process) - 1]
 		}
 
 		if len(stmts_to_process) == 0 {
@@ -553,12 +600,20 @@ get_block_body_text :: proc(src: string, stmt: ^ast.Stmt, base_indent: string) -
 
 // Extract the body text at a specific indentation level (for unwrapping) - DEPRECATED, use extract_block_text
 get_block_body_text_at_indent :: proc(src: string, stmt: ^ast.Stmt, target_indent: string) -> string {
-	return extract_block_text(src, stmt, Block_Text_Options{target_indent = target_indent, base_indent = target_indent})
+	return extract_block_text(
+		src,
+		stmt,
+		Block_Text_Options{target_indent = target_indent, base_indent = target_indent},
+	)
 }
 
 // Extract the body text at a specific indentation level, excluding the last statement - DEPRECATED, use extract_block_text
 get_block_body_without_last_stmt_at_indent :: proc(src: string, stmt: ^ast.Stmt, target_indent: string) -> string {
-	return extract_block_text(src, stmt, Block_Text_Options{target_indent = target_indent, base_indent = target_indent, exclude_last = true})
+	return extract_block_text(
+		src,
+		stmt,
+		Block_Text_Options{target_indent = target_indent, base_indent = target_indent, exclude_last = true},
+	)
 }
 
 // Get the text of the last statement in a block
@@ -584,31 +639,39 @@ get_last_stmt_text :: proc(src: string, stmt: ^ast.Stmt, target_indent: string) 
 
 // For else-if chains, we don't invert them, just preserve but re-indent
 // For else-if chains, preserve structure (don't invert) but re-indent
-format_else_if_chain :: proc(src: string, if_stmt: ^ast.If_Stmt, base_indent: string, is_inline: bool) -> (string, bool) {
+format_else_if_chain :: proc(
+	src: string,
+	if_stmt: ^ast.If_Stmt,
+	base_indent: string,
+	is_inline: bool,
+) -> (
+	string,
+	bool,
+) {
 	sb := strings.builder_make(context.temp_allocator)
-	
+
 	// Write leading indent only if not inline (inline follows "} else ")
 	if !is_inline {
 		strings.write_string(&sb, base_indent)
 		strings.write_string(&sb, "\t")
 	}
-	
+
 	// Write "if <cond> {"
 	strings.write_string(&sb, "if ")
-	
+
 	if if_stmt.init != nil {
 		init_text := extract_node_text(src, if_stmt.init)
 		strings.write_string(&sb, init_text)
 		strings.write_string(&sb, "; ")
 	}
-	
+
 	if if_stmt.cond != nil {
 		cond_text := extract_node_text(src, if_stmt.cond)
 		strings.write_string(&sb, cond_text)
 	}
-	
+
 	strings.write_string(&sb, " {\n")
-	
+
 	// Write the body with increased indentation
 	body_indent := is_inline ? base_indent : strings.concatenate({base_indent, "\t"}, context.temp_allocator)
 	if if_stmt.body != nil {
@@ -616,9 +679,9 @@ format_else_if_chain :: proc(src: string, if_stmt: ^ast.If_Stmt, base_indent: st
 		body_text := extract_block_text(src, if_stmt.body, Block_Text_Options{target_indent = nested_indent})
 		strings.write_string(&sb, body_text)
 	}
-	
+
 	strings.write_string(&sb, body_indent)
-	
+
 	// Handle else/else-if
 	if if_stmt.else_stmt != nil {
 		#partial switch else_block in if_stmt.else_stmt.derived {
@@ -642,7 +705,7 @@ format_else_if_chain :: proc(src: string, if_stmt: ^ast.If_Stmt, base_indent: st
 	} else {
 		strings.write_string(&sb, "}\n")
 	}
-	
+
 	return strings.to_string(sb), true
 }
 
@@ -652,13 +715,24 @@ generate_inverted_if_for_else :: proc(src: string, if_stmt: ^ast.If_Stmt, base_i
 }
 
 // DEPRECATED: Use format_else_if_chain with is_inline=true
-generate_inverted_if_for_else_inline :: proc(src: string, if_stmt: ^ast.If_Stmt, base_indent: string) -> (string, bool) {
+generate_inverted_if_for_else_inline :: proc(
+	src: string,
+	if_stmt: ^ast.If_Stmt,
+	base_indent: string,
+) -> (
+	string,
+	bool,
+) {
 	return format_else_if_chain(src, if_stmt, base_indent, true)
 }
 
 // Get block body text with specific indentation (re-indenting) - DEPRECATED, use extract_block_text
 get_block_body_text_reindented :: proc(src: string, stmt: ^ast.Stmt, target_indent: string) -> string {
-	return extract_block_text(src, stmt, Block_Text_Options{target_indent = target_indent, base_indent = target_indent})
+	return extract_block_text(
+		src,
+		stmt,
+		Block_Text_Options{target_indent = target_indent, base_indent = target_indent},
+	)
 }
 
 // Invert a condition expression
