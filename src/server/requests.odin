@@ -1,9 +1,9 @@
 #+feature dynamic-literals
 package server
 
-import "src:doc"
 import "base:intrinsics"
 import "base:runtime"
+import doc "src:documents"
 
 import "core:encoding/json"
 import "core:fmt"

@@ -7,13 +7,13 @@ import "core:odin/tokenizer"
 import "core:strings"
 
 import "src:common"
-import "src:doc"
+import doc "src:documents"
 
 // Type aliases for backwards compatibility - these will be removed once all code migrates to doc package
 ParserError :: doc.ParserError
 Package :: doc.Package
-Document :: doc.Document
-DocumentContext :: doc.DocumentContext
+Document :: doc.DocumentData
+DocumentContext :: doc.Document
 
 // RequestContext bundles together all data needed for handling a request.
 // Created fresh per-request with data from DocumentContext and symbols.

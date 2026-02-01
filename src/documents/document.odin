@@ -1,4 +1,4 @@
-package doc
+package documents
 
 import "core:odin/ast"
 
@@ -23,13 +23,13 @@ ParserError :: struct {
 
 // Document represents an open document in the editor.
 // Stores URI and raw text bytes in persistent memory.
-Document :: struct {
+DocumentData :: struct {
 	uri:  common.Uri,
 	text: []u8,
 }
 
 // DocumentContext holds parsed data for a document.
-DocumentContext :: struct {
+Document :: struct {
 	uri:          common.Uri,
 	text:         []u8,
 	ast:          ast.File,

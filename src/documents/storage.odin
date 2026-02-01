@@ -1,4 +1,4 @@
-package doc
+package documents
 
 import "core:log"
 import "core:mem"
@@ -18,7 +18,7 @@ ContentChangeEvent :: struct {
 
 DocumentStorage :: struct {
 	allocator: mem.Allocator,
-	documents: map[string]Document,
+	documents: map[string]DocumentData,
 }
 
 @(private = "file")
@@ -28,7 +28,7 @@ storage: DocumentStorage
 // Must be called before any document operations.
 init :: proc() {
 	storage.allocator = context.allocator
-	storage.documents = make(map[string]Document, storage.allocator)
+	storage.documents = make(map[string]DocumentData, storage.allocator)
 }
 
 shutdown :: proc() {
@@ -43,7 +43,7 @@ shutdown :: proc() {
 
 // Get a document by URI string. Returns pointer to stored document, or nil if not found.
 // Will attempt to load from disk if document is not in storage.
-get :: proc(uri_string: string) -> ^Document {
+get :: proc(uri_string: string) -> ^DocumentData {
 	uri, parsed_ok := common.parse_uri(uri_string, context.temp_allocator)
 
 	if !parsed_ok {
@@ -59,7 +59,7 @@ get :: proc(uri_string: string) -> ^Document {
 
 // Load a document from disk and store it in storage.
 // Returns pointer to the stored document, or nil on failure.
-load_from_disk :: proc(uri: common.Uri) -> ^Document {
+load_from_disk :: proc(uri: common.Uri) -> ^DocumentData {
 	fullpath := get_fullpath_from_uri(uri.path, context.temp_allocator)
 
 	data, read_ok := os.read_entire_file(fullpath, context.temp_allocator)
@@ -79,7 +79,7 @@ open :: proc {
 	open_from_uri,
 }
 
-open_from_uri_string :: proc(uri_string: string, text: string) -> (^Document, common.Error) {
+open_from_uri_string :: proc(uri_string: string, text: string) -> (^DocumentData, common.Error) {
 	// Parse URI with temp allocator first, then clone to persistent storage
 	uri, parsed_ok := common.parse_uri(uri_string, context.temp_allocator)
 
@@ -91,7 +91,7 @@ open_from_uri_string :: proc(uri_string: string, text: string) -> (^Document, co
 	return open_from_uri(uri, text)
 }
 
-open_from_uri :: proc(uri: common.Uri, text: string) -> (^Document, common.Error) {
+open_from_uri :: proc(uri: common.Uri, text: string) -> (^DocumentData, common.Error) {
 	if document, ok := &storage.documents[uri.path]; ok {
 		// Document already exists, update it
 		// Free old data with persistent allocator
@@ -105,7 +105,7 @@ open_from_uri :: proc(uri: common.Uri, text: string) -> (^Document, common.Error
 	}
 
 	// New document - clone data to persistent storage
-	document := Document {
+	document := DocumentData {
 		uri  = common.clone_uri(uri, storage.allocator),
 		text = transmute([]u8)strings.clone(text, storage.allocator),
 	}

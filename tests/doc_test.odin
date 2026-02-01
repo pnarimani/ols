@@ -4,7 +4,7 @@ import "core:log"
 import "core:testing"
 
 import "src:common"
-import "src:doc"
+import doc "src:documents"
 
 @(test)
 doc_apply_changes_full_replace :: proc(t: ^testing.T) {

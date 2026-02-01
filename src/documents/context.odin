@@ -1,4 +1,4 @@
-package doc
+package documents
 
 import "core:fmt"
 import "core:odin/ast"
@@ -13,7 +13,7 @@ import "src:common"
 // Get a DocumentContext for a given URI string. Parses AST and imports fresh.
 // All allocations use the provided allocator (typically context.temp_allocator).
 // Returns nil if document not found or parsing fails.
-get_context :: proc(uri_string: string, config: ^common.Config, allocator := context.temp_allocator) -> (ctx: DocumentContext, ok: bool) {
+get_context :: proc(uri_string: string, config: ^common.Config, allocator := context.temp_allocator) -> (ctx: Document, ok: bool) {
 	document := get(uri_string)
 	if document == nil {
 		return {}, false
@@ -25,7 +25,7 @@ get_context :: proc(uri_string: string, config: ^common.Config, allocator := con
 // Create a DocumentContext from a Document. Parses AST and imports fresh.
 // All allocations use the provided allocator (typically context.temp_allocator).
 // Caller is responsible for freeing allocator when done.
-create_context :: proc(document: ^Document, config: ^common.Config, allocator := context.temp_allocator) -> (ctx: DocumentContext, ok: bool) {
+create_context :: proc(document: ^DocumentData, config: ^common.Config, allocator := context.temp_allocator) -> (ctx: Document, ok: bool) {
 	if document == nil {
 		return {}, false
 	}
