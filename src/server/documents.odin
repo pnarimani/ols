@@ -6,6 +6,7 @@ import "core:mem"
 import "core:odin/ast"
 import "core:odin/parser"
 import "core:odin/tokenizer"
+import "core:os"
 import "core:path/filepath"
 import path "core:path/slashpath"
 import "core:strings"
@@ -93,6 +94,28 @@ document_storage_shutdown :: proc() {
 	delete(document_storage.documents)
 }
 
+// Load a document from disk and store it in document_storage.
+// Returns pointer to the stored document, or nil on failure.
+document_load_from_disk :: proc(uri: common.Uri) -> ^Document {
+	fullpath := get_fullpath_from_uri(uri.path, context.temp_allocator)
+	
+	data, read_ok := os.read_entire_file(fullpath, context.temp_allocator)
+	if !read_ok {
+		log.errorf("Failed to read file from disk: %v", uri.path)
+		return nil
+	}
+
+	// Create document and store it in persistent storage
+	document := Document {
+		uri  = common.clone_uri(uri, document_storage.allocator),
+		text = transmute([]u8)strings.clone(string(data), document_storage.allocator),
+	}
+
+	key := strings.clone(uri.path, document_storage.allocator)
+	document_storage.documents[key] = document
+
+	return &document_storage.documents[key]
+}
 
 document_get :: proc(uri_string: string) -> ^Document {
 	uri, parsed_ok := common.parse_uri(uri_string, context.temp_allocator)
@@ -101,18 +124,11 @@ document_get :: proc(uri_string: string) -> ^Document {
 		return nil
 	}
 
-	document := &document_storage.documents[uri.path]
-
-	if document == nil {
-		log.errorf("Failed to get document %v", uri.path)
-		return nil
+	if document, ok := &document_storage.documents[uri.path]; ok {
+		return document
 	}
 
-	return document
-}
-
-document_release :: proc(document: ^Document) {
-	// No-op: reference counting removed
+	return document_load_from_disk(uri)
 }
 
 // Create a DocumentContext from a Document. Parses AST and imports fresh.
@@ -149,7 +165,7 @@ document_open :: proc(uri_string: string, text: string, config: ^common.Config, 
 		return .ParseError
 	}
 
-	if document := &document_storage.documents[uri.path]; document != nil {
+	if document, ok := &document_storage.documents[uri.path]; ok {
 		// Document already exists, update it
 		// Free old data with persistent allocator
 		common.delete_uri(document.uri, document_storage.allocator)
@@ -165,7 +181,8 @@ document_open :: proc(uri_string: string, text: string, config: ^common.Config, 
 			text = transmute([]u8)strings.clone(text, document_storage.allocator),
 		}
 
-		document_storage.documents[strings.clone(uri.path, document_storage.allocator)] = document
+		key := strings.clone(uri.path, document_storage.allocator)
+		document_storage.documents[key] = document
 	}
 
 	return .None
