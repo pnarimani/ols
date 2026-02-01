@@ -68,6 +68,8 @@ thread_request_main :: proc(data: rawptr) {
 	context.logger = get_file_logger()
 
 	for common.config.running {
+		defer free_all(context.temp_allocator)
+
 		header, success := read_and_parse_header(request_data.reader)
 
 		if (!success) {
@@ -115,8 +117,7 @@ thread_request_main :: proc(data: rawptr) {
 		method := root["method"].(json.String)
 
 		if method == "$/cancelRequest" {
-			append(&deletings, Request{id = id})
-			json.destroy_value(root)
+			append(&deletings, Request{id = id, value = root})
 		} else if method in notification_map {
 			append(&requests, Request{value = root, is_notification = true})
 			sync.sema_post(&requests_sempahore)
@@ -126,8 +127,6 @@ thread_request_main :: proc(data: rawptr) {
 		}
 
 		sync.mutex_unlock(&requests_mutex)
-
-		free_all(context.temp_allocator)
 	}
 }
 
@@ -258,48 +257,52 @@ notification_map: map[string]struct{} = {
 }
 
 consume_requests :: proc(config: ^common.Config, writer: ^Writer) -> bool {
-	temp_requests := make([dynamic]Request, 0, context.allocator)
-	defer delete(temp_requests)
+	context.allocator = context.temp_allocator
+	defer free_all(context.temp_allocator)
 
-	sync.mutex_lock(&requests_mutex)
+	requests_copy := make([dynamic]Request, 4)
 
-	for d in deletings {
-		delete_index := -1
-		for request, i in requests {
-			if request.id == d.id {
-				delete_index := i
-				break
+	{
+		sync.mutex_lock(&requests_mutex)
+		defer sync.mutex_unlock(&requests_mutex)
+
+		for d in deletings {
+			delete_index := -1
+			for request, i in requests {
+				if request.id == d.id {
+					delete_index = i
+					break
+				}
+			}
+			if delete_index != -1 {
+				cancel(requests[delete_index].value, requests[delete_index].id, writer, config)
+				ordered_remove(&requests, delete_index)
 			}
 		}
-		if delete_index != -1 {
-			cancel(requests[delete_index].value, requests[delete_index].id, writer, config)
-			ordered_remove(&requests, delete_index)
+
+		for request in requests {
+			append(&requests_copy, request)
 		}
 	}
-
-	for request in requests {
-		append(&temp_requests, request)
-	}
-
-	sync.mutex_unlock(&requests_mutex)
 
 	request_index := 0
 
-	for ; request_index < len(temp_requests); request_index += 1 {
-		request := temp_requests[request_index]
+	for ; request_index < len(requests_copy); request_index += 1 {
+		request := requests_copy[request_index]
 		call(request.value, request.id, writer, config)
-		free_all(context.temp_allocator)
 	}
 
-	sync.mutex_lock(&requests_mutex)
+	{
+		sync.mutex_lock(&requests_mutex)
+		defer sync.mutex_unlock(&requests_mutex)
 
-	for i := 0; i < request_index; i += 1 {
-		pop_front(&requests)
+		for i := 0; i < request_index; i += 1 {
+			pop_front(&requests)
+		}
 	}
 
-	sync.mutex_unlock(&requests_mutex)
 
-	if request_index != len(temp_requests) {
+	if request_index != len(requests_copy) {
 		sync.sema_post(&requests_sempahore)
 	}
 
@@ -312,14 +315,18 @@ consume_requests :: proc(config: ^common.Config, writer: ^Writer) -> bool {
 
 
 cancel :: proc(value: json.Value, id: RequestId, writer: ^Writer, config: ^common.Config) {
+	defer json.destroy_value(value)
+
 	response := make_response_message(id = id, params = ResponseParams{})
-
-	json.destroy_value(value)
-
 	send_response(response, writer)
 }
 
 call :: proc(value: json.Value, id: RequestId, writer: ^Writer, config: ^common.Config) {
+	// Use temp_allocator for all request-scoped allocations
+	context.allocator = context.temp_allocator
+	defer free_all(context.temp_allocator)
+	defer json.destroy_value(value)
+
 	root := value.(json.Object)
 
 	method, ok := root["method"].(json.String)
@@ -1077,7 +1084,7 @@ notification_did_open :: proc(
 
 	document := document_get(open_params.textDocument.uri)
 
-	diagnostics := make_diagnostic_collection(context.temp_allocator)
+	diagnostics := make_diagnostic_collection()
 
 	if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
 		check_unused_imports(doc_ctx, config, &diagnostics)
@@ -1176,7 +1183,7 @@ notification_did_save :: proc(
 
 	corrected_uri := common.create_uri(fullpath, context.temp_allocator)
 
-	diagnostics := make_diagnostic_collection(context.temp_allocator)
+	diagnostics := make_diagnostic_collection()
 
 	check(config.profile.checker_path[:], corrected_uri, config, &diagnostics)
 
@@ -1228,7 +1235,7 @@ request_semantic_token_full :: proc(
 		doc_ctx, ctx_ok := create_document_context(document, config)
 		if ctx_ok {
 			file := FileResolve {
-				symbols = resolve_entire_file(doc_ctx, .None, context.temp_allocator),
+				symbols = resolve_entire_file(doc_ctx),
 			}
 			tokens := get_semantic_tokens(doc_ctx, range, file.symbols)
 			tokens_params = semantic_tokens_to_response_params(tokens)
@@ -1272,7 +1279,7 @@ request_semantic_token_range :: proc(
 		doc_ctx, ctx_ok := create_document_context(document, config)
 		if ctx_ok {
 			file := FileResolve {
-				symbols = resolve_ranged_file(doc_ctx, semantic_params.range, context.temp_allocator),
+				symbols = resolve_ranged_file(doc_ctx, semantic_params.range),
 			}
 			tokens := get_semantic_tokens(doc_ctx, semantic_params.range, file.symbols)
 			tokens_params = semantic_tokens_to_response_params(tokens)
@@ -1389,7 +1396,7 @@ request_inlay_hint :: proc(
 	if !ctx_ok do return .InternalError
 
 	file := FileResolve {
-		symbols = resolve_ranged_file(doc_ctx, inlay_params.range, context.temp_allocator),
+		symbols = resolve_ranged_file(doc_ctx, inlay_params.range),
 	}
 
 	hints, hints_ok := get_inlay_hints(doc_ctx, inlay_params.range, file.symbols, config)

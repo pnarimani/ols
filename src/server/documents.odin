@@ -2,6 +2,7 @@ package server
 
 import "core:fmt"
 import "core:log"
+import "core:mem"
 import "core:odin/ast"
 import "core:odin/parser"
 import "core:odin/tokenizer"
@@ -57,7 +58,7 @@ make_request_context :: proc(doc: ^Document, pos: common.Position, config: ^comm
 		return {}, false
 	}
 
-	symbols := build_request_symbols(doc_ctx.imports, config, context.temp_allocator)
+	symbols := build_request_symbols(doc_ctx.imports, config)
 
 	return RequestContext{doc_ctx = doc_ctx, config = config, position = pos, symbols = symbols}, true
 }
@@ -69,16 +70,24 @@ Document :: struct {
 
 
 DocumentStorage :: struct {
+	allocator: mem.Allocator,
 	documents: map[string]Document,
 }
 
 document_storage: DocumentStorage
 
+// Initialize document storage with a persistent allocator.
+// Must be called before any document operations.
+document_storage_init :: proc() {
+	document_storage.allocator = context.allocator
+	document_storage.documents = make(map[string]Document, document_storage.allocator)
+}
+
 document_storage_shutdown :: proc() {
 	for k, v in document_storage.documents {
-		delete(v.text)
-		common.delete_uri(v.uri)
-		delete(k)
+		delete(v.text, document_storage.allocator)
+		common.delete_uri(v.uri, document_storage.allocator)
+		delete(k, document_storage.allocator)
 	}
 
 	delete(document_storage.documents)
@@ -109,27 +118,20 @@ document_release :: proc(document: ^Document) {
 // Create a DocumentContext from a Document. Parses AST and imports fresh.
 // All allocations use the provided allocator (typically context.temp_allocator).
 // Caller is responsible for freeing allocator when done.
-create_document_context :: proc(
-	document: ^Document,
-	config: ^common.Config,
-	allocator := context.temp_allocator,
-) -> (
-	ctx: DocumentContext,
-	ok: bool,
-) {
+create_document_context :: proc(document: ^Document, config: ^common.Config) -> (ctx: DocumentContext, ok: bool) {
 	if document == nil {
 		return {}, false
 	}
 
 	ctx.uri = document.uri
 	ctx.text = document.text
-	ctx.fullpath = get_fullpath_from_uri(document.uri.path, allocator)
-	ctx.package_name = get_package_name_from_uri(document.uri.path, allocator)
-	ctx.ast, ctx.errors, ok = parse_document_text(ctx.fullpath, document.text, allocator)
+	ctx.fullpath = get_fullpath_from_uri(document.uri.path)
+	ctx.package_name = get_package_name_from_uri(document.uri.path)
+	ctx.ast, ctx.errors, ok = parse_document_text(ctx.fullpath, document.text)
 	if !ok {
 		return {}, false
 	}
-	ctx.imports = parse_imports_from_ast(ctx.ast, ctx.package_name, document.text, config, allocator)
+	ctx.imports = parse_imports_from_ast(ctx.ast, ctx.package_name, document.text, config)
 
 	return ctx, true
 }
@@ -139,7 +141,8 @@ create_document_context :: proc(
 */
 
 document_open :: proc(uri_string: string, text: string, config: ^common.Config, writer: ^Writer) -> common.Error {
-	uri, parsed_ok := common.parse_uri(uri_string, context.allocator)
+	// Parse URI with temp allocator first, then clone to persistent storage
+	uri, parsed_ok := common.parse_uri(uri_string, context.temp_allocator)
 
 	if !parsed_ok {
 		log.error("Failed to parse uri")
@@ -148,19 +151,21 @@ document_open :: proc(uri_string: string, text: string, config: ^common.Config, 
 
 	if document := &document_storage.documents[uri.path]; document != nil {
 		// Document already exists, update it
-		common.delete_uri(document.uri)
-		delete(document.text)
+		// Free old data with persistent allocator
+		common.delete_uri(document.uri, document_storage.allocator)
+		delete(document.text, document_storage.allocator)
 
-		document.uri = uri
-		document.text = transmute([]u8)strings.clone(text)
+		// Clone new data to persistent storage
+		document.uri = common.clone_uri(uri, document_storage.allocator)
+		document.text = transmute([]u8)strings.clone(text, document_storage.allocator)
 	} else {
-		// New document
+		// New document - clone data to persistent storage
 		document := Document {
-			uri  = uri,
-			text = transmute([]u8)strings.clone(text),
+			uri  = common.clone_uri(uri, document_storage.allocator),
+			text = transmute([]u8)strings.clone(text, document_storage.allocator),
 		}
 
-		document_storage.documents[strings.clone(uri.path)] = document
+		document_storage.documents[strings.clone(uri.path, document_storage.allocator)] = document
 	}
 
 	return .None
@@ -211,20 +216,20 @@ document_apply_changes :: proc(
 			//total new size needed
 			new_size := len(lower) + len(change.text) + len(upper)
 
-			new_text := make([]u8, new_size)
+			new_text := make([]u8, new_size, document_storage.allocator)
 
 			//join the 3 splices into the text
 			copy(new_text, lower)
 			copy(new_text[len(lower):], middle)
 			copy(new_text[len(lower) + len(middle):], upper)
 
-			delete(document.text)
+			delete(document.text, document_storage.allocator)
 
 			document.text = new_text
 		} else {
-			new_text := make([]u8, len(change.text))
+			new_text := make([]u8, len(change.text), document_storage.allocator)
 			copy(new_text, change.text)
-			delete(document.text)
+			delete(document.text, document_storage.allocator)
 			document.text = new_text
 		}
 	}
@@ -248,16 +253,23 @@ document_close :: proc(uri_string: string) -> common.Error {
 		return .InvalidRequest
 	}
 
-	common.delete_uri(document.uri)
-	delete(document.text)
+	common.delete_uri(document.uri, document_storage.allocator)
+	delete(document.text, document_storage.allocator)
 
+	// The key in the map was cloned with persistent allocator, need to free it
+	for k, _ in document_storage.documents {
+		if k == uri.path {
+			delete(k, document_storage.allocator)
+			break
+		}
+	}
 	delete_key(&document_storage.documents, uri.path)
 
 	return .None
 }
 
-// Scope parser errors to file-private. Reset at start of parse_document_text().
-@(private = "file")
+// Scope parser errors to file-private and thread-local. Reset at start of parse_document_text().
+@(private = "file", thread_local)
 current_errors: [dynamic]ParserError
 
 parser_error_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {

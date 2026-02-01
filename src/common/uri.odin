@@ -44,7 +44,7 @@ parse_uri :: proc(value: string, allocator: mem.Allocator) -> (Uri, bool) {
 }
 
 //Note(Daniel, Again some really incomplete and scuffed uri writer)
-create_uri :: proc(path: string, allocator: mem.Allocator) -> Uri {
+create_uri :: proc(path: string, allocator := context.allocator) -> Uri {
 	path_forward, _ := filepath.to_slash(path, context.temp_allocator)
 
 	builder := strings.builder_make(allocator)
@@ -67,13 +67,26 @@ create_uri :: proc(path: string, allocator: mem.Allocator) -> Uri {
 	return uri
 }
 
-delete_uri :: proc(uri: Uri) {
+// Clone a Uri to a new allocator
+clone_uri :: proc(uri: Uri, allocator: mem.Allocator) -> Uri {
+	result: Uri
+	result.uri = strings.clone(uri.uri, allocator)
+	result.decode_full = strings.clone(uri.decode_full, allocator)
+	// path points into decode_full, calculate offset
+	if uri.decode_full != "" && uri.path != "" {
+		offset := len(uri.decode_full) - len(uri.path)
+		result.path = result.decode_full[offset:]
+	}
+	return result
+}
+
+delete_uri :: proc(uri: Uri, allocator := context.allocator) {
 	if uri.uri != "" {
-		delete(uri.uri)
+		delete(uri.uri, allocator)
 	}
 
 	if uri.decode_full != "" {
-		delete(uri.decode_full)
+		delete(uri.decode_full, allocator)
 	}
 }
 

@@ -170,7 +170,7 @@ get_generic_assignment :: proc(
 				//Handle the old way of type casting
 				if v, ok := keyword_map[ident.name]; ok {
 					//keywords
-					type_ident := new_type(Ident, ident.pos, ident.end, ast_context.allocator)
+					type_ident := new_type(Ident, ident.pos, ident.end)
 					type_ident.name = ident.name
 					append(results, type_ident)
 					break
@@ -246,7 +246,7 @@ get_generic_assignment :: proc(
 			case:
 				if ident, ok := v.expr.derived.(^ast.Ident); ok {
 					//TODO: Simple assumption that you are casting it the type.
-					type_ident := new_type(Ident, ident.pos, ident.end, ast_context.allocator)
+					type_ident := new_type(Ident, ident.pos, ident.end)
 					type_ident.name = ident.name
 					append(results, type_ident)
 				}
@@ -543,9 +543,9 @@ get_locals_using :: proc(expr: ^ast.Expr, ast_context: ^AstContext) {
 			}
 		case SymbolStructValue:
 			for name, i in v.names {
-				selector := new_type(ast.Selector_Expr, v.types[i].pos, v.types[i].end, ast_context.allocator)
+				selector := new_type(ast.Selector_Expr, v.types[i].pos, v.types[i].end)
 				selector.expr = expr
-				selector.field = new_type(ast.Ident, v.types[i].pos, v.types[i].end, ast_context.allocator)
+				selector.field = new_type(ast.Ident, v.types[i].pos, v.types[i].end)
 				selector.field.name = name
 				store_local(
 					ast_context,
@@ -562,9 +562,9 @@ get_locals_using :: proc(expr: ^ast.Expr, ast_context: ^AstContext) {
 			}
 		case SymbolBitFieldValue:
 			for name, i in v.names {
-				selector := new_type(ast.Selector_Expr, v.types[i].pos, v.types[i].end, ast_context.allocator)
+				selector := new_type(ast.Selector_Expr, v.types[i].pos, v.types[i].end)
 				selector.expr = expr
-				selector.field = new_type(ast.Ident, v.types[i].pos, v.types[i].end, ast_context.allocator)
+				selector.field = new_type(ast.Ident, v.types[i].pos, v.types[i].end)
 				selector.field.name = name
 				store_local(
 					ast_context,

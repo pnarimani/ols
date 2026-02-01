@@ -35,9 +35,16 @@ CodeAction :: struct {
 	edit:        WorkspaceEdit,
 }
 
-get_code_actions :: proc(doc_ctx: DocumentContext, range: common.Range, config: ^common.Config) -> ([]CodeAction, bool) {
+get_code_actions :: proc(
+	doc_ctx: DocumentContext,
+	range: common.Range,
+	config: ^common.Config,
+) -> (
+	[]CodeAction,
+	bool,
+) {
 	// Build fresh symbols for this request
-	symbols := build_request_symbols(doc_ctx.imports, config, context.temp_allocator)
+	symbols := build_request_symbols(doc_ctx.imports, config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -69,18 +76,58 @@ get_code_actions :: proc(doc_ctx: DocumentContext, range: common.Range, config: 
 
 	if position_context.selector_expr != nil {
 		if selector, ok := position_context.selector_expr.derived.(^ast.Selector_Expr); ok {
-			add_missing_imports(&ast_context, selector, strings.clone(doc_ctx.uri.uri, context.temp_allocator), config, &actions)
+			add_missing_imports(
+				&ast_context,
+				selector,
+				strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+				config,
+				&actions,
+			)
 		}
 	} else if position_context.import_stmt != nil {
 		remove_unused_imports(doc_ctx, strings.clone(doc_ctx.uri.uri, context.temp_allocator), config, &actions)
 	}
 
-	add_invert_if_action(doc_ctx, position_context.position, strings.clone(doc_ctx.uri.uri, context.temp_allocator), &actions)
-	add_redundant_else_action(doc_ctx, position_context.position, strings.clone(doc_ctx.uri.uri, context.temp_allocator), &actions)
-	add_extract_proc_action(doc_ctx, &ast_context, range, strings.clone(doc_ctx.uri.uri, context.temp_allocator), &actions)
-	add_extract_variable_action(doc_ctx, &ast_context, range, strings.clone(doc_ctx.uri.uri, context.temp_allocator), &actions)
-	add_inline_proc_action(doc_ctx, &ast_context, range, strings.clone(doc_ctx.uri.uri, context.temp_allocator), &actions)
-	add_inline_variable_action(doc_ctx, &ast_context, range, strings.clone(doc_ctx.uri.uri, context.temp_allocator), &actions)
+	add_invert_if_action(
+		doc_ctx,
+		position_context.position,
+		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		&actions,
+	)
+	add_redundant_else_action(
+		doc_ctx,
+		position_context.position,
+		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		&actions,
+	)
+	add_extract_proc_action(
+		doc_ctx,
+		&ast_context,
+		range,
+		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		&actions,
+	)
+	add_extract_variable_action(
+		doc_ctx,
+		&ast_context,
+		range,
+		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		&actions,
+	)
+	add_inline_proc_action(
+		doc_ctx,
+		&ast_context,
+		range,
+		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		&actions,
+	)
+	add_inline_variable_action(
+		doc_ctx,
+		&ast_context,
+		range,
+		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		&actions,
+	)
 
 	return actions[:], true
 }

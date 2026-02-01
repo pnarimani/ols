@@ -76,8 +76,8 @@ get_workspace_symbols :: proc(query: string) -> (workspace_symbols: []WorkspaceS
 	workspace_pkgs := find_workspace_packages()
 
 	// Build a symbol collection containing all workspace packages
-	symbols := make_symbol_collection(&common.config, context.temp_allocator)
-	loaded_pkgs := make(map[string]bool, 16, context.temp_allocator)
+	symbols := make_symbol_collection(&common.config)
+	loaded_pkgs := make(map[string]bool, 16)
 
 	// Load builtins
 	builtin_path := get_builtin_path()

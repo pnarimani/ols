@@ -1,3 +1,4 @@
+#+feature using-stmt
 /*
 
 LSP Reference:
@@ -5,7 +6,7 @@ https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/spe
 
 */
 
-#+feature using-stmt
+
 package server
 
 import "core:fmt"
@@ -133,7 +134,7 @@ get_semantic_tokens :: proc(
 	symbols: map[uintptr]SymbolAndNode,
 ) -> []SemanticToken {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, nil, context.temp_allocator)
+	request_symbols := build_request_symbols(doc_ctx.imports)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

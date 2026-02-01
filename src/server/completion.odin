@@ -34,7 +34,7 @@ Completion_Type :: enum {
 	Package,
 }
 
-get_completion_list :: proc(req_ctx: ^RequestContext, completion_context: CompletionContext) -> (CompletionList, bool) {
+get_completion_list :: proc(req_ctx: ^RequestContext, cmp_ctx: CompletionContext) -> (CompletionList, bool) {
 	list: CompletionList
 
 	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .Completion)
@@ -44,7 +44,7 @@ get_completion_list :: proc(req_ctx: ^RequestContext, completion_context: Comple
 	}
 
 	if position_context.import_stmt == nil {
-		if strings.contains_any(completion_context.triggerCharacter, "/:\"") {
+		if strings.contains_any(cmp_ctx.triggerCharacter, "/:\"") {
 			return list, true
 		}
 	} else {
@@ -52,7 +52,7 @@ get_completion_list :: proc(req_ctx: ^RequestContext, completion_context: Comple
 		// completion of modules when the initial '"' quote is entered.
 		if len(position_context.import_stmt.fullpath) > 1 &&
 		   position_context.position == position_context.import_stmt.end.offset &&
-		   completion_context.triggerCharacter == "\"" {
+		   cmp_ctx.triggerCharacter == "\"" {
 			// The completion was called for an import statement where the
 			// cursor is on the ending quote, so abort early to prevent
 			// performing another completion.
@@ -1741,7 +1741,7 @@ get_identifier_completion :: proc(
 
 		ast_context.current_package = ast_context.document_package
 
-		ident := new_type(ast.Ident, v.expr.pos, v.expr.end, context.temp_allocator)
+		ident := new_type(ast.Ident, v.expr.pos, v.expr.end)
 		ident.name = k
 
 		if symbol, ok := resolve_type_identifier(ast_context, ident^); ok {
@@ -1770,7 +1770,7 @@ get_identifier_completion :: proc(
 
 			ast_context.current_package = ast_context.document_package
 
-			ident := new_type(ast.Ident, {offset = local_offset}, {offset = local_offset}, context.temp_allocator)
+			ident := new_type(ast.Ident, {offset = local_offset}, {offset = local_offset})
 			ident.name = k
 
 			if symbol, ok := resolve_type_identifier(ast_context, ident^); ok {

@@ -11,7 +11,7 @@ import "src:common"
 
 get_rename :: proc(doc_ctx: DocumentContext, new_text: string, position: common.Position) -> (WorkspaceEdit, bool) {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, &common.config, context.temp_allocator)
+	request_symbols := build_request_symbols(doc_ctx.imports, &common.config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -105,7 +105,10 @@ get_struct_field_type_position :: proc(
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 	node: ^ast.Expr,
-) -> (Symbol, bool) {
+) -> (
+	Symbol,
+	bool,
+) {
 	#partial switch v in node.derived {
 	case ^ast.Ident:
 		symbol := Symbol {
@@ -219,7 +222,7 @@ prepare_rename :: proc(
 		range := common.get_token_range(position_context.implicit_selector_expr, ast_context.file.src)
 		// Skip the `.`
 		range.start.character += 1
-		symbol = Symbol{
+		symbol = Symbol {
 			range = range,
 		}
 	} else if position_context.field_value != nil &&

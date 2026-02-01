@@ -399,7 +399,7 @@ fallback_position_context_completion :: proc(
 
 		position_context.selector = e
 
-		ident := new_type(ast.Ident, e.pos, e.end, context.temp_allocator)
+		ident := new_type(ast.Ident, e.pos, e.end)
 		ident.name = string(position_context.file.src[last_dot + 1:end_offset])
 
 		if ident.name != "" {

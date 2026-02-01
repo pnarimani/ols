@@ -9,8 +9,8 @@ import "core:odin/tokenizer"
 import "core:reflect"
 import "core:strings"
 
-new_type :: proc($T: typeid, pos, end: tokenizer.Pos, allocator: mem.Allocator) -> ^T {
-	n, _ := mem.new(T, allocator)
+new_type :: proc($T: typeid, pos, end: tokenizer.Pos) -> ^T {
+	n := new(T)
 	n.pos = pos
 	n.end = end
 	n.derived = n
@@ -33,37 +33,33 @@ clone_type :: proc {
 	clone_comment_group,
 }
 
-clone_array :: proc(array: $A/[]^$T, allocator: mem.Allocator, unique_strings: ^map[string]string) -> A {
+clone_array :: proc(array: $A/[]^$T, unique_strings: ^map[string]string) -> A {
 	if len(array) == 0 {
 		return nil
 	}
-	res := make(A, len(array), allocator)
+	res := make(A, len(array))
 	for elem, i in array {
-		res[i] = cast(^T)clone_type(elem, allocator, unique_strings)
+		res[i] = cast(^T)clone_type(elem, unique_strings)
 	}
 	return res
 }
 
-clone_dynamic_array :: proc(
-	array: $A/[dynamic]^$T,
-	allocator: mem.Allocator,
-	unique_strings: ^map[string]string,
-) -> A {
+clone_dynamic_array :: proc(array: $A/[dynamic]^$T, unique_strings: ^map[string]string) -> A {
 	if len(array) == 0 {
 		return nil
 	}
-	res := make(A, len(array), allocator)
+	res := make(A, len(array))
 	for elem, i in array {
-		res[i] = auto_cast clone_type(elem, allocator, unique_strings)
+		res[i] = auto_cast clone_type(elem, unique_strings)
 	}
 	return res
 }
 
-clone_expr :: proc(node: ^ast.Expr, allocator: mem.Allocator, unique_strings: ^map[string]string) -> ^ast.Expr {
-	return cast(^ast.Expr)clone_node(node, allocator, unique_strings)
+clone_expr :: proc(node: ^ast.Expr, unique_strings: ^map[string]string) -> ^ast.Expr {
+	return cast(^ast.Expr)clone_node(node, unique_strings)
 }
 
-clone_node :: proc(node: ^ast.Node, allocator: mem.Allocator, unique_strings: ^map[string]string) -> ^ast.Node {
+clone_node :: proc(node: ^ast.Node, unique_strings: ^map[string]string) -> ^ast.Node {
 	using ast
 	if node == nil {
 		return nil
@@ -83,7 +79,7 @@ clone_node :: proc(node: ^ast.Node, allocator: mem.Allocator, unique_strings: ^m
 		panic("Cannot clone this node type")
 	}
 
-	res := cast(^Node)(mem.alloc(size, align, allocator) or_else panic("OOM"))
+	res := cast(^Node)(mem.alloc(size, align) or_else panic("OOM"))
 	src: rawptr = node
 	if node.derived != nil {
 		src = (^rawptr)(&node.derived)^
@@ -94,13 +90,13 @@ clone_node :: proc(node: ^ast.Node, allocator: mem.Allocator, unique_strings: ^m
 	res_ptr_any.id = ti.id
 
 	if unique_strings != nil && node.pos.file != "" {
-		res.pos.file = get_index_unique_string(unique_strings, allocator, node.pos.file)
+		res.pos.file = get_index_unique_string(unique_strings, node.pos.file)
 	} else {
 		res.pos.file = node.pos.file
 	}
 
 	if unique_strings != nil && node.end.file != "" {
-		res.end.file = get_index_unique_string(unique_strings, allocator, node.end.file)
+		res.end.file = get_index_unique_string(unique_strings, node.end.file)
 	} else {
 		res.end.file = node.end.file
 	}
@@ -123,211 +119,208 @@ clone_node :: proc(node: ^ast.Node, allocator: mem.Allocator, unique_strings: ^m
 		n := node.derived.(^Ident)
 
 		if unique_strings == nil {
-			r.name = strings.clone(n.name, allocator)
+			r.name = strings.clone(n.name)
 		} else {
-			r.name = get_index_unique_string(unique_strings, allocator, n.name)
+			r.name = get_index_unique_string(unique_strings, n.name)
 		}
 	case ^Implicit:
 		n := node.derived.(^Implicit)
 		if unique_strings == nil {
-			r.tok.text = strings.clone(n.tok.text, allocator)
+			r.tok.text = strings.clone(n.tok.text)
 		} else {
-			r.tok.text = get_index_unique_string(unique_strings, allocator, n.tok.text)
+			r.tok.text = get_index_unique_string(unique_strings, n.tok.text)
 		}
 	case ^Undef:
 	case ^Basic_Lit:
 		n := node.derived.(^Basic_Lit)
 		if unique_strings == nil {
-			r.tok.text = strings.clone(n.tok.text, allocator)
+			r.tok.text = strings.clone(n.tok.text)
 		} else {
-			r.tok.text = get_index_unique_string(unique_strings, allocator, n.tok.text)
+			r.tok.text = get_index_unique_string(unique_strings, n.tok.text)
 		}
 	case ^Basic_Directive:
 		n := node.derived.(^Basic_Directive)
 		if unique_strings == nil {
-			r.name = strings.clone(n.name, allocator)
+			r.name = strings.clone(n.name)
 		} else {
-			r.name = get_index_unique_string(unique_strings, allocator, n.name)
+			r.name = get_index_unique_string(unique_strings, n.name)
 		}
 	case ^Ellipsis:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
 	case ^Tag_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
 	case ^Unary_Expr:
 		n := node.derived.(^Unary_Expr)
-		r.expr = clone_type(r.expr, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
 		if unique_strings == nil {
-			r.op.text = strings.clone(n.op.text, allocator)
+			r.op.text = strings.clone(n.op.text)
 		} else {
-			r.op.text = get_index_unique_string(unique_strings, allocator, n.op.text)
+			r.op.text = get_index_unique_string(unique_strings, n.op.text)
 		}
 	case ^Binary_Expr:
 		n := node.derived.(^Binary_Expr)
-		r.left = clone_type(r.left, allocator, unique_strings)
-		r.right = clone_type(r.right, allocator, unique_strings)
+		r.left = clone_type(r.left, unique_strings)
+		r.right = clone_type(r.right, unique_strings)
 		//Todo: Replace this with some constant table for opeator text
 		if unique_strings == nil {
-			r.op.text = strings.clone(n.op.text, allocator)
+			r.op.text = strings.clone(n.op.text)
 		} else {
-			r.op.text = get_index_unique_string(unique_strings, allocator, n.op.text)
+			r.op.text = get_index_unique_string(unique_strings, n.op.text)
 		}
 	case ^Paren_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
 	case ^Selector_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
-		r.field = auto_cast clone_type(r.field, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
+		r.field = auto_cast clone_type(r.field, unique_strings)
 	case ^Selector_Call_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
-		r.call = auto_cast clone_type(r.call, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
+		r.call = auto_cast clone_type(r.call, unique_strings)
 	case ^Implicit_Selector_Expr:
-		r.field = auto_cast clone_type(r.field, allocator, unique_strings)
+		r.field = auto_cast clone_type(r.field, unique_strings)
 	case ^Slice_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
-		r.low = clone_type(r.low, allocator, unique_strings)
-		r.high = clone_type(r.high, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
+		r.low = clone_type(r.low, unique_strings)
+		r.high = clone_type(r.high, unique_strings)
 	case ^Attribute:
-		r.elems = clone_type(r.elems, allocator, unique_strings)
+		r.elems = clone_type(r.elems, unique_strings)
 	case ^Distinct_Type:
-		r.type = clone_type(r.type, allocator, unique_strings)
+		r.type = clone_type(r.type, unique_strings)
 	case ^Proc_Type:
-		r.params = auto_cast clone_type(r.params, allocator, unique_strings)
-		r.results = auto_cast clone_type(r.results, allocator, unique_strings)
-		r.calling_convention = clone_calling_convention(r.calling_convention, allocator, unique_strings)
+		r.params = auto_cast clone_type(r.params, unique_strings)
+		r.results = auto_cast clone_type(r.results, unique_strings)
+		r.calling_convention = clone_calling_convention(r.calling_convention, unique_strings)
 	case ^Pointer_Type:
-		r.tag = clone_type(r.tag, allocator, unique_strings)
-		r.elem = clone_type(r.elem, allocator, unique_strings)
+		r.tag = clone_type(r.tag, unique_strings)
+		r.elem = clone_type(r.elem, unique_strings)
 	case ^Array_Type:
-		r.len = clone_type(r.len, allocator, unique_strings)
-		r.elem = clone_type(r.elem, allocator, unique_strings)
-		r.tag = clone_type(r.tag, allocator, unique_strings)
+		r.len = clone_type(r.len, unique_strings)
+		r.elem = clone_type(r.elem, unique_strings)
+		r.tag = clone_type(r.tag, unique_strings)
 	case ^Dynamic_Array_Type:
-		r.elem = clone_type(r.elem, allocator, unique_strings)
-		r.tag = clone_type(r.tag, allocator, unique_strings)
+		r.elem = clone_type(r.elem, unique_strings)
+		r.tag = clone_type(r.tag, unique_strings)
 	case ^Struct_Type:
-		r.poly_params = auto_cast clone_type(r.poly_params, allocator, unique_strings)
-		r.align = clone_type(r.align, allocator, unique_strings)
-		r.fields = auto_cast clone_type(r.fields, allocator, unique_strings)
-		r.where_clauses = clone_type(r.where_clauses, allocator, unique_strings)
-		r.align = clone_type(r.align, allocator, unique_strings)
-		r.max_field_align = clone_type(r.max_field_align, allocator, unique_strings)
-		r.min_field_align = clone_type(r.min_field_align, allocator, unique_strings)
+		r.poly_params = auto_cast clone_type(r.poly_params, unique_strings)
+		r.align = clone_type(r.align, unique_strings)
+		r.fields = auto_cast clone_type(r.fields, unique_strings)
+		r.where_clauses = clone_type(r.where_clauses, unique_strings)
+		r.align = clone_type(r.align, unique_strings)
+		r.max_field_align = clone_type(r.max_field_align, unique_strings)
+		r.min_field_align = clone_type(r.min_field_align, unique_strings)
 	case ^Field:
-		r.names = clone_type(r.names, allocator, unique_strings)
-		r.type = clone_type(r.type, allocator, unique_strings)
-		r.default_value = clone_type(r.default_value, allocator, unique_strings)
-		r.docs = clone_type(r.docs, allocator, unique_strings)
-		r.comment = clone_type(r.comment, allocator, unique_strings)
+		r.names = clone_type(r.names, unique_strings)
+		r.type = clone_type(r.type, unique_strings)
+		r.default_value = clone_type(r.default_value, unique_strings)
+		r.docs = clone_type(r.docs, unique_strings)
+		r.comment = clone_type(r.comment, unique_strings)
 	case ^Field_List:
-		r.list = clone_type(r.list, allocator, unique_strings)
+		r.list = clone_type(r.list, unique_strings)
 	case ^Field_Value:
-		r.field = clone_type(r.field, allocator, unique_strings)
-		r.value = clone_type(r.value, allocator, unique_strings)
+		r.field = clone_type(r.field, unique_strings)
+		r.value = clone_type(r.value, unique_strings)
 	case ^Union_Type:
-		r.poly_params = auto_cast clone_type(r.poly_params, allocator, unique_strings)
-		r.align = clone_type(r.align, allocator, unique_strings)
-		r.variants = clone_type(r.variants, allocator, unique_strings)
-		r.where_clauses = clone_type(r.where_clauses, allocator, unique_strings)
+		r.poly_params = auto_cast clone_type(r.poly_params, unique_strings)
+		r.align = clone_type(r.align, unique_strings)
+		r.variants = clone_type(r.variants, unique_strings)
+		r.where_clauses = clone_type(r.where_clauses, unique_strings)
 	case ^Enum_Type:
-		r.base_type = clone_type(r.base_type, allocator, unique_strings)
-		r.fields = clone_type(r.fields, allocator, unique_strings)
+		r.base_type = clone_type(r.base_type, unique_strings)
+		r.fields = clone_type(r.fields, unique_strings)
 	case ^Bit_Set_Type:
-		r.elem = clone_type(r.elem, allocator, unique_strings)
-		r.underlying = clone_type(r.underlying, allocator, unique_strings)
+		r.elem = clone_type(r.elem, unique_strings)
+		r.underlying = clone_type(r.underlying, unique_strings)
 	case ^Map_Type:
-		r.key = clone_type(r.key, allocator, unique_strings)
-		r.value = clone_type(r.value, allocator, unique_strings)
+		r.key = clone_type(r.key, unique_strings)
+		r.value = clone_type(r.value, unique_strings)
 	case ^Call_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
-		r.args = clone_type(r.args, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
+		r.args = clone_type(r.args, unique_strings)
 	case ^Typeid_Type:
-		r.specialization = clone_type(r.specialization, allocator, unique_strings)
+		r.specialization = clone_type(r.specialization, unique_strings)
 	case ^Ternary_When_Expr:
-		r.x = clone_type(r.x, allocator, unique_strings)
-		r.cond = clone_type(r.cond, allocator, unique_strings)
-		r.y = clone_type(r.y, allocator, unique_strings)
+		r.x = clone_type(r.x, unique_strings)
+		r.cond = clone_type(r.cond, unique_strings)
+		r.y = clone_type(r.y, unique_strings)
 	case ^Ternary_If_Expr:
-		r.x = clone_type(r.x, allocator, unique_strings)
-		r.cond = clone_type(r.cond, allocator, unique_strings)
-		r.y = clone_type(r.y, allocator, unique_strings)
+		r.x = clone_type(r.x, unique_strings)
+		r.cond = clone_type(r.cond, unique_strings)
+		r.y = clone_type(r.y, unique_strings)
 	case ^Poly_Type:
-		r.type = auto_cast clone_type(r.type, allocator, unique_strings)
-		r.specialization = clone_type(r.specialization, allocator, unique_strings)
+		r.type = auto_cast clone_type(r.type, unique_strings)
+		r.specialization = clone_type(r.specialization, unique_strings)
 	case ^Proc_Group:
-		r.args = clone_type(r.args, allocator, unique_strings)
+		r.args = clone_type(r.args, unique_strings)
 	case ^Comp_Lit:
-		r.type = clone_type(r.type, allocator, unique_strings)
-		r.elems = clone_type(r.elems, allocator, unique_strings)
+		r.type = clone_type(r.type, unique_strings)
+		r.elems = clone_type(r.elems, unique_strings)
 	case ^Proc_Lit:
-		r.type = cast(^Proc_Type)clone_type(cast(^Node)r.type, allocator, unique_strings)
+		r.type = cast(^Proc_Type)clone_type(cast(^Node)r.type, unique_strings)
 		r.body = nil
-		r.where_clauses = clone_type(r.where_clauses, allocator, unique_strings)
+		r.where_clauses = clone_type(r.where_clauses, unique_strings)
 	case ^Helper_Type:
-		r.type = clone_type(r.type, allocator, unique_strings)
+		r.type = clone_type(r.type, unique_strings)
 	case ^Type_Cast:
-		r.type = clone_type(r.type, allocator, unique_strings)
-		r.expr = clone_type(r.expr, allocator, unique_strings)
+		r.type = clone_type(r.type, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
 	case ^Deref_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
 	case ^Index_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
-		r.index = clone_type(r.index, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
+		r.index = clone_type(r.index, unique_strings)
 	case ^Multi_Pointer_Type:
-		r.elem = clone_type(r.elem, allocator, unique_strings)
+		r.elem = clone_type(r.elem, unique_strings)
 	case ^Matrix_Type:
-		r.elem = clone_type(r.elem, allocator, unique_strings)
-		r.column_count = clone_type(r.column_count, allocator, unique_strings)
-		r.row_count = clone_type(r.row_count, allocator, unique_strings)
+		r.elem = clone_type(r.elem, unique_strings)
+		r.column_count = clone_type(r.column_count, unique_strings)
+		r.row_count = clone_type(r.row_count, unique_strings)
 	case ^Type_Assertion:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
-		r.type = clone_type(r.type, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
+		r.type = clone_type(r.type, unique_strings)
 	case ^Relative_Type:
-		r.tag = clone_type(r.tag, allocator, unique_strings)
-		r.type = clone_type(r.type, allocator, unique_strings)
+		r.tag = clone_type(r.tag, unique_strings)
+		r.type = clone_type(r.type, unique_strings)
 	case ^Bit_Field_Type:
-		r.backing_type = clone_type(r.backing_type, allocator, unique_strings)
-		r.fields = clone_type(r.fields, allocator, unique_strings)
+		r.backing_type = clone_type(r.backing_type, unique_strings)
+		r.fields = clone_type(r.fields, unique_strings)
 	case ^Bit_Field_Field:
-		r.name = clone_type(r.name, allocator, unique_strings)
-		r.type = clone_type(r.type, allocator, unique_strings)
-		r.bit_size = clone_type(r.bit_size, allocator, unique_strings)
-		r.docs = clone_type(r.docs, allocator, unique_strings)
-		r.comments = clone_type(r.comments, allocator, unique_strings)
+		r.name = clone_type(r.name, unique_strings)
+		r.type = clone_type(r.type, unique_strings)
+		r.bit_size = clone_type(r.bit_size, unique_strings)
+		r.docs = clone_type(r.docs, unique_strings)
+		r.comments = clone_type(r.comments, unique_strings)
 	case ^Or_Else_Expr:
-		r.x = clone_type(r.x, allocator, unique_strings)
-		r.y = clone_type(r.y, allocator, unique_strings)
+		r.x = clone_type(r.x, unique_strings)
+		r.y = clone_type(r.y, unique_strings)
 	case ^Or_Branch_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
-		r.label = clone_type(r.label, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
+		r.label = clone_type(r.label, unique_strings)
 	case ^Comment_Group:
-		list := make([dynamic]tokenizer.Token, 0, len(r.list), allocator)
+		list := make([dynamic]tokenizer.Token, 0, len(r.list))
 		for t in r.list {
-			append(&list, tokenizer.Token{text = strings.clone(t.text, allocator), kind = t.kind, pos = tokenizer.Pos{file = strings.clone(t.pos.file, allocator), offset = t.pos.offset, line = t.pos.line, column = t.pos.column}})
+			append(&list, tokenizer.Token{text = strings.clone(t.text), kind = t.kind, pos = tokenizer.Pos{file = strings.clone(t.pos.file), offset = t.pos.offset, line = t.pos.line, column = t.pos.column}})
 		}
 		r.list = list[:]
 	case ^Auto_Cast:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
 	case ^Or_Return_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
 	case ^Matrix_Index_Expr:
-		r.expr = clone_type(r.expr, allocator, unique_strings)
-		r.row_index = clone_type(r.row_index, allocator, unique_strings)
-		r.column_index = clone_type(r.column_index, allocator, unique_strings)
+		r.expr = clone_type(r.expr, unique_strings)
+		r.row_index = clone_type(r.row_index, unique_strings)
+		r.column_index = clone_type(r.column_index, unique_strings)
 	case:
 	}
 
 	return res
 }
 
-clone_comment_group :: proc(
-	node: ^ast.Comment_Group,
-	allocator: mem.Allocator,
-	unique_strings: ^map[string]string,
-) -> ^ast.Comment_Group {
-	return cast(^ast.Comment_Group)clone_node(node, allocator, unique_strings)
+clone_comment_group :: proc(node: ^ast.Comment_Group, unique_strings: ^map[string]string) -> ^ast.Comment_Group {
+	return cast(^ast.Comment_Group)clone_node(node, unique_strings)
 }
 
 clone_calling_convention :: proc(
-	cc: ast.Proc_Calling_Convention, allocator: mem.Allocator, unique_strings: ^map[string]string,
+	cc: ast.Proc_Calling_Convention,
+	unique_strings: ^map[string]string,
 ) -> ast.Proc_Calling_Convention {
 	if cc == nil {
 		return nil
@@ -336,9 +329,9 @@ clone_calling_convention :: proc(
 	switch v in cc {
 	case string:
 		if unique_strings != nil {
-			return get_index_unique_string(unique_strings, allocator, v)
+			return get_index_unique_string(unique_strings, v)
 		}
-		return strings.clone(v, allocator)
+		return strings.clone(v)
 	case ast.Proc_Calling_Convention_Extra:
 		return v
 	}

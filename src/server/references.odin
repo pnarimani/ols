@@ -243,19 +243,19 @@ resolve_references :: proc(
 	[]common.Location,
 	bool,
 ) {
-	locations := make([dynamic]common.Location, 0, ast_context.allocator)
-	fullpaths := make([dynamic]string, 0, ast_context.allocator)
+	locations := make([dynamic]common.Location)
+	fullpaths := make([dynamic]string)
 
 	symbol, resolve_flag, ok := prepare_references(doc_ctx, ast_context, position_context)
 
 	if !ok {
 		return {}, true
 	}
-	symbols_and_nodes := resolve_entire_file(doc_ctx, resolve_flag, ast_context.allocator)
+	symbols_and_nodes := resolve_entire_file(doc_ctx, resolve_flag)
 
 	for k, v in symbols_and_nodes {
 		if strings.equal_fold(v.symbol.uri, symbol.uri) && v.symbol.range == symbol.range {
-			node_uri := common.create_uri(v.node.pos.file, ast_context.allocator)
+			node_uri := common.create_uri(v.node.pos.file)
 
 			range := common.get_token_range(v.node^, ast_context.file.src)
 
@@ -266,7 +266,7 @@ resolve_references :: proc(
 
 			location := common.Location {
 				range = range,
-				uri   = strings.clone(node_uri.uri, ast_context.allocator),
+				uri   = strings.clone(node_uri.uri),
 			}
 
 			append(&locations, location)
@@ -281,7 +281,7 @@ resolve_references :: proc(
 		// Copy doc_ctx so we can take a pointer to it for walk_directories
 		doc_ctx_copy := doc_ctx
 		walk_data := WalkDirectoriesData {
-			doc_ctx = &doc_ctx_copy,
+			doc_ctx   = &doc_ctx_copy,
 			fullpaths = &fullpaths,
 		}
 		for workspace in common.config.workspace_folders {
@@ -350,10 +350,10 @@ resolve_references :: proc(
 
 		// Create a DocumentContext directly for this file
 		inner_doc_ctx := DocumentContext {
-			uri = uri,
-			text = data,
-			ast = file,
-			fullpath = fullpath,
+			uri          = uri,
+			text         = data,
+			ast          = file,
+			fullpath     = fullpath,
 			package_name = forward_dir,
 		}
 
@@ -370,10 +370,10 @@ resolve_references :: proc(
 		}
 
 		if in_pkg || symbol.pkg == inner_doc_ctx.package_name {
-			symbols_and_nodes := resolve_entire_file(inner_doc_ctx, resolve_flag, context.allocator)
+			symbols_and_nodes := resolve_entire_file(inner_doc_ctx, resolve_flag)
 			for k, v in symbols_and_nodes {
 				if strings.equal_fold(v.symbol.uri, symbol.uri) && v.symbol.range == symbol.range {
-					node_uri := common.create_uri(v.node.pos.file, ast_context.allocator)
+					node_uri := common.create_uri(v.node.pos.file)
 					range := common.get_token_range(v.node^, string(inner_doc_ctx.text))
 					//We don't have to have the `.` with, otherwise it renames the dot.
 					if _, ok := v.node.derived.(^ast.Implicit_Selector_Expr); ok {
@@ -381,7 +381,7 @@ resolve_references :: proc(
 					}
 					location := common.Location {
 						range = range,
-						uri   = strings.clone(node_uri.uri, ast_context.allocator),
+						uri   = strings.clone(node_uri.uri),
 					}
 					append(&locations, location)
 				}
@@ -403,7 +403,7 @@ get_references :: proc(
 	bool,
 ) {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, &common.config, context.temp_allocator)
+	request_symbols := build_request_symbols(doc_ctx.imports, &common.config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -412,7 +412,6 @@ get_references :: proc(
 		doc_ctx.uri.uri,
 		doc_ctx.fullpath,
 		&request_symbols,
-		context.temp_allocator,
 	)
 
 	position_context, ok := get_document_position_context(doc_ctx, position, .Hover)

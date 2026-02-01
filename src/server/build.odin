@@ -239,15 +239,11 @@ get_runtime_path :: proc() -> string {
 
 // Build a fresh symbol collection for a request.
 // Includes builtins, runtime, and the specified imports.
-build_request_symbols :: proc(
-	imports: []Package,
-	config: ^common.Config = nil,
-	allocator := context.temp_allocator,
-) -> SymbolCollection {
+build_request_symbols :: proc(imports: []Package, config: ^common.Config = nil) -> SymbolCollection {
 	// Use provided config or fall back to global config
 	actual_config := config if config != nil else &common.config
-	symbols := make_symbol_collection(actual_config, allocator)
-	loaded_pkgs := make(map[string]bool, 16, allocator)
+	symbols := make_symbol_collection(actual_config)
+	loaded_pkgs := make(map[string]bool, 16)
 
 	// Always load builtins
 	builtin_path := get_builtin_path()

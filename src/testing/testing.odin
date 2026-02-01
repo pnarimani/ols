@@ -46,7 +46,7 @@ setup :: proc(src: ^Source) {
 	// Use temp allocator for all allocations in this test to avoid leak reports
 	// The parser internally uses context.allocator so we need to redirect it
 	context.allocator = context.temp_allocator
-	
+
 	src.main = strings.clone(src.main, context.temp_allocator)
 	src.document = new(server.Document, context.temp_allocator)
 	src.document.uri = common.create_uri("test/test.odin", context.temp_allocator)
@@ -58,13 +58,13 @@ setup :: proc(src: ^Source) {
 	// Create a fresh symbol collection for this test
 	// This includes builtins from the filesystem for builtin function testing
 	// Pass the test config so that enable_fake_method etc. are respected
-	src.symbols = server.build_request_symbols({}, &src.config, context.temp_allocator)
+	src.symbols = server.build_request_symbols({}, &src.config)
 
 	// Create DocumentContext for the test document
-	src.doc_ctx, _ = server.create_document_context(src.document, &src.config, context.temp_allocator)
+	src.doc_ctx, _ = server.create_document_context(src.document, &src.config)
 
 	// Create a fresh diagnostic collection for this test
-	src.diagnostics = server.make_diagnostic_collection(context.temp_allocator)
+	src.diagnostics = server.make_diagnostic_collection()
 
 	// Run diagnostics checks if enabled in config
 	server.run_hint_diagnostics(src.doc_ctx, &src.config, &src.diagnostics)
@@ -766,7 +766,7 @@ expect_semantic_tokens :: proc(t: ^testing.T, src: ^Source, expected: []server.S
 
 
 	resolve_flag: server.ResolveReferenceFlag
-	symbols_and_nodes := server.resolve_entire_file(src.doc_ctx, resolve_flag, context.temp_allocator)
+	symbols_and_nodes := server.resolve_entire_file(src.doc_ctx, resolve_flag)
 
 	range := common.Range {
 		end = {line = 9000000},
@@ -853,7 +853,7 @@ expect_inlay_hints :: proc(t: ^testing.T, src: ^Source) {
 	setup(src)
 	defer teardown(src)
 
-	symbols_and_nodes := server.resolve_entire_file(src.doc_ctx, allocator = context.temp_allocator)
+	symbols_and_nodes := server.resolve_entire_file(src.doc_ctx)
 
 	range := common.Range {
 		end = {line = 9000000},

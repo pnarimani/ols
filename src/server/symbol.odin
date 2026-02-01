@@ -280,19 +280,19 @@ SymbolStructValueBuilder :: struct {
 
 symbol_struct_value_builder_make_none :: proc(allocator := context.allocator) -> SymbolStructValueBuilder {
 	return SymbolStructValueBuilder {
-		names             = make([dynamic]string, allocator),
-		types             = make([dynamic]^ast.Expr, allocator),
-		args              = make([dynamic]^ast.Expr, allocator),
-		ranges            = make([dynamic]common.Range, allocator),
-		docs              = make([dynamic]^ast.Comment_Group, allocator),
-		comments          = make([dynamic]^ast.Comment_Group, allocator),
-		usings            = make([dynamic]int, allocator),
-		from_usings       = make([dynamic]int, allocator),
+		names = make([dynamic]string, allocator),
+		types = make([dynamic]^ast.Expr, allocator),
+		args = make([dynamic]^ast.Expr, allocator),
+		ranges = make([dynamic]common.Range, allocator),
+		docs = make([dynamic]^ast.Comment_Group, allocator),
+		comments = make([dynamic]^ast.Comment_Group, allocator),
+		usings = make([dynamic]int, allocator),
+		from_usings = make([dynamic]int, allocator),
 		unexpanded_usings = make([dynamic]int, allocator),
-		poly_names        = make([dynamic]string, allocator),
-		backing_types     = make(map[int]^ast.Expr, allocator),
-		bit_sizes         = make(map[int]^ast.Expr, allocator),
-		where_clauses     = make([dynamic]^ast.Expr, allocator),
+		poly_names = make([dynamic]string, allocator),
+		backing_types = make(map[int]^ast.Expr, allocator),
+		bit_sizes = make(map[int]^ast.Expr, allocator),
+		where_clauses = make([dynamic]^ast.Expr, allocator),
 	}
 }
 
@@ -389,8 +389,8 @@ write_struct_type :: proc(
 ) {
 	b.poly = v.poly_params
 	// We clone this so we don't override docs and comments with temp allocated docs and comments
-	v := cast(^ast.Struct_Type)clone_node(v, ast_context.allocator, nil)
-	construct_struct_field_docs(ast_context.file, v, ast_context.allocator)
+	v := cast(^ast.Struct_Type)clone_node(v, nil)
+	construct_struct_field_docs(ast_context.file, v)
 	for field in v.fields.list {
 		for n in field.names {
 			if identifier, ok := n.derived.(^ast.Ident); ok && field.type != nil {
@@ -401,7 +401,7 @@ write_struct_type :: proc(
 
 				append(&b.names, identifier.name)
 				if v.poly_params != nil {
-					append(&b.types, clone_type(field.type, ast_context.allocator, nil))
+					append(&b.types, clone_type(field.type, nil))
 				} else {
 					append(&b.types, field.type)
 				}
@@ -596,13 +596,13 @@ expand_objc :: proc(ast_context: ^AstContext, b: ^SymbolStructValueBuilder) {
 
 		if obj_struct, ok := pkg.objc_structs[symbol.name]; ok {
 			_objc_function: for function, i in obj_struct.functions {
-				base := new_type(ast.Ident, {}, {}, context.temp_allocator)
+				base := new_type(ast.Ident, {}, {})
 				base.name = obj_struct.pkg
 
-				field := new_type(ast.Ident, {}, {}, context.temp_allocator)
+				field := new_type(ast.Ident, {}, {})
 				field.name = function.physical_name
 
-				selector := new_type(ast.Selector_Expr, {}, {}, context.temp_allocator)
+				selector := new_type(ast.Selector_Expr, {}, {})
 
 				selector.field = field
 				selector.expr = base
@@ -827,7 +827,7 @@ symbol_kind_to_type :: proc(type: SymbolType) -> SymbolKind {
 	}
 }
 
-symbol_to_expr :: proc(symbol: Symbol, file: string, allocator := context.temp_allocator) -> ^ast.Expr {
+symbol_to_expr :: proc(symbol: Symbol, file: string) -> ^ast.Expr {
 
 	pos := tokenizer.Pos {
 		file = file,
@@ -839,74 +839,74 @@ symbol_to_expr :: proc(symbol: Symbol, file: string, allocator := context.temp_a
 
 	#partial switch v in symbol.value {
 	case SymbolDynamicArrayValue:
-		type := new_type(ast.Dynamic_Array_Type, pos, end, allocator)
+		type := new_type(ast.Dynamic_Array_Type, pos, end)
 		type.elem = v.expr
 		if .Soa in symbol.flags {
-			directive := new_type(ast.Basic_Directive, pos, end, allocator)
+			directive := new_type(ast.Basic_Directive, pos, end)
 			directive.name = "soa"
 			type.tag = directive
 		}
 		return type
 	case SymbolFixedArrayValue:
-		type := new_type(ast.Array_Type, pos, end, allocator)
+		type := new_type(ast.Array_Type, pos, end)
 		type.elem = v.expr
 		type.len = v.len
 		if .Soa in symbol.flags {
-			directive := new_type(ast.Basic_Directive, pos, end, allocator)
+			directive := new_type(ast.Basic_Directive, pos, end)
 			directive.name = "soa"
 			type.tag = directive
 		}
 		return type
 	case SymbolMapValue:
-		type := new_type(ast.Map_Type, pos, end, allocator)
+		type := new_type(ast.Map_Type, pos, end)
 		type.key = v.key
 		type.value = v.value
 		return type
 	case SymbolBasicValue:
 		return v.ident
 	case SymbolSliceValue:
-		type := new_type(ast.Array_Type, pos, end, allocator)
+		type := new_type(ast.Array_Type, pos, end)
 		type.elem = v.expr
 		if .Soa in symbol.flags {
-			directive := new_type(ast.Basic_Directive, pos, end, allocator)
+			directive := new_type(ast.Basic_Directive, pos, end)
 			directive.name = "soa"
 			type.tag = directive
 		}
 		return type
 	case SymbolStructValue:
-		type := new_type(ast.Struct_Type, pos, end, allocator)
+		type := new_type(ast.Struct_Type, pos, end)
 		return type
 	case SymbolEnumValue:
-		type := new_type(ast.Enum_Type, pos, end, allocator)
+		type := new_type(ast.Enum_Type, pos, end)
 		return type
 	case SymbolUnionValue:
-		type := new_type(ast.Union_Type, pos, end, allocator)
+		type := new_type(ast.Union_Type, pos, end)
 		return type
 	case SymbolBitSetValue:
-		type := new_type(ast.Bit_Set_Type, pos, end, allocator)
+		type := new_type(ast.Bit_Set_Type, pos, end)
 		return type
 	case SymbolUntypedValue:
-		type := new_type(ast.Basic_Lit, pos, end, allocator)
+		type := new_type(ast.Basic_Lit, pos, end)
 		type.tok = v.tok
 		return type
 	case SymbolMatrixValue:
-		type := new_type(ast.Matrix_Type, pos, end, allocator)
+		type := new_type(ast.Matrix_Type, pos, end)
 		type.row_count = v.x
 		type.column_count = v.y
 		type.elem = v.expr
 		return type
 	case SymbolProcedureValue:
-		type := new_type(ast.Proc_Type, pos, end, allocator)
-		type.results = new_type(ast.Field_List, pos, end, allocator)
+		type := new_type(ast.Proc_Type, pos, end)
+		type.results = new_type(ast.Field_List, pos, end)
 		type.results.list = v.return_types
-		type.params = new_type(ast.Field_List, pos, end, allocator)
+		type.params = new_type(ast.Field_List, pos, end)
 		type.params.list = v.arg_types
 		return type
 	case SymbolBitFieldValue:
-		type := new_type(ast.Bit_Field_Type, pos, end, allocator)
+		type := new_type(ast.Bit_Field_Type, pos, end)
 		return type
 	case SymbolMultiPointerValue:
-		type := new_type(ast.Multi_Pointer_Type, pos, end, allocator)
+		type := new_type(ast.Multi_Pointer_Type, pos, end)
 		type.elem = v.expr
 		return type
 	case:

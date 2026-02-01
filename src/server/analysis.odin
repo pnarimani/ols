@@ -64,10 +64,7 @@ make_ast_context :: proc {
 	make_ast_context_from_doc,
 }
 
-make_ast_context_from_request :: proc(
-	req_ctx: ^RequestContext,
-	allocator := context.temp_allocator,
-) -> AstContext {
+make_ast_context_from_request :: proc(req_ctx: ^RequestContext, allocator := context.temp_allocator) -> AstContext {
 	return make_ast_context_from_doc(
 		req_ctx.doc_ctx.ast,
 		req_ctx.doc_ctx.imports,
@@ -1043,7 +1040,7 @@ resolve_basic_directive :: proc(
 ) {
 	switch directive.name {
 	case "caller_location":
-		ident := new_type(ast.Ident, directive.pos, directive.end, ast_context.allocator)
+		ident := new_type(ast.Ident, directive.pos, directive.end)
 		ident.name = "Source_Code_Location"
 		set_ast_package_set_scoped(ast_context, ast_context.document_package)
 		return internal_resolve_type_identifier(ast_context, ident^)
@@ -1178,7 +1175,7 @@ internal_resolve_type_expression :: proc(ast_context: ^AstContext, node: ^ast.Ex
 
 	#partial switch v in node.derived {
 	case ^ast.Typeid_Type:
-		ident := new_type(ast.Ident, v.pos, v.end, context.temp_allocator)
+		ident := new_type(ast.Ident, v.pos, v.end)
 		ident.name = "typeid"
 		out^, ok = make_symbol_basic_type_from_ast(ast_context, ident), true
 		return ok
@@ -1298,7 +1295,7 @@ internal_resolve_type_expression :: proc(ast_context: ^AstContext, node: ^ast.Ex
 		}
 		return true
 	case ^Implicit:
-		ident := new_type(Ident, v.node.pos, v.node.end, ast_context.allocator)
+		ident := new_type(Ident, v.node.pos, v.node.end)
 		ident.name = v.tok.text
 		out^, ok = internal_resolve_type_identifier(ast_context, ident^)
 		return ok
@@ -1407,7 +1404,7 @@ resolve_call_directive :: proc(ast_context: ^AstContext, call: ^ast.Call_Expr) -
 		return resolve_type_expression(ast_context, call.args[1])
 	case "load":
 		if len(call.args) == 1 {
-			ident := new_type(ast.Ident, call.pos, call.end, ast_context.allocator)
+			ident := new_type(ast.Ident, call.pos, call.end)
 			ident.name = "u8"
 			value := SymbolSliceValue {
 				expr = ident,
@@ -1425,15 +1422,15 @@ resolve_call_directive :: proc(ast_context: ^AstContext, call: ^ast.Call_Expr) -
 		runtime_path := get_runtime_path()
 		return lookup(ast_context.symbols, "Source_Code_Location", runtime_path, call.pos.file)
 	case "hash", "load_hash":
-		ident := new_type(ast.Ident, call.pos, call.end, ast_context.allocator)
+		ident := new_type(ast.Ident, call.pos, call.end)
 		ident.name = "int"
 		return resolve_type_identifier(ast_context, ident^)
 	case "load_directory":
-		pkg := new_type(ast.Ident, call.pos, call.end, ast_context.allocator)
+		pkg := new_type(ast.Ident, call.pos, call.end)
 		pkg.name = "runtime"
-		field := new_type(ast.Ident, call.pos, call.end, ast_context.allocator)
+		field := new_type(ast.Ident, call.pos, call.end)
 		field.name = "Load_Directory_File"
-		selector := new_type(ast.Selector_Expr, call.pos, call.end, ast_context.allocator)
+		selector := new_type(ast.Selector_Expr, call.pos, call.end)
 		selector.expr = pkg
 		selector.field = field
 		value := SymbolSliceValue {
@@ -1463,20 +1460,20 @@ resolve_index_expr :: proc(ast_context: ^AstContext, index_expr: ^ast.Index_Expr
 	#partial switch v in indexed.value {
 	case SymbolDynamicArrayValue:
 		if .Soa in indexed.flags {
-			indexed.flags |= { .SoaPointer }
+			indexed.flags |= {.SoaPointer}
 			return indexed, true
 		}
 		ok = internal_resolve_type_expression(ast_context, v.expr, &symbol)
 	case SymbolSliceValue:
 		ok = internal_resolve_type_expression(ast_context, v.expr, &symbol)
 		if .Soa in indexed.flags {
-			indexed.flags |= { .SoaPointer }
+			indexed.flags |= {.SoaPointer}
 			return indexed, true
 		}
 	case SymbolFixedArrayValue:
 		ok = internal_resolve_type_expression(ast_context, v.expr, &symbol)
 		if .Soa in indexed.flags {
-			indexed.flags |= { .SoaPointer }
+			indexed.flags |= {.SoaPointer}
 			return indexed, true
 		}
 	case SymbolMapValue:
@@ -1674,12 +1671,7 @@ resolve_selector_expression :: proc(ast_context: ^AstContext, node: ^ast.Selecto
 			}
 		case SymbolProcedureValue:
 			if len(s.return_types) == 1 {
-				selector_expr := new_type(
-					ast.Selector_Expr,
-					s.return_types[0].node.pos,
-					s.return_types[0].node.end,
-					ast_context.allocator,
-				)
+				selector_expr := new_type(ast.Selector_Expr, s.return_types[0].node.pos, s.return_types[0].node.end)
 				selector_expr.expr = s.return_types[0].type
 				selector_expr.field = node.field
 				ok := internal_resolve_type_expression(ast_context, selector_expr, &symbol)
@@ -1708,7 +1700,10 @@ resolve_selector_expression :: proc(ast_context: ^AstContext, node: ^ast.Selecto
 			}
 		case SymbolPackageValue:
 			if node.field != nil {
-				return resolve_symbol_return(ast_context, lookup(ast_context.symbols, node.field.name, selector.pkg, node.pos.file))
+				return resolve_symbol_return(
+					ast_context,
+					lookup(ast_context.symbols, node.field.name, selector.pkg, node.pos.file),
+				)
 			} else {
 				return Symbol{}, false
 			}
@@ -1774,7 +1769,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 
 	if v, ok := keyword_map[node.name]; ok {
 		//keywords
-		ident := new_type(Ident, node.pos, node.end, ast_context.allocator)
+		ident := new_type(Ident, node.pos, node.end)
 		ident.name = node.name
 
 		switch ident.name {
@@ -2699,10 +2694,10 @@ resolve_symbol_return :: proc(ast_context: ^AstContext, symbol: Symbol, ok := tr
 		}
 	case SymbolUnionValue:
 		if v.poly != nil {
-			types := make([dynamic]^ast.Expr, ast_context.allocator)
+			types := make([dynamic]^ast.Expr)
 
 			for type in v.types {
-				append(&types, clone_expr(type, context.temp_allocator, nil))
+				append(&types, clone_expr(type, nil))
 			}
 
 			v.types = types[:]
@@ -2711,13 +2706,13 @@ resolve_symbol_return :: proc(ast_context: ^AstContext, symbol: Symbol, ok := tr
 		}
 		return symbol, ok
 	case SymbolStructValue:
-		b := symbol_struct_value_builder_make(symbol, v, ast_context.allocator)
+		b := symbol_struct_value_builder_make(symbol, v)
 		if v.poly != nil {
 			clear(&b.types)
 			for type in v.types {
-				append(&b.types, clone_expr(type, context.temp_allocator, nil))
+				append(&b.types, clone_expr(type, nil))
 			}
-			b.poly = cast(^ast.Field_List)clone_type(v.poly, context.temp_allocator, nil)
+			b.poly = cast(^ast.Field_List)clone_type(v.poly, nil)
 			resolve_poly_struct(ast_context, &b, v.poly)
 		}
 
@@ -3408,32 +3403,32 @@ get_call_argument_type :: proc(
 }
 
 make_pointer_ast :: proc(ast_context: ^AstContext, elem: ^ast.Expr) -> ^ast.Pointer_Type {
-	pointer := new_type(ast.Pointer_Type, elem.pos, elem.end, ast_context.allocator)
+	pointer := new_type(ast.Pointer_Type, elem.pos, elem.end)
 	pointer.elem = elem
 	return pointer
 }
 
 make_bool_ast :: proc(ast_context: ^AstContext, pos: tokenizer.Pos, end: tokenizer.Pos) -> ^ast.Ident {
-	ident := new_type(ast.Ident, pos, end, ast_context.allocator)
+	ident := new_type(ast.Ident, pos, end)
 	ident.name = "bool"
 	return ident
 }
 
 make_int_ast :: proc(ast_context: ^AstContext, pos: tokenizer.Pos, end: tokenizer.Pos) -> ^ast.Ident {
-	ident := new_type(ast.Ident, pos, end, ast_context.allocator)
+	ident := new_type(ast.Ident, pos, end)
 	ident.name = "int"
 	return ident
 }
 
 make_rune_ast :: proc(ast_context: ^AstContext, pos: tokenizer.Pos, end: tokenizer.Pos) -> ^ast.Ident {
-	ident := new_type(ast.Ident, pos, end, ast_context.allocator)
+	ident := new_type(ast.Ident, pos, end)
 	ident.name = "rune"
 	return ident
 }
 
 
 make_ident_ast :: proc(ast_context: ^AstContext, pos: tokenizer.Pos, end: tokenizer.Pos, name: string) -> ^ast.Ident {
-	ident := new_type(ast.Ident, pos, end, ast_context.allocator)
+	ident := new_type(ast.Ident, pos, end)
 	ident.name = name
 	return ident
 }
@@ -3444,7 +3439,7 @@ make_int_basic_value :: proc(
 	pos: tokenizer.Pos,
 	end: tokenizer.Pos,
 ) -> ^ast.Basic_Lit {
-	basic := new_type(ast.Basic_Lit, pos, end, ast_context.allocator)
+	basic := new_type(ast.Basic_Lit, pos, end)
 	basic.tok.text = fmt.tprintf("%v", n)
 	return basic
 }
@@ -3464,7 +3459,7 @@ wrap_pointer :: proc(expr: ^ast.Expr, times: int) -> ^ast.Expr {
 	expr := expr
 
 	for i in 0 ..< times {
-		new_pointer := new_type(ast.Pointer_Type, expr.pos, expr.end, context.temp_allocator)
+		new_pointer := new_type(ast.Pointer_Type, expr.pos, expr.end)
 
 		new_pointer.elem = expr
 
@@ -3746,17 +3741,17 @@ make_symbol_union_from_ast :: proc(
 		symbol.name = "union"
 	}
 
-	types := make([dynamic]^ast.Expr, ast_context.allocator)
+	types := make([dynamic]^ast.Expr)
 
 	for variant in v.variants {
 		if v.poly_params != nil {
-			append(&types, clone_type(variant, ast_context.allocator, nil))
+			append(&types, clone_type(variant, nil))
 		} else {
 			append(&types, variant)
 		}
 	}
 
-	docs, comments := get_field_docs_and_comments(ast_context.file, v.variants, ast_context.allocator)
+	docs, comments := get_field_docs_and_comments(ast_context.file, v.variants)
 
 	symbol.value = SymbolUnionValue {
 		types         = types[:],
@@ -3806,7 +3801,7 @@ make_symbol_enum_from_ast :: proc(
 		append(&values, value)
 	}
 
-	docs, comments := get_field_docs_and_comments(ast_context.file, v.fields, ast_context.allocator)
+	docs, comments := get_field_docs_and_comments(ast_context.file, v.fields)
 
 	symbol.value = SymbolEnumValue {
 		names     = names[:],
@@ -3894,14 +3889,14 @@ make_symbol_bit_field_from_ast :: proc(
 	inlined := false,
 ) -> Symbol {
 	// We clone this so we don't override docs and comments with temp allocated docs and comments
-	v := cast(^ast.Bit_Field_Type)clone_node(v, ast_context.allocator, nil)
+	v := cast(^ast.Bit_Field_Type)clone_node(v, nil)
 	construct_bit_field_field_docs(ast_context.file, v)
 	symbol := Symbol {
 		range = common.get_token_range(v, ast_context.file.src),
 		type  = .Struct,
 		pkg   = get_package_from_node(v.node),
 		name  = name,
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.create_uri(v.pos.file).uri,
 	}
 
 	if inlined {
@@ -3909,12 +3904,12 @@ make_symbol_bit_field_from_ast :: proc(
 		symbol.name = "bit_field"
 	}
 
-	names := make([dynamic]string, ast_context.allocator)
-	types := make([dynamic]^ast.Expr, ast_context.allocator)
-	ranges := make([dynamic]common.Range, 0, ast_context.allocator)
-	docs := make([dynamic]^ast.Comment_Group, 0, ast_context.allocator)
-	comments := make([dynamic]^ast.Comment_Group, 0, ast_context.allocator)
-	bit_sizes := make([dynamic]^ast.Expr, 0, ast_context.allocator)
+	names := make([dynamic]string)
+	types := make([dynamic]^ast.Expr)
+	ranges := make([dynamic]common.Range, 0)
+	docs := make([dynamic]^ast.Comment_Group, 0)
+	comments := make([dynamic]^ast.Comment_Group, 0)
+	bit_sizes := make([dynamic]^ast.Expr, 0)
 
 	for field in v.fields {
 		if identifier, ok := field.name.derived.(^ast.Ident); ok && field.type != nil {

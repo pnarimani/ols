@@ -17,15 +17,12 @@ DiagnosticType :: enum {
 // DiagnosticCollection holds diagnostics computed for a request
 DiagnosticCollection :: struct {
 	diagnostics: [DiagnosticType]map[string][dynamic]Diagnostic,
-	allocator:   runtime.Allocator,
 }
 
-make_diagnostic_collection :: proc(allocator := context.temp_allocator) -> DiagnosticCollection {
-	collection := DiagnosticCollection {
-		allocator = allocator,
-	}
+make_diagnostic_collection :: proc() -> DiagnosticCollection {
+	collection := DiagnosticCollection{}
 	for &diag_map in collection.diagnostics {
-		diag_map = make(map[string][dynamic]Diagnostic, 16, allocator)
+		diag_map = make(map[string][dynamic]Diagnostic, 16)
 	}
 	return collection
 }
@@ -47,13 +44,13 @@ add_diagnostic :: proc(collection: ^DiagnosticCollection, type: DiagnosticType, 
 	diagnostic_array := &diagnostic_type[uri]
 
 	if diagnostic_array == nil {
-		diagnostic_type[strings.clone(uri, collection.allocator)] = make([dynamic]Diagnostic, collection.allocator)
+		diagnostic_type[strings.clone(uri)] = make([dynamic]Diagnostic)
 		diagnostic_array = &diagnostic_type[uri]
 	}
 
 	diagnostic := diagnostic
-	diagnostic.message = strings.clone(diagnostic.message, collection.allocator)
-	diagnostic.code = strings.clone(diagnostic.code, collection.allocator)
+	diagnostic.message = strings.clone(diagnostic.message)
+	diagnostic.code = strings.clone(diagnostic.code)
 
 	append(diagnostic_array, diagnostic)
 }

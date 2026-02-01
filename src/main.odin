@@ -55,6 +55,8 @@ os_write :: proc(handle: rawptr, data: []byte) -> (int, int) {
 request_thread: ^thread.Thread
 
 run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
+	server.document_storage_init()
+
 	common.config.collections = make(map[string]string)
 	common.config.running = true
 

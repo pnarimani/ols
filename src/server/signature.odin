@@ -50,8 +50,8 @@ seperate_proc_field_arguments :: proc(procedure: ^Symbol) {
 			}
 
 			for name in arg.names {
-				field: ^ast.Field = new_type(ast.Field, arg.pos, arg.end, context.temp_allocator)
-				field.names = make([]^ast.Expr, 1, context.temp_allocator)
+				field: ^ast.Field = new_type(ast.Field, arg.pos, arg.end)
+				field.names = make([]^ast.Expr, 1)
 				field.names[0] = name
 				field.type = arg.type
 				append(&types, field)
