@@ -1,6 +1,7 @@
 #+feature dynamic-literals
 package server
 
+import "src:doc"
 import "base:intrinsics"
 import "base:runtime"
 
@@ -515,10 +516,16 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 		if abs_final_path, ok := filepath.abs(final_path); ok {
 			slashed_path, _ := filepath.to_slash(abs_final_path, context.temp_allocator)
 
-			config.collections[strings.clone(it.name, common.config_storage.allocator)] = strings.clone(slashed_path, common.config_storage.allocator)
+			config.collections[strings.clone(it.name, common.config_storage.allocator)] = strings.clone(
+				slashed_path,
+				common.config_storage.allocator,
+			)
 		} else {
 			log.errorf("Failed to find absolute address of collection: %v", final_path)
-			config.collections[strings.clone(it.name, common.config_storage.allocator)] = strings.clone(final_path, common.config_storage.allocator)
+			config.collections[strings.clone(it.name, common.config_storage.allocator)] = strings.clone(
+				final_path,
+				common.config_storage.allocator,
+			)
 		}
 	}
 
@@ -1078,11 +1085,7 @@ notification_did_open :: proc(
 
 	defer delete(open_params.textDocument.uri)
 
-	if n := document_open(open_params.textDocument.uri, open_params.textDocument.text, config, writer); n != .None {
-		return .InternalError
-	}
-
-	document := document_get(open_params.textDocument.uri)
+	document := doc.open(open_params.textDocument.uri, open_params.textDocument.text) or_return
 
 	diagnostics := make_diagnostic_collection()
 

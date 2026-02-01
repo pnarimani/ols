@@ -52,6 +52,10 @@ AstContext :: struct {
 	// We should probably rework how this is handled in the future
 	resolve_specific_overload: bool,
 	call_expr_recursion_cache: map[rawptr]SymbolResult,
+	// Reference to the DocumentContext this AstContext was created from.
+	// Fields above (file, imports, document_package, uri, fullpath) are populated from this.
+	// TODO: Remove duplicated fields and access through doc_ctx directly.
+	doc_ctx:                   ^DocumentContext,
 }
 
 SymbolResult :: struct {
@@ -62,19 +66,48 @@ SymbolResult :: struct {
 make_ast_context :: proc {
 	make_ast_context_from_request,
 	make_ast_context_from_doc,
+	make_ast_context_from_doc_ctx,
 }
 
 make_ast_context_from_request :: proc(req_ctx: ^RequestContext, allocator := context.temp_allocator) -> AstContext {
-	return make_ast_context_from_doc(
-		req_ctx.doc_ctx.ast,
-		req_ctx.doc_ctx.imports,
-		req_ctx.doc_ctx.package_name,
-		req_ctx.doc_ctx.uri.uri,
-		req_ctx.doc_ctx.fullpath,
+	return make_ast_context_from_doc_ctx(
+		&req_ctx.doc_ctx,
 		&req_ctx.symbols,
 		allocator,
 	)
 }
+
+// Create AstContext from a DocumentContext pointer. This is the preferred method.
+make_ast_context_from_doc_ctx :: proc(
+	doc_ctx: ^DocumentContext,
+	symbols: ^SymbolCollection,
+	allocator := context.temp_allocator,
+) -> AstContext {
+	ast_context := AstContext {
+		locals                    = make([dynamic]map[string][dynamic]DocumentLocal, 0, allocator),
+		globals                   = make(map[string]GlobalExpr, 0, allocator),
+		usings                    = make([dynamic]UsingStatement, allocator),
+		recursion_map             = make(map[rawptr]struct{}, 0, allocator),
+		call_expr_recursion_cache = make(map[rawptr]SymbolResult, 0, allocator),
+		file                      = doc_ctx.ast,
+		imports                   = doc_ctx.imports,
+		symbols                   = symbols,
+		use_locals                = true,
+		use_usings                = true,
+		document_package          = doc_ctx.package_name,
+		current_package           = doc_ctx.package_name,
+		uri                       = doc_ctx.uri.uri,
+		fullpath                  = doc_ctx.fullpath,
+		allocator                 = allocator,
+		doc_ctx                   = doc_ctx,
+	}
+
+	add_local_group(&ast_context)
+
+	return ast_context
+}
+
+// Legacy: Create AstContext from individual fields. Use make_ast_context_from_doc_ctx when possible.
 
 make_ast_context_from_doc :: proc(
 	file: ast.File,
