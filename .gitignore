@@ -21,3 +21,4 @@ ols.json
 deno.lock
 *.dSYM/
 .DS_store
+ols.log

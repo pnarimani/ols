@@ -14,6 +14,9 @@ File_Logger_Data :: struct {
 @(private = "file")
 g_logger_data: File_Logger_Data
 
+@(private = "file")
+g_logger: log.Logger
+
 init_file_logger :: proc(verbose: bool) -> log.Logger {
 	exe_path := os.args[0]
 	exe_dir := filepath.dir(exe_path, context.temp_allocator)
@@ -36,12 +39,18 @@ init_file_logger :: proc(verbose: bool) -> log.Logger {
 		}
 	}
 
-	return log.Logger{file_logger_proc, &g_logger_data, lowest, {}}
+	g_logger = log.Logger{file_logger_proc, &g_logger_data, lowest, {}}
+	return g_logger
+}
+
+get_file_logger :: proc() -> log.Logger {
+	return g_logger
 }
 
 shutdown_file_logger :: proc() {
-	if g_logger_data.file_handle != os.INVALID_HANDLE {
+	if g_logger_data.file_handle != os.INVALID_HANDLE && g_logger_data.file_handle != 0 {
 		os.close(g_logger_data.file_handle)
+		g_logger_data.file_handle = 0
 	}
 }
 
@@ -58,8 +67,6 @@ file_logger_proc :: proc(
 		return
 	}
 
-	sync.lock(&data.mutex)
-	defer sync.unlock(&data.mutex)
 
 	thread_id := os.current_thread_id()
 
@@ -78,5 +85,9 @@ file_logger_proc :: proc(
 	}
 
 	message := fmt.tprintf("[%d] [%s] %s\n", thread_id, level_str, text)
+
+	sync.lock(&data.mutex)
+	defer sync.unlock(&data.mutex)
+
 	os.write_string(data.file_handle, message)
 }

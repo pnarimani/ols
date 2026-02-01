@@ -65,6 +65,7 @@ deletings: [dynamic]Request
 
 thread_request_main :: proc(data: rawptr) {
 	request_data := cast(^RequestThreadData)data
+	context.logger = get_file_logger()
 
 	for common.config.running {
 		header, success := read_and_parse_header(request_data.reader)
