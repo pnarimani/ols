@@ -28,21 +28,14 @@ write_hover_content :: proc(ast_context: ^AstContext, symbol: Symbol) -> MarkupC
 	return content
 }
 
-get_hover_information :: proc(doc_ctx: DocumentContext, position: common.Position, symbols: ^SymbolCollection) -> (Hover, bool, bool) {
+get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 	hover := Hover {
 		contents = {kind = "plaintext"},
 	}
 
-	ast_context := make_ast_context(
-		doc_ctx.ast,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.uri.uri,
-		doc_ctx.fullpath,
-		symbols,
-	)
+	ast_context := make_ast_context(req_ctx)
 
-	position_context, ok := get_document_position_context(doc_ctx, position, .Hover)
+	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .Hover)
 	if !ok {
 		log.warn("Failed to get position context")
 		return hover, false, false
@@ -50,10 +43,10 @@ get_hover_information :: proc(doc_ctx: DocumentContext, position: common.Positio
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(req_ctx.doc_ctx.ast, &ast_context)
 
 	if position_context.function != nil {
-		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(req_ctx.doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 
 	if position_context.import_stmt != nil {
@@ -202,7 +195,7 @@ get_hover_information :: proc(doc_ctx: DocumentContext, position: common.Positio
 
 	if position_context.field_value != nil &&
 	   position_in_node(position_context.field_value.field, position_context.position) {
-		hover.range = common.get_token_range(position_context.field_value.field^, doc_ctx.ast.src)
+		hover.range = common.get_token_range(position_context.field_value.field^, req_ctx.doc_ctx.ast.src)
 		if position_context.comp_lit != nil {
 			if comp_symbol, ok := resolve_comp_literal(&ast_context, &position_context); ok {
 				if field, ok := position_context.field_value.field.derived.(^ast.Ident); ok {
@@ -389,7 +382,7 @@ get_hover_information :: proc(doc_ctx: DocumentContext, position: common.Positio
 		}
 	} else if position_context.implicit_selector_expr != nil {
 		implicit_selector := position_context.implicit_selector_expr
-		hover.range = common.get_token_range(implicit_selector, doc_ctx.ast.src)
+		hover.range = common.get_token_range(implicit_selector, req_ctx.doc_ctx.ast.src)
 		if symbol, ok := resolve_implicit_selector(&ast_context, &position_context); ok {
 			#partial switch v in symbol.value {
 			case SymbolEnumValue:
@@ -439,7 +432,7 @@ get_hover_information :: proc(doc_ctx: DocumentContext, position: common.Positio
 			ident.end = position_context.value_decl.end
 		}
 
-		hover.range = common.get_token_range(position_context.identifier^, doc_ctx.ast.src)
+		hover.range = common.get_token_range(position_context.identifier^, req_ctx.doc_ctx.ast.src)
 
 		if position_context.call != nil {
 			if call, ok := position_context.call.derived.(^ast.Call_Expr); ok {

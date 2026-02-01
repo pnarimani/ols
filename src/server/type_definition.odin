@@ -23,32 +23,25 @@ append_symbol_to_locations :: proc(locations: ^[dynamic]common.Location, doc_ctx
 	append(locations, location)
 }
 
-get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common.Position, symbols: ^SymbolCollection) -> ([]common.Location, bool) {
+get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Location, bool) {
 	uri: string
 	locations := make([dynamic]common.Location, context.temp_allocator)
 
-	position_context, ok := get_document_position_context(doc_ctx, position, .TypeDefinition)
+	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .TypeDefinition)
 
 	if !ok {
 		log.warn("Failed to get position context")
 		return {}, false
 	}
 
-	ast_context := make_ast_context(
-		doc_ctx.ast,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.uri.uri,
-		doc_ctx.fullpath,
-		symbols,
-	)
+	ast_context := make_ast_context(req_ctx)
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(req_ctx.doc_ctx.ast, &ast_context)
 
 	if position_context.function != nil {
-		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(req_ctx.doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 
 	if position_context.import_stmt != nil {
@@ -63,7 +56,8 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 		}
 	}
 
-	if position_context.field_value != nil && position_in_node(position_context.field_value.field, position_context.position) {
+	if position_context.field_value != nil &&
+	   position_in_node(position_context.field_value.field, position_context.position) {
 		if position_context.comp_lit != nil {
 			if comp_symbol, ok := resolve_comp_literal(&ast_context, &position_context); ok {
 				if field, ok := position_context.field_value.field.derived.(^ast.Ident); ok {
@@ -72,7 +66,7 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 							for name, i in v.names {
 								if name == field.name {
 									if symbol, ok := resolve_location_type_expression(&ast_context, v.types[i]); ok {
-										append_symbol_to_locations(&locations, doc_ctx, symbol)
+										append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 										return locations[:], true
 									}
 								}
@@ -82,7 +76,7 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 						for name, i in v.names {
 							if name == field.name {
 								if symbol, ok := resolve_type_expression(&ast_context, v.types[i]); ok {
-									append_symbol_to_locations(&locations, doc_ctx, symbol)
+									append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 									return locations[:], true
 								}
 							}
@@ -94,7 +88,7 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 
 		if position_context.call != nil {
 			if symbol, ok := resolve_location_proc_param_name_type(&ast_context, &position_context); ok {
-				append_symbol_to_locations(&locations, doc_ctx, symbol)
+				append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 				return locations[:], true
 			}
 		}
@@ -105,7 +99,7 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 			if !position_in_exprs(call.args, position_context.position) {
 				if call_symbol, ok := resolve_type_expression(&ast_context, position_context.call); ok {
 					if symbol, ok := resolve_symbol_proc_first_return_symbol(&ast_context, call_symbol); ok {
-						append_symbol_to_locations(&locations, doc_ctx, symbol)
+						append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 						return locations[:], true
 					}
 					return {}, false
@@ -121,7 +115,7 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 					if identifier, ok := name.derived.(^ast.Ident); ok && field.type != nil {
 						if position_context.value_decl != nil && len(position_context.value_decl.names) != 0 {
 							if symbol, ok := resolve_location_type_expression(&ast_context, field.type); ok {
-								append_symbol_to_locations(&locations, doc_ctx, symbol)
+								append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 								return locations[:], true
 							}
 						}
@@ -144,7 +138,7 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 
 			if position_in_node(base, position_context.position) {
 				if symbol, ok := resolve_location_type_identifier(&ast_context, ident); ok {
-					append_symbol_to_locations(&locations, doc_ctx, symbol)
+					append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 					return locations[:], true
 				}
 			}
@@ -186,7 +180,7 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 			for name, i in v.names {
 				if name == field {
 					if symbol, ok := resolve_location_type_expression(&ast_context, v.types[i]); ok {
-						append_symbol_to_locations(&locations, doc_ctx, symbol)
+						append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 						return locations[:], true
 					}
 				}
@@ -195,7 +189,7 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 			for name, i in v.names {
 				if name == field {
 					if symbol, ok := resolve_type_expression(&ast_context, v.types[i]); ok {
-						append_symbol_to_locations(&locations, doc_ctx, symbol)
+						append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 						return locations[:], true
 					}
 				}
@@ -212,7 +206,7 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 						}
 					}
 					if symbol, ok := resolve_type_identifier(&ast_context, ident^); ok {
-						append_symbol_to_locations(&locations, doc_ctx, symbol)
+						append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 						return locations[:], true
 					}
 				}
@@ -240,17 +234,17 @@ get_type_definition_locations :: proc(doc_ctx: DocumentContext, position: common
 
 		if symbol, ok := resolve_location_type_identifier(&ast_context, ident); ok {
 			if symbol, ok := resolve_symbol_proc_first_return_symbol(&ast_context, symbol); ok {
-				append_symbol_to_locations(&locations, doc_ctx, symbol)
+				append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 				return locations[:], true
 			}
-			append_symbol_to_locations(&locations, doc_ctx, symbol)
+			append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 			return locations[:], true
 		}
 	}
 
 	if position_context.comp_lit != nil {
 		if symbol, ok := resolve_location_comp_literal(&ast_context, &position_context); ok {
-			append_symbol_to_locations(&locations, doc_ctx, symbol)
+			append_symbol_to_locations(&locations, req_ctx.doc_ctx, symbol)
 			return locations[:], true
 		}
 	}

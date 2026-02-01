@@ -403,7 +403,7 @@ get_references :: proc(
 	bool,
 ) {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, context.temp_allocator)
+	request_symbols := build_request_symbols(doc_ctx.imports, &common.config, context.temp_allocator)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

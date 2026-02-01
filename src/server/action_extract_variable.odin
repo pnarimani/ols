@@ -197,6 +197,7 @@ create_extract_variable_context :: proc(
 	ctx := ExtractVariableContext {
 		doc_ctx = doc_ctx,
 		ast_context = ast_context,
+		out_of_scope_vars = make([dynamic]string),
 	}
 
 	start_pos, start_ok := common.get_absolute_position(range.start, doc_ctx.text)

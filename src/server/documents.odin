@@ -31,13 +31,35 @@ Package :: struct {
 // DocumentContext holds parsed data for a document. Computed fresh per-request using temp allocator.
 // All data is owned by the allocator passed to create_document_context().
 DocumentContext :: struct {
-	uri:          common.Uri,    // Reference to Document.uri (not owned)
-	text:         []u8,          // Reference to Document.text (not owned)
-	ast:          ast.File,      // Parsed AST (owned by allocator)
-	imports:      []Package,     // Parsed imports (owned by allocator)
-	package_name: string,        // Package directory path (owned by allocator)
-	fullpath:     string,        // Full file path (owned by allocator)
+	uri:          common.Uri, // Reference to Document.uri (not owned)
+	text:         []u8, // Reference to Document.text (not owned)
+	ast:          ast.File, // Parsed AST (owned by allocator)
+	imports:      []Package, // Parsed imports (owned by allocator)
+	package_name: string, // Package directory path (owned by allocator)
+	fullpath:     string, // Full file path (owned by allocator)
 	errors:       []ParserError, // Parser errors (owned by allocator)
+}
+
+// RequestContext bundles together all data needed for handling a request.
+// Created fresh per-request with data from DocumentContext and symbols.
+RequestContext :: struct {
+	doc_ctx:  DocumentContext,
+	config:   ^common.Config,
+	position: common.Position,
+	symbols:  SymbolCollection,
+}
+
+// Creates a RequestContext for a document at a given position.
+// All data is allocated using context.temp_allocator.
+make_request_context :: proc(doc: ^Document, pos: common.Position, config: ^common.Config) -> (RequestContext, bool) {
+	doc_ctx, ok := create_document_context(doc, config)
+	if !ok {
+		return {}, false
+	}
+
+	symbols := build_request_symbols(doc_ctx.imports, config, context.temp_allocator)
+
+	return RequestContext{doc_ctx = doc_ctx, config = config, position = pos, symbols = symbols}, true
 }
 
 Document :: struct {
@@ -128,7 +150,7 @@ document_open :: proc(uri_string: string, text: string, config: ^common.Config, 
 		// Document already exists, update it
 		common.delete_uri(document.uri)
 		delete(document.text)
-		
+
 		document.uri = uri
 		document.text = transmute([]u8)strings.clone(text)
 	} else {

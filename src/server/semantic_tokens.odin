@@ -133,7 +133,7 @@ get_semantic_tokens :: proc(
 	symbols: map[uintptr]SymbolAndNode,
 ) -> []SemanticToken {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports)
+	request_symbols := build_request_symbols(doc_ctx.imports, nil, context.temp_allocator)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

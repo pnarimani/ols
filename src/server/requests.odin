@@ -842,14 +842,12 @@ request_definition :: proc(
 		return .InternalError
 	}
 
-	doc_ctx, ctx_ok := create_document_context(document, config)
+	req_ctx, ctx_ok := make_request_context(document, definition_params.position, config)
 	if !ctx_ok {
 		return .InternalError
 	}
 
-	symbols := build_request_symbols(doc_ctx.imports)
-
-	locations, ok2 := get_definition_location(doc_ctx, definition_params.position, config, &symbols)
+	locations, ok2 := get_definition_location(&req_ctx)
 
 	if !ok2 {
 		log.warn("Failed to get definition location")
@@ -890,14 +888,12 @@ request_type_definition :: proc(
 		return .InternalError
 	}
 
-	doc_ctx, ctx_ok := create_document_context(document, config)
+	req_ctx, ctx_ok := make_request_context(document, definition_params.position, config)
 	if !ctx_ok {
 		return .InternalError
 	}
 
-	symbols := build_request_symbols(doc_ctx.imports)
-
-	locations, ok2 := get_type_definition_locations(doc_ctx, definition_params.position, &symbols)
+	locations, ok2 := get_type_definition_locations(&req_ctx)
 	if !ok2 {
 		log.warn("Failed to get type definition location")
 	}
@@ -938,15 +934,13 @@ request_completion :: proc(
 		return .InternalError
 	}
 
-	doc_ctx, ctx_ok := create_document_context(document, config)
+	req_ctx, ctx_ok := make_request_context(document, completition_params.position, config)
 	if !ctx_ok {
 		return .InternalError
 	}
 
-	symbols := build_request_symbols(doc_ctx.imports)
-
 	list: CompletionList
-	list, ok = get_completion_list(doc_ctx, completition_params.position, completition_params.context_, config, &symbols)
+	list, ok = get_completion_list(&req_ctx, completition_params.context_)
 
 	if !ok {
 		return .InternalError
@@ -983,15 +977,13 @@ request_signature_help :: proc(
 		return .InternalError
 	}
 
-	doc_ctx, ctx_ok := create_document_context(document, config)
+	req_ctx, ctx_ok := make_request_context(document, signature_params.position, config)
 	if !ctx_ok {
 		return .InternalError
 	}
 
-	symbols := build_request_symbols(doc_ctx.imports)
-
 	help: SignatureHelp
-	help, ok = get_signature_information(doc_ctx, signature_params.position, config, &symbols)
+	help, ok = get_signature_information(&req_ctx)
 
 	if !ok {
 		return .InternalError
@@ -1235,7 +1227,7 @@ request_semantic_token_full :: proc(
 	if config.enable_semantic_tokens {
 		doc_ctx, ctx_ok := create_document_context(document, config)
 		if ctx_ok {
-			file := FileResolve{
+			file := FileResolve {
 				symbols = resolve_entire_file(doc_ctx, .None, context.temp_allocator),
 			}
 			tokens := get_semantic_tokens(doc_ctx, range, file.symbols)
@@ -1279,7 +1271,7 @@ request_semantic_token_range :: proc(
 	if config.enable_semantic_tokens {
 		doc_ctx, ctx_ok := create_document_context(document, config)
 		if ctx_ok {
-			file := FileResolve{
+			file := FileResolve {
 				symbols = resolve_ranged_file(doc_ctx, semantic_params.range, context.temp_allocator),
 			}
 			tokens := get_semantic_tokens(doc_ctx, semantic_params.range, file.symbols)
@@ -1351,16 +1343,14 @@ request_hover :: proc(params: json.Value, id: RequestId, config: ^common.Config,
 		return .InternalError
 	}
 
-	doc_ctx, ctx_ok := create_document_context(document, config)
+	req_ctx, ctx_ok := make_request_context(document, hover_params.position, config)
 	if !ctx_ok {
 		return .InternalError
 	}
 
-	symbols := build_request_symbols(doc_ctx.imports)
-
 	hover: Hover
 	valid: bool
-	hover, valid, ok = get_hover_information(doc_ctx, hover_params.position, &symbols)
+	hover, valid, ok = get_hover_information(&req_ctx)
 
 	if !ok {
 		return .InternalError
@@ -1398,7 +1388,7 @@ request_inlay_hint :: proc(
 	doc_ctx, ctx_ok := create_document_context(document, config)
 	if !ctx_ok do return .InternalError
 
-	file := FileResolve{
+	file := FileResolve {
 		symbols = resolve_ranged_file(doc_ctx, inlay_params.range, context.temp_allocator),
 	}
 

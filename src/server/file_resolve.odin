@@ -32,7 +32,7 @@ resolve_ranged_file :: proc(
 	allocator := context.allocator,
 ) -> map[uintptr]SymbolAndNode {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, allocator)
+	request_symbols := build_request_symbols(doc_ctx.imports, nil, allocator)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -45,6 +45,7 @@ resolve_ranged_file :: proc(
 	)
 
 	position_context: DocumentPositionContext
+	position_context.functions = make([dynamic]^ast.Proc_Lit, context.temp_allocator)
 
 	get_globals(doc_ctx.ast, &ast_context)
 
@@ -75,7 +76,7 @@ resolve_entire_file :: proc(
 	allocator := context.allocator,
 ) -> map[uintptr]SymbolAndNode {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, allocator)
+	request_symbols := build_request_symbols(doc_ctx.imports)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -88,6 +89,7 @@ resolve_entire_file :: proc(
 	)
 
 	position_context: DocumentPositionContext
+	position_context.functions = make([dynamic]^ast.Proc_Lit, context.temp_allocator)
 
 	get_globals(doc_ctx.ast, &ast_context)
 

@@ -59,7 +59,27 @@ SymbolResult :: struct {
 	ok:     bool,
 }
 
-make_ast_context :: proc(
+make_ast_context :: proc {
+	make_ast_context_from_request,
+	make_ast_context_from_doc,
+}
+
+make_ast_context_from_request :: proc(
+	req_ctx: ^RequestContext,
+	allocator := context.temp_allocator,
+) -> AstContext {
+	return make_ast_context_from_doc(
+		req_ctx.doc_ctx.ast,
+		req_ctx.doc_ctx.imports,
+		req_ctx.doc_ctx.package_name,
+		req_ctx.doc_ctx.uri.uri,
+		req_ctx.doc_ctx.fullpath,
+		&req_ctx.symbols,
+		allocator,
+	)
+}
+
+make_ast_context_from_doc :: proc(
 	file: ast.File,
 	imports: []Package,
 	package_name: string,

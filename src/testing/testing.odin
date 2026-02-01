@@ -21,18 +21,32 @@ Source :: struct {
 	main:         string,
 	packages:     []Package,
 	document:     ^server.Document,
-	doc_ctx:      server.DocumentContext,  // Parsed document context
+	doc_ctx:      server.DocumentContext, // Parsed document context
 	symbols:      server.SymbolCollection, // Per-test symbol collection
 	diagnostics:  server.DiagnosticCollection, // Per-test diagnostic collection
 	collections:  map[string]string,
 	config:       common.Config,
 	position:     common.Position,
 	end_position: common.Position, // For range selection tests
-	has_range:    bool,            // True if {<} and {>} markers were found
+	has_range:    bool, // True if {<} and {>} markers were found
+}
+
+// Helper to create a RequestContext from a Source for testing
+make_test_request_context :: proc(src: ^Source) -> server.RequestContext {
+	return server.RequestContext {
+		doc_ctx = src.doc_ctx,
+		config = &src.config,
+		position = src.position,
+		symbols = src.symbols,
+	}
 }
 
 @(private)
 setup :: proc(src: ^Source) {
+	// Use temp allocator for all allocations in this test to avoid leak reports
+	// The parser internally uses context.allocator so we need to redirect it
+	context.allocator = context.temp_allocator
+	
 	src.main = strings.clone(src.main, context.temp_allocator)
 	src.document = new(server.Document, context.temp_allocator)
 	src.document.uri = common.create_uri("test/test.odin", context.temp_allocator)
@@ -44,7 +58,7 @@ setup :: proc(src: ^Source) {
 	// Create a fresh symbol collection for this test
 	// This includes builtins from the filesystem for builtin function testing
 	// Pass the test config so that enable_fake_method etc. are respected
-	src.symbols = server.build_request_symbols({}, context.temp_allocator, &src.config)
+	src.symbols = server.build_request_symbols({}, &src.config, context.temp_allocator)
 
 	// Create DocumentContext for the test document
 	src.doc_ctx, _ = server.create_document_context(src.document, &src.config, context.temp_allocator)
@@ -103,7 +117,7 @@ setup :: proc(src: ^Source) {
 
 @(private)
 teardown :: proc(src: ^Source) {
-	// Nothing to clean up - symbols and diagnostics are in temp_allocator
+	free_all(context.temp_allocator)
 }
 
 // Parse position markers from source text
@@ -184,7 +198,8 @@ expect_signature_labels :: proc(t: ^testing.T, src: ^Source, expect_labels: []st
 	setup(src)
 	defer teardown(src)
 
-	help, ok := server.get_signature_information(src.doc_ctx, src.position, &src.config, &src.symbols)
+	req_ctx := make_test_request_context(src)
+	help, ok := server.get_signature_information(&req_ctx)
 
 	if !ok {
 		log.error("Failed get_signature_information")
@@ -216,7 +231,8 @@ expect_signature_parameter_position :: proc(t: ^testing.T, src: ^Source, positio
 	setup(src)
 	defer teardown(src)
 
-	help, ok := server.get_signature_information(src.doc_ctx, src.position, &src.config, &src.symbols)
+	req_ctx := make_test_request_context(src)
+	help, ok := server.get_signature_information(&req_ctx)
 
 	if help.activeParameter != position {
 		log.errorf("expected parameter position %v, but received %v", position, help.activeParameter)
@@ -237,7 +253,8 @@ expect_completion_labels :: proc(
 		triggerCharacter = trigger_character,
 	}
 
-	completion_list, ok := server.get_completion_list(src.doc_ctx, src.position, completion_context, &src.config, &src.symbols)
+	req_ctx := make_test_request_context(src)
+	completion_list, ok := server.get_completion_list(&req_ctx, completion_context)
 
 	if !ok {
 		log.error("Failed get_completion_list")
@@ -298,7 +315,8 @@ expect_completion_docs :: proc(
 		triggerCharacter = trigger_character,
 	}
 
-	completion_list, ok := server.get_completion_list(src.doc_ctx, src.position, completion_context, &src.config, &src.symbols)
+	req_ctx := make_test_request_context(src)
+	completion_list, ok := server.get_completion_list(&req_ctx, completion_context)
 
 	if !ok {
 		log.error("Failed get_completion_list")
@@ -346,7 +364,8 @@ expect_completion_insert_text :: proc(
 		triggerCharacter = trigger_character,
 	}
 
-	completion_list, ok := server.get_completion_list(src.doc_ctx, src.position, completion_context, &src.config, &src.symbols)
+	req_ctx := make_test_request_context(src)
+	completion_list, ok := server.get_completion_list(&req_ctx, completion_context)
 
 	if !ok {
 		log.error("Failed get_completion_list")
@@ -390,7 +409,8 @@ expect_completion_edit_text :: proc(
 		triggerCharacter = trigger_character,
 	}
 
-	completion_list, ok := server.get_completion_list(src.doc_ctx, src.position, completion_context, &src.config, &src.symbols)
+	req_ctx := make_test_request_context(src)
+	completion_list, ok := server.get_completion_list(&req_ctx, completion_context)
 
 	if !ok {
 		log.error("Failed get_completion_list")
@@ -423,8 +443,8 @@ expect_completion_edit_text :: proc(
 expect_hover :: proc(t: ^testing.T, src: ^Source, expect_hover_string: string) {
 	setup(src)
 	defer teardown(src)
-
-	hover, valid, ok := server.get_hover_information(src.doc_ctx, src.position, &src.symbols)
+	req_ctx := make_test_request_context(src)
+	hover, valid, ok := server.get_hover_information(&req_ctx)
 
 	if !ok {
 		log.error(t, "Failed get_hover_information")
@@ -448,7 +468,8 @@ expect_definition_locations :: proc(t: ^testing.T, src: ^Source, expect_location
 	setup(src)
 	defer teardown(src)
 
-	locations, ok := server.get_definition_location(src.doc_ctx, src.position, &src.config, &src.symbols)
+	req_ctx := make_test_request_context(src)
+	locations, ok := server.get_definition_location(&req_ctx)
 
 	if !ok {
 		log.error("Failed get_definition_location")
@@ -479,7 +500,8 @@ expect_type_definition_locations :: proc(t: ^testing.T, src: ^Source, expect_loc
 	setup(src)
 	defer teardown(src)
 
-	locations, ok := server.get_type_definition_locations(src.doc_ctx, src.position, &src.symbols)
+	req_ctx := make_test_request_context(src)
+	locations, ok := server.get_type_definition_locations(&req_ctx)
 
 	if !ok {
 		log.error("Failed get_definition_location")
@@ -577,15 +599,9 @@ expect_prepare_rename_range :: proc(t: ^testing.T, src: ^Source, expect_range: c
 @(private)
 build_action_range :: proc(src: ^Source) -> common.Range {
 	if src.has_range {
-		return common.Range {
-			start = src.position,
-			end   = src.end_position,
-		}
+		return common.Range{start = src.position, end = src.end_position}
 	}
-	return common.Range {
-		start = src.position,
-		end   = src.position,
-	}
+	return common.Range{start = src.position, end = src.position}
 }
 
 expect_action :: proc(t: ^testing.T, src: ^Source, expect_action_names: []string) {

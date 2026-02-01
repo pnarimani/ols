@@ -63,27 +63,12 @@ seperate_proc_field_arguments :: proc(procedure: ^Symbol) {
 }
 
 
-get_signature_information :: proc(
-	doc_ctx: DocumentContext,
-	position: common.Position,
-	config: ^common.Config,
-	symbols: ^SymbolCollection,
-) -> (
-	SignatureHelp,
-	bool,
-) {
+get_signature_information :: proc(req_ctx: ^RequestContext) -> (SignatureHelp, bool) {
 	signature_help: SignatureHelp
 
-	ast_context := make_ast_context(
-		doc_ctx.ast,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.uri.uri,
-		doc_ctx.fullpath,
-		symbols,
-	)
+	ast_context := make_ast_context(req_ctx)
 
-	position_context, ok := get_document_position_context(doc_ctx, position, .SignatureHelp)
+	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .SignatureHelp)
 	if !ok {
 		log.warn("Failed to get position context")
 		return signature_help, true
@@ -91,14 +76,14 @@ get_signature_information :: proc(
 	ast_context.position_hint = position_context.hint
 
 	//TODO(should probably not be an ast.Expr, but ast.Call_Expr)
-	if position_context.call == nil && !config.enable_comp_lit_signature_help {
+	if position_context.call == nil && !req_ctx.config.enable_comp_lit_signature_help {
 		return signature_help, true
 	}
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(req_ctx.doc_ctx.ast, &ast_context)
 
 	if position_context.function != nil {
-		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(req_ctx.doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 	signature_information := make([dynamic]SignatureInformation, context.temp_allocator)
 
@@ -106,9 +91,9 @@ get_signature_information :: proc(
 		signature_help.activeParameter = add_proc_signature(&ast_context, &position_context, &signature_information)
 	}
 
-	if config.enable_comp_lit_signature_help {
+	if req_ctx.config.enable_comp_lit_signature_help {
 		if symbol, ok := resolve_comp_literal(&ast_context, &position_context); ok {
-			if config.enable_comp_lit_signature_help_use_docs {
+			if req_ctx.config.enable_comp_lit_signature_help_use_docs {
 				build_documentation(&ast_context, &symbol, short_signature = true)
 				signature := get_signature(symbol)
 				build_documentation(&ast_context, &symbol, short_signature = false)
@@ -133,7 +118,7 @@ get_signature_information :: proc(
 
 @(private = "file")
 get_signature :: proc(symbol: Symbol) -> string {
-	sb := strings.builder_make()
+	sb := strings.builder_make(context.temp_allocator)
 	write_symbol_name(&sb, symbol)
 	strings.write_string(&sb, " :: ")
 	strings.write_string(&sb, symbol.signature)

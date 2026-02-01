@@ -34,19 +34,10 @@ Completion_Type :: enum {
 	Package,
 }
 
-get_completion_list :: proc(
-	doc_ctx: DocumentContext,
-	position: common.Position,
-	completion_context: CompletionContext,
-	config: ^common.Config,
-	symbols: ^SymbolCollection,
-) -> (
-	CompletionList,
-	bool,
-) {
+get_completion_list :: proc(req_ctx: ^RequestContext, completion_context: CompletionContext) -> (CompletionList, bool) {
 	list: CompletionList
 
-	position_context, ok := get_document_position_context(doc_ctx, position, .Completion)
+	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .Completion)
 
 	if !ok || position_context.abort_completion {
 		return list, true
@@ -69,23 +60,16 @@ get_completion_list :: proc(
 		}
 	}
 
-	ast_context := make_ast_context(
-		doc_ctx.ast,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.uri.uri,
-		doc_ctx.fullpath,
-		symbols,
-	)
+	ast_context := make_ast_context(req_ctx)
 	ast_context.position_hint = position_context.hint
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(req_ctx.doc_ctx.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 	ast_context.value_decl = position_context.value_decl
 
 	if position_context.function != nil {
-		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(req_ctx.doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 
 	completion_type: Completion_Type = .Identifier
@@ -158,19 +142,19 @@ get_completion_list :: proc(
 	// TODO: as these are mutally exclusive, should probably just make them return a slice?
 	switch completion_type {
 	case .Comp_Lit:
-		is_incomplete = get_comp_lit_completion(&ast_context, &position_context, &results, config)
+		is_incomplete = get_comp_lit_completion(&ast_context, &position_context, &results, req_ctx.config)
 	case .Identifier:
-		is_incomplete = get_identifier_completion(&ast_context, &position_context, &results, config)
+		is_incomplete = get_identifier_completion(&ast_context, &position_context, &results, req_ctx.config)
 	case .Implicit:
 		is_incomplete = get_implicit_completion(&ast_context, &position_context, &results)
 	case .Selector:
-		is_incomplete = get_selector_completion(&ast_context, &position_context, &results, config)
+		is_incomplete = get_selector_completion(&ast_context, &position_context, &results, req_ctx.config)
 	case .Switch_Type:
 		is_incomplete = get_type_switch_completion(&ast_context, &position_context, &results)
 	case .Directive:
 		is_incomplete = get_directive_completion(&ast_context, &position_context, &results)
 	case .Package:
-		is_incomplete = get_package_completion(&ast_context, &position_context, &results, config)
+		is_incomplete = get_package_completion(&ast_context, &position_context, &results, req_ctx.config)
 	}
 
 	items := convert_completion_results(
@@ -179,7 +163,7 @@ get_completion_list :: proc(
 		results[:],
 		completion_type,
 		arg_symbol,
-		config,
+		req_ctx.config,
 	)
 	list.items = items
 	list.isIncomplete = is_incomplete
@@ -550,7 +534,7 @@ get_completion_description :: proc(ast_context: ^AstContext, symbol: Symbol) -> 
 	case SymbolAggregateValue:
 		return ""
 	}
-	sb := strings.builder_make()
+	sb := strings.builder_make(context.temp_allocator)
 	if write_symbol_type_information(&sb, ast_context, symbol) {
 		return strings.to_string(sb)
 	}
@@ -1594,7 +1578,7 @@ add_implicit_selector_remove_edit :: proc(
 	valid_names: []string,
 ) {
 	get_name :: proc(full_name: string) -> string {
-		split_name := strings.split(full_name, ".")
+		split_name := strings.split(full_name, ".", context.temp_allocator)
 		return split_name[len(split_name) - 1]
 	}
 
