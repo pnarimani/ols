@@ -387,8 +387,6 @@ resolve_references :: proc(
 				}
 			}
 		}
-
-		free_all(context.allocator)
 	}
 
 	return locations[:], true

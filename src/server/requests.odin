@@ -51,6 +51,7 @@ RequestThreadData :: struct {
 }
 
 Request :: struct {
+	allocator:       mem.Allocator,
 	id:              RequestId,
 	value:           json.Value,
 	is_notification: bool,
@@ -117,12 +118,12 @@ thread_request_main :: proc(data: rawptr) {
 		method := root["method"].(json.String)
 
 		if method == "$/cancelRequest" {
-			append(&deletings, Request{id = id, value = root})
+			append(&deletings, Request{id = id, value = root, allocator = context.allocator})
 		} else if method in notification_map {
-			append(&requests, Request{value = root, is_notification = true})
+			append(&requests, Request{value = root, is_notification = true, allocator = context.allocator})
 			sync.sema_post(&requests_sempahore)
 		} else {
-			append(&requests, Request{id = id, value = root})
+			append(&requests, Request{id = id, value = root, allocator = context.allocator})
 			sync.sema_post(&requests_sempahore)
 		}
 
@@ -260,7 +261,7 @@ consume_requests :: proc(config: ^common.Config, writer: ^Writer) -> bool {
 	context.allocator = context.temp_allocator
 	defer free_all(context.temp_allocator)
 
-	requests_copy := make([dynamic]Request, 4)
+	requests_copy := make([dynamic]Request)
 
 	{
 		sync.mutex_lock(&requests_mutex)
@@ -275,12 +276,17 @@ consume_requests :: proc(config: ^common.Config, writer: ^Writer) -> bool {
 				}
 			}
 			if delete_index != -1 {
-				cancel(requests[delete_index].value, requests[delete_index].id, writer, config)
+				req := requests[delete_index]
+				json_value := req.value
+				cancel(json_value, req.id, writer, config)
 				ordered_remove(&requests, delete_index)
+
+				json.destroy_value(json_value, allocator = req.allocator)
 			}
 		}
 
 		for request in requests {
+			assert(request.value != nil)
 			append(&requests_copy, request)
 		}
 	}
@@ -290,6 +296,8 @@ consume_requests :: proc(config: ^common.Config, writer: ^Writer) -> bool {
 	for ; request_index < len(requests_copy); request_index += 1 {
 		request := requests_copy[request_index]
 		call(request.value, request.id, writer, config)
+
+		json.destroy_value(request.value, allocator = request.allocator)
 	}
 
 	{
@@ -315,18 +323,11 @@ consume_requests :: proc(config: ^common.Config, writer: ^Writer) -> bool {
 
 
 cancel :: proc(value: json.Value, id: RequestId, writer: ^Writer, config: ^common.Config) {
-	defer json.destroy_value(value)
-
 	response := make_response_message(id = id, params = ResponseParams{})
 	send_response(response, writer)
 }
 
 call :: proc(value: json.Value, id: RequestId, writer: ^Writer, config: ^common.Config) {
-	// Use temp_allocator for all request-scoped allocations
-	context.allocator = context.temp_allocator
-	defer free_all(context.temp_allocator)
-	defer json.destroy_value(value)
-
 	root := value.(json.Object)
 
 	method, ok := root["method"].(json.String)
