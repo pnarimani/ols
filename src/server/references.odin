@@ -33,7 +33,7 @@ walk_directories :: proc(info: os.File_Info, in_err: os.Errno, user_data: rawptr
 	if strings.contains(info.name, ".odin") {
 		slash_path, _ := filepath.to_slash(info.fullpath, context.temp_allocator)
 		if slash_path != data.doc_ctx.fullpath {
-			append(data.fullpaths, strings.clone(info.fullpath, context.temp_allocator))
+			append(data.fullpaths, strings.clone(info.fullpath))
 		}
 	}
 
@@ -292,15 +292,6 @@ resolve_references :: proc(
 
 	reset_ast_context(ast_context)
 
-
-	arena: runtime.Arena
-
-	_ = runtime.arena_init(&arena, mem.Megabyte * 40, runtime.default_allocator())
-
-	defer runtime.arena_destroy(&arena)
-
-	context.allocator = runtime.arena_allocator(&arena)
-
 	unique_fullpaths := slice.unique(fullpaths[:])
 
 	for fullpath in unique_fullpaths {
@@ -308,7 +299,7 @@ resolve_references :: proc(
 		base := filepath.base(dir)
 		forward_dir, _ := filepath.to_slash(dir)
 
-		data, ok := os.read_entire_file(fullpath, context.allocator)
+		data, ok := os.read_entire_file(fullpath)
 
 		if !ok {
 			log.errorf("failed to read entire file for indexing %v", fullpath)
@@ -346,7 +337,7 @@ resolve_references :: proc(
 			continue
 		}
 
-		uri := common.create_uri(fullpath, context.allocator)
+		uri := common.create_uri(fullpath)
 
 		// Create a DocumentContext directly for this file
 		inner_doc_ctx := DocumentContext {
@@ -358,7 +349,7 @@ resolve_references :: proc(
 		}
 
 		// Parse imports for this file
-		inner_doc_ctx.imports = parse_imports_from_ast(file, forward_dir, data, &common.config, context.allocator)
+		inner_doc_ctx.imports = parse_imports_from_ast(file, forward_dir, data, &common.config)
 
 		in_pkg := false
 
