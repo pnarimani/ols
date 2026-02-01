@@ -20,19 +20,21 @@ DocumentFormattingParams :: struct {
 	options:      FormattingOptions,
 }
 
-get_complete_format :: proc(document: ^Document, config: ^common.Config) -> ([]TextEdit, bool) {
-	if document.ast.syntax_error_count > 0 {
+get_complete_format :: proc(doc_ctx: DocumentContext, config: ^common.Config) -> ([]TextEdit, bool) {
+	if doc_ctx.ast.syntax_error_count > 0 {
 		return {}, true
 	}
 
-	if len(document.text) == 0 {
+	if len(doc_ctx.text) == 0 {
 		return {}, true
 	}
 
-	style := format.find_config_file_or_default(filepath.dir(document.fullpath, context.temp_allocator))
+	style := format.find_config_file_or_default(filepath.dir(doc_ctx.fullpath, context.temp_allocator))
 	prnt := printer.make_printer(style, context.temp_allocator)
 
-	src := printer.print(&prnt, &document.ast)
+	// Copy the ast to take a pointer to it
+	ast_copy := doc_ctx.ast
+	src := printer.print(&prnt, &ast_copy)
 
 	if prnt.errored_out {
 		return {}, true
@@ -40,7 +42,7 @@ get_complete_format :: proc(document: ^Document, config: ^common.Config) -> ([]T
 
 	edit := TextEdit {
 		newText = src,
-		range   = common.get_document_range(document.text[0:document.used_text]),
+		range   = common.get_document_range(doc_ctx.text),
 	}
 
 	edits := make([dynamic]TextEdit, context.temp_allocator)

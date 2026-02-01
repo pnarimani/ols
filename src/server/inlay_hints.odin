@@ -8,7 +8,7 @@ import "core:odin/ast"
 import "src:common"
 
 get_inlay_hints :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	range: common.Range,
 	symbols: map[uintptr]SymbolAndNode,
 	config: ^common.Config,
@@ -17,7 +17,7 @@ get_inlay_hints :: proc(
 	bool,
 ) {
 	Visitor_Data :: struct {
-		document: ^Document,
+		doc_ctx:  DocumentContext,
 		range:    common.Range,
 		symbols:  map[uintptr]SymbolAndNode,
 		config:   ^common.Config,
@@ -32,7 +32,7 @@ get_inlay_hints :: proc(
 	}
 
 	data := Visitor_Data{
-		document = document,
+		doc_ctx  = doc_ctx,
 		range    = range,
 		symbols  = symbols,
 		config   = config,
@@ -69,7 +69,7 @@ get_inlay_hints :: proc(
 		},
 	}
 
-	for decl in document.ast.decls {
+	for decl in doc_ctx.ast.decls {
 		ast.walk(&visitor, decl)
 	}
 
@@ -96,7 +96,7 @@ get_inlay_hints :: proc(
 
 		call := node.derived.(^ast.Call_Expr) or_return
 
-		src := string(data.document.text)
+		src := string(data.doc_ctx.text)
 		end_pos := common.token_pos_to_position(call.close, src)
 
 		selector, is_selector_call := call.expr.derived.(^ast.Selector_Expr)
@@ -254,7 +254,7 @@ get_inlay_hints :: proc(
 					needs_leading_comma := added_default_hint || param_idx > 0 || label_idx > 0
 					if needs_leading_comma && !added_default_hint {
 						// check for existing trailing comma
-						#reverse for ch in string(data.document.text[:call.close.offset]) {
+						#reverse for ch in string(data.doc_ctx.text[:call.close.offset]) {
 							switch ch {
 							case ' ', '\t', '\n': continue
 							case ',': needs_leading_comma = false
@@ -332,7 +332,7 @@ get_inlay_hints :: proc(
 			}
 		}
 
-		range := common.get_token_range(return_node^, string(data.document.text))
+		range := common.get_token_range(return_node^, string(data.doc_ctx.text))
 		append(&data.hints, InlayHint{range.end, .Parameter, strings.to_string(sb)})
 
 		return true

@@ -87,7 +87,6 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 
 	server.document_storage_shutdown()
 
-	server.free_index()
 	server.shutdown_file_logger()
 
 }

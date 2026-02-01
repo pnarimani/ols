@@ -128,16 +128,20 @@ semantic_tokens_to_response_params :: proc(tokens: []SemanticToken) -> SemanticT
 }
 
 get_semantic_tokens :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	range: common.Range,
 	symbols: map[uintptr]SymbolAndNode,
 ) -> []SemanticToken {
+	// Build fresh symbols for this request
+	request_symbols := build_request_symbols(doc_ctx.imports)
+
 	ast_context := make_ast_context(
-		document.ast,
-		document.imports,
-		document.package_name,
-		document.uri.uri,
-		document.fullpath,
+		doc_ctx.ast,
+		doc_ctx.imports,
+		doc_ctx.package_name,
+		doc_ctx.uri.uri,
+		doc_ctx.fullpath,
+		&request_symbols,
 	)
 	ast_context.current_package = ast_context.document_package
 
@@ -149,7 +153,7 @@ get_semantic_tokens :: proc(
 
 	margin := 20
 
-	for decl in document.ast.decls {
+	for decl in doc_ctx.ast.decls {
 		//Look for declarations that overlap with range
 		if range.start.line - margin <= decl.end.line && decl.pos.line <= range.end.line + margin {
 			visit_node(decl, &builder)

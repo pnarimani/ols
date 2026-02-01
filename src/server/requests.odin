@@ -288,7 +288,6 @@ consume_requests :: proc(config: ^common.Config, writer: ^Writer) -> bool {
 	for ; request_index < len(temp_requests); request_index += 1 {
 		request := temp_requests[request_index]
 		call(request.value, request.id, writer, config)
-		clear_index_cache()
 		free_all(context.temp_allocator)
 	}
 
@@ -772,28 +771,9 @@ request_initialize :: proc(
 
 	send_response(response, writer)
 
-	/*
-		Add runtime package
-	*/
-
-	if base, ok := config.collections["base"]; ok {
-		indexer.runtime_package = path.join({base, "runtime"})
-		append(&indexer.builtin_packages, indexer.runtime_package)
-	}
-
-	file_resolve_cache.files = make(map[string]FileResolve, 200)
-
-	setup_index()
-
-	for pkg in indexer.builtin_packages {
-		try_build_package(pkg)
-	}
-
 	if initialize_params.capabilities.workspace.didChangeWatchedFiles.dynamicRegistration {
 		register_dynamic_capabilities(writer)
 	}
-
-	find_all_package_aliases()
 
 	return .None
 }
@@ -862,7 +842,14 @@ request_definition :: proc(
 		return .InternalError
 	}
 
-	locations, ok2 := get_definition_location(document, definition_params.position, config)
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
+	symbols := build_request_symbols(doc_ctx.imports)
+
+	locations, ok2 := get_definition_location(doc_ctx, definition_params.position, config, &symbols)
 
 	if !ok2 {
 		log.warn("Failed to get definition location")
@@ -903,7 +890,14 @@ request_type_definition :: proc(
 		return .InternalError
 	}
 
-	locations, ok2 := get_type_definition_locations(document, definition_params.position)
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
+	symbols := build_request_symbols(doc_ctx.imports)
+
+	locations, ok2 := get_type_definition_locations(doc_ctx, definition_params.position, &symbols)
 	if !ok2 {
 		log.warn("Failed to get type definition location")
 	}
@@ -944,8 +938,15 @@ request_completion :: proc(
 		return .InternalError
 	}
 
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
+	symbols := build_request_symbols(doc_ctx.imports)
+
 	list: CompletionList
-	list, ok = get_completion_list(document, completition_params.position, completition_params.context_, config)
+	list, ok = get_completion_list(doc_ctx, completition_params.position, completition_params.context_, config, &symbols)
 
 	if !ok {
 		return .InternalError
@@ -982,8 +983,15 @@ request_signature_help :: proc(
 		return .InternalError
 	}
 
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
+	symbols := build_request_symbols(doc_ctx.imports)
+
 	help: SignatureHelp
-	help, ok = get_signature_information(document, signature_params.position, config)
+	help, ok = get_signature_information(doc_ctx, signature_params.position, config, &symbols)
 
 	if !ok {
 		return .InternalError
@@ -1025,8 +1033,13 @@ request_format_document :: proc(
 		return .InternalError
 	}
 
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
 	edit: []TextEdit
-	edit, ok = get_complete_format(document, config)
+	edit, ok = get_complete_format(doc_ctx, config)
 
 	if !ok {
 		return .InternalError
@@ -1072,10 +1085,14 @@ notification_did_open :: proc(
 
 	document := document_get(open_params.textDocument.uri)
 
-	check_unused_imports(document, config)
-	check_invert_if_suggestions(document, config)
+	diagnostics := make_diagnostic_collection(context.temp_allocator)
 
-	push_diagnostics(writer)
+	if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
+		check_unused_imports(doc_ctx, config, &diagnostics)
+		check_invert_if_suggestions(doc_ctx, config, &diagnostics)
+	}
+
+	push_diagnostics(&diagnostics, writer)
 
 	return .None
 }
@@ -1158,10 +1175,6 @@ notification_did_save :: proc(
 		return .ParseError
 	}
 
-	if result := index_file(uri, save_params.text); result != .None {
-		return result
-	}
-
 	fullpath := uri.path
 
 	when ODIN_OS == .Windows {
@@ -1171,15 +1184,19 @@ notification_did_save :: proc(
 
 	corrected_uri := common.create_uri(fullpath, context.temp_allocator)
 
-	check(config.profile.checker_path[:], corrected_uri, config)
+	diagnostics := make_diagnostic_collection(context.temp_allocator)
+
+	check(config.profile.checker_path[:], corrected_uri, config, &diagnostics)
 
 	document := document_get(save_params.textDocument.uri)
 	if document != nil {
-		check_unused_imports(document, config)
-		check_invert_if_suggestions(document, config)
+		if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
+			check_unused_imports(doc_ctx, config, &diagnostics)
+			check_invert_if_suggestions(doc_ctx, config, &diagnostics)
+		}
 	}
 
-	push_diagnostics(writer)
+	push_diagnostics(&diagnostics, writer)
 
 	return .None
 }
@@ -1216,10 +1233,12 @@ request_semantic_token_full :: proc(
 	tokens_params: SemanticTokensResponseParams
 
 	if config.enable_semantic_tokens {
-		resolve_entire_file_cached(document)
-
-		if file, ok := file_resolve_cache.files[document.uri.uri]; ok {
-			tokens := get_semantic_tokens(document, range, file.symbols)
+		doc_ctx, ctx_ok := create_document_context(document, config)
+		if ctx_ok {
+			file := FileResolve{
+				symbols = resolve_entire_file(doc_ctx, .None, context.temp_allocator),
+			}
+			tokens := get_semantic_tokens(doc_ctx, range, file.symbols)
 			tokens_params = semantic_tokens_to_response_params(tokens)
 		}
 	}
@@ -1258,10 +1277,14 @@ request_semantic_token_range :: proc(
 	tokens_params: SemanticTokensResponseParams
 
 	if config.enable_semantic_tokens {
-		file := resolve_ranged_file_cached(document, semantic_params.range, context.temp_allocator)
-
-		tokens := get_semantic_tokens(document, semantic_params.range, file.symbols)
-		tokens_params = semantic_tokens_to_response_params(tokens)
+		doc_ctx, ctx_ok := create_document_context(document, config)
+		if ctx_ok {
+			file := FileResolve{
+				symbols = resolve_ranged_file(doc_ctx, semantic_params.range, context.temp_allocator),
+			}
+			tokens := get_semantic_tokens(doc_ctx, semantic_params.range, file.symbols)
+			tokens_params = semantic_tokens_to_response_params(tokens)
+		}
 	}
 
 	response := make_response_message(params = tokens_params, id = id)
@@ -1295,7 +1318,12 @@ request_document_symbols :: proc(
 		return .InternalError
 	}
 
-	symbols := get_document_symbols(document)
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
+	symbols := get_document_symbols(doc_ctx)
 
 	response := make_response_message(params = symbols, id = id)
 
@@ -1323,9 +1351,16 @@ request_hover :: proc(params: json.Value, id: RequestId, config: ^common.Config,
 		return .InternalError
 	}
 
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
+	symbols := build_request_symbols(doc_ctx.imports)
+
 	hover: Hover
 	valid: bool
-	hover, valid, ok = get_hover_information(document, hover_params.position)
+	hover, valid, ok = get_hover_information(doc_ctx, hover_params.position, &symbols)
 
 	if !ok {
 		return .InternalError
@@ -1360,9 +1395,14 @@ request_inlay_hint :: proc(
 	document := document_get(inlay_params.textDocument.uri)
 	if document == nil do return .InternalError
 
-	file := resolve_ranged_file_cached(document, inlay_params.range, context.temp_allocator)
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok do return .InternalError
 
-	hints, hints_ok := get_inlay_hints(document, inlay_params.range, file.symbols, config)
+	file := FileResolve{
+		symbols = resolve_ranged_file(doc_ctx, inlay_params.range, context.temp_allocator),
+	}
+
+	hints, hints_ok := get_inlay_hints(doc_ctx, inlay_params.range, file.symbols, config)
 	if !hints_ok do return .InternalError
 
 	response := make_response_message(params = hints, id = id)
@@ -1403,8 +1443,13 @@ request_document_links :: proc(
 		return .InternalError
 	}
 
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
 	links: []DocumentLink
-	links, ok = get_document_links(document)
+	links, ok = get_document_links(doc_ctx)
 
 	if !ok {
 		return .InternalError
@@ -1441,7 +1486,12 @@ request_prepare_rename :: proc(
 		return .InternalError
 	}
 
-	if range, ok := get_prepare_rename(document, rename_param.position); ok {
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
+	if range, ok := get_prepare_rename(doc_ctx, rename_param.position); ok {
 		response := make_response_message(params = range, id = id)
 		send_response(response, writer)
 	} else {
@@ -1471,8 +1521,13 @@ request_rename :: proc(params: json.Value, id: RequestId, config: ^common.Config
 		return .InternalError
 	}
 
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
 	workspace_edit: WorkspaceEdit
-	workspace_edit, ok = get_rename(document, rename_param.newName, rename_param.position)
+	workspace_edit, ok = get_rename(doc_ctx, rename_param.newName, rename_param.position)
 
 	if !ok {
 		return .InternalError
@@ -1509,8 +1564,13 @@ request_references :: proc(
 		return .InternalError
 	}
 
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
 	locations: []common.Location
-	locations, ok = get_references(document, reference_param.position)
+	locations, ok = get_references(doc_ctx, reference_param.position)
 
 	if !ok {
 		return .InternalError
@@ -1547,8 +1607,13 @@ request_highlights :: proc(
 		return .InternalError
 	}
 
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
 	locations: []common.Location
-	locations, ok = get_references(document, highlight_param.position, true)
+	locations, ok = get_references(doc_ctx, highlight_param.position, true)
 
 	if !ok {
 		return .InternalError
@@ -1590,8 +1655,13 @@ request_code_action :: proc(
 		return .InternalError
 	}
 
+	doc_ctx, ctx_ok := create_document_context(document, config)
+	if !ctx_ok {
+		return .InternalError
+	}
+
 	code_actions: []CodeAction
-	code_actions, ok = get_code_actions(document, code_action_params.range, config)
+	code_actions, ok = get_code_actions(doc_ctx, code_action_params.range, config)
 	if !ok {
 		return .InternalError
 	}
@@ -1620,25 +1690,7 @@ notification_did_change_watched_files :: proc(
 		return .ParseError
 	}
 
-	for change in did_change_watched_files_params.changes {
-		if change.type == cast(int)FileChangeType.Deleted {
-			if uri, ok := common.parse_uri(change.uri, context.temp_allocator); ok {
-				remove_index_file(uri)
-			}
-			clear_all_package_aliases()
-			find_all_package_aliases()
-		} else {
-			if uri, ok := common.parse_uri(change.uri, context.temp_allocator); ok {
-				if data, ok := os.read_entire_file(uri.path, context.temp_allocator); ok {
-					index_file(uri, cast(string)data)
-				}
-			}
-			if change.type == cast(int)FileChangeType.Created {
-				clear_all_package_aliases()
-				find_all_package_aliases()
-			}
-		}
-	}
+	// No global index to update - symbols are built fresh per request
 
 	return .None
 }

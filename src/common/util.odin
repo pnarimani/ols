@@ -118,8 +118,7 @@ when ODIN_OS == .Darwin || ODIN_OS == .FreeBSD || ODIN_OS == .Linux || ODIN_OS =
 		return 0, true, stdout[0:index]
 	}
 
-	foreign libc 
-	{
+	foreign libc {
 		popen :: proc(command: cstring, type: cstring) -> ^FILE ---
 		pclose :: proc(stream: ^FILE) -> i32 ---
 		fgets :: proc "cdecl" (s: [^]byte, n: i32, stream: ^FILE) -> [^]u8 ---

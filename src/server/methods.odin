@@ -118,7 +118,7 @@ collect_methods :: proc(
 	remove_edit: []TextEdit,
 	results: ^[dynamic]CompletionResult,
 ) {
-	for k, v in indexer.index.collection.packages {
+	for k, v in ast_context.symbols.packages {
 		symbols, ok := &v.methods[method]
 		if !ok {
 			continue

@@ -24,7 +24,7 @@ expect_diagnostic_at :: proc(t: ^testing.T, src: ^Source, code: string, message_
 	found := false
 	found_diagnostics := make([dynamic]server.Diagnostic, context.temp_allocator)
 
-	diag_map := &server.diagnostics[.Hint]
+	diag_map := &src.diagnostics.diagnostics[.Hint]
 	if diag_arr, ok := diag_map[uri.uri]; ok {
 		for diag in diag_arr {
 			if diag.code == code {
@@ -74,8 +74,8 @@ expect_no_diagnostic :: proc(t: ^testing.T, src: ^Source, code: string) {
 	path := src.document.uri.path
 	uri := common.create_uri(path, context.temp_allocator)
 	
-	// Check the diagnostics map for our document
-	diag_map := &server.diagnostics[.Hint]
+	// Check the diagnostics collection for our document
+	diag_map := &src.diagnostics.diagnostics[.Hint]
 	if diag_arr, ok := diag_map[uri.uri]; ok {
 		for diag in diag_arr {
 			if diag.code == code {

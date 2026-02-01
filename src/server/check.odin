@@ -65,14 +65,14 @@ fallback_find_odin_directories :: proc(config: ^common.Config) -> []string {
 	return data[:]
 }
 
-check_unused_imports :: proc(document: ^Document, config: ^common.Config) {
+check_unused_imports :: proc(doc_ctx: DocumentContext, config: ^common.Config, collection: ^DiagnosticCollection) {
 	if !config.enable_unused_imports_reporting {
 		return
 	}
 
-	unused_imports := find_unused_imports(document, context.temp_allocator)
+	unused_imports := find_unused_imports(doc_ctx, context.temp_allocator)
 
-	path := document.uri.path
+	path := doc_ctx.uri.path
 
 	when ODIN_OS == .Windows {
 		path = common.get_case_sensitive_path(path, context.temp_allocator)
@@ -80,14 +80,13 @@ check_unused_imports :: proc(document: ^Document, config: ^common.Config) {
 
 	uri := common.create_uri(path, context.temp_allocator)
 
-	remove_diagnostics(.Unused, uri.uri)
-
 	for imp in unused_imports {
-		add_diagnostics(
+		add_diagnostic(
+			collection,
 			.Unused,
 			uri.uri,
 			Diagnostic {
-				range = common.get_token_range(imp.import_decl, document.ast.src),
+				range = common.get_token_range(imp.import_decl, doc_ctx.ast.src),
 				severity = DiagnosticSeverity.Hint,
 				code = "Unused",
 				message = "unused import",
@@ -97,7 +96,7 @@ check_unused_imports :: proc(document: ^Document, config: ^common.Config) {
 	}
 }
 
-check :: proc(paths: []string, uri: common.Uri, config: ^common.Config) {
+check :: proc(paths: []string, uri: common.Uri, config: ^common.Config, collection: ^DiagnosticCollection) {
 	paths := paths
 
 	if len(paths) == 0 {
@@ -123,8 +122,6 @@ check :: proc(paths: []string, uri: common.Uri, config: ^common.Config) {
 		}
 		strings.write_string(&collection_builder, fmt.aprintf("-collection:%v=\"%v\" ", k, v))
 	}
-
-	errors := make(map[string][dynamic]Diagnostic, 0, context.temp_allocator)
 
 	for path in paths {
 		command: string
@@ -156,8 +153,6 @@ check :: proc(paths: []string, uri: common.Uri, config: ^common.Config) {
 			return
 		}
 
-		clear_diagnostics(.Check)
-
 		if len(buffer) == 0 {
 			continue
 		}
@@ -188,7 +183,8 @@ check :: proc(paths: []string, uri: common.Uri, config: ^common.Config) {
 
 			uri := common.create_uri(path, context.temp_allocator)
 
-			add_diagnostics(
+			add_diagnostic(
+				collection,
 				.Check,
 				uri.uri,
 				Diagnostic {

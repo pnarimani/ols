@@ -9,32 +9,36 @@ import "core:strings"
 
 import "src:common"
 
-get_rename :: proc(document: ^Document, new_text: string, position: common.Position) -> (WorkspaceEdit, bool) {
+get_rename :: proc(doc_ctx: DocumentContext, new_text: string, position: common.Position) -> (WorkspaceEdit, bool) {
+	// Build fresh symbols for this request
+	request_symbols := build_request_symbols(doc_ctx.imports, context.temp_allocator)
+
 	ast_context := make_ast_context(
-		document.ast,
-		document.imports,
-		document.package_name,
-		document.uri.uri,
-		document.fullpath,
+		doc_ctx.ast,
+		doc_ctx.imports,
+		doc_ctx.package_name,
+		doc_ctx.uri.uri,
+		doc_ctx.fullpath,
+		&request_symbols,
 		context.temp_allocator,
 	)
 
-	position_context, ok := get_document_position_context(document, position, .Hover)
+	position_context, ok := get_document_position_context(doc_ctx, position, .Hover)
 	if !ok {
 		log.warn("Failed to get position context")
 		return {}, false
 	}
 	ast_context.position_hint = position_context.hint
 
-	get_globals(document.ast, &ast_context)
+	get_globals(doc_ctx.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	if position_context.function != nil {
-		get_locals(document.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 
-	locations, ok2 := resolve_references(document, &ast_context, &position_context)
+	locations, ok2 := resolve_references(doc_ctx, &ast_context, &position_context)
 
 	changes := make(map[string][dynamic]TextEdit, 0, context.temp_allocator)
 
@@ -64,37 +68,43 @@ get_rename :: proc(document: ^Document, new_text: string, position: common.Posit
 }
 
 
-get_prepare_rename :: proc(document: ^Document, position: common.Position) -> (common.Range, bool) {
+get_prepare_rename :: proc(doc_ctx: DocumentContext, position: common.Position) -> (common.Range, bool) {
+	// Build fresh symbols for this request
+	request_symbols := build_request_symbols(doc_ctx.imports, context.temp_allocator)
+
 	ast_context := make_ast_context(
-		document.ast,
-		document.imports,
-		document.package_name,
-		document.uri.uri,
-		document.fullpath,
+		doc_ctx.ast,
+		doc_ctx.imports,
+		doc_ctx.package_name,
+		doc_ctx.uri.uri,
+		doc_ctx.fullpath,
+		&request_symbols,
 		context.temp_allocator,
 	)
 
-	position_context, ok := get_document_position_context(document, position, .Hover)
+	position_context, ok := get_document_position_context(doc_ctx, position, .Hover)
 	if !ok {
 		log.warn("Failed to get position context")
 		return {}, false
 	}
 	ast_context.position_hint = position_context.hint
 
-	get_globals(document.ast, &ast_context)
+	get_globals(doc_ctx.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	if position_context.function != nil {
-		get_locals(document.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 
-	symbol, ok2 := prepare_rename(document, &ast_context, &position_context)
+	symbol, ok2 := prepare_rename(doc_ctx, &ast_context, &position_context)
 	return symbol.range, ok2
 }
 
 get_struct_field_type_position :: proc(
-	ast_context: ^AstContext, position_context: ^DocumentPositionContext, node: ^ast.Expr
+	ast_context: ^AstContext,
+	position_context: ^DocumentPositionContext,
+	node: ^ast.Expr,
 ) -> (Symbol, bool) {
 	#partial switch v in node.derived {
 	case ^ast.Ident:
@@ -116,7 +126,7 @@ get_struct_field_type_position :: proc(
 // For preparing the rename, we want to position of the token within the current file,
 // not the position of the declaration
 prepare_rename :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 ) -> (
@@ -185,7 +195,7 @@ prepare_rename :: proc(
 	} else if position_context.bitset_type != nil {
 		if position_in_node(position_context.bitset_type.elem, position_context.position) {
 			symbol = Symbol {
-				range = common.get_token_range(position_context.bitset_type.elem, ast_context.file.src)
+				range = common.get_token_range(position_context.bitset_type.elem, ast_context.file.src),
 			}
 			return symbol, true
 		}
@@ -217,7 +227,7 @@ prepare_rename :: proc(
 	   !is_expr_basic_lit(position_context.field_value.field) &&
 	   position_in_node(position_context.field_value.field, position_context.position) {
 		symbol = Symbol {
-			range = common.get_token_range(position_context.field_value.field, ast_context.file.src)
+			range = common.get_token_range(position_context.field_value.field, ast_context.file.src),
 		}
 	} else if position_context.selector_expr != nil {
 		if position_in_node(position_context.selector, position_context.position) &&
@@ -239,7 +249,7 @@ prepare_rename :: proc(
 		ident := position_context.identifier.derived.(^ast.Ident)
 
 		symbol = Symbol {
-			range = common.get_token_range(position_context.identifier^, ast_context.file.src)
+			range = common.get_token_range(position_context.identifier^, ast_context.file.src),
 		}
 	} else {
 		return

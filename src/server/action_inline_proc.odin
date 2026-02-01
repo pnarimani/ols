@@ -14,7 +14,7 @@ INLINE_PROC_ACTION_TITLE :: "Inline Proc"
 INLINE_PROC_ACTION_KIND :: "refactor.inline"
 
 InlineProcContext :: struct {
-	document:         ^Document,
+	doc_ctx:          DocumentContext,
 	ast_context:      ^AstContext,
 	position:         common.AbsolutePosition,
 	// The call expression if cursor is on a procedure call
@@ -29,7 +29,7 @@ InlineProcContext :: struct {
 
 @(private = "package")
 add_inline_proc_action :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	range: common.Range,
 	uri: string,
@@ -40,7 +40,7 @@ add_inline_proc_action :: proc(
 		return
 	}
 
-	ctx, ok := create_inline_proc_context(document, ast_context, range.start)
+	ctx, ok := create_inline_proc_context(doc_ctx, ast_context, range.start)
 	if !ok {
 		return
 	}
@@ -80,7 +80,7 @@ add_inline_proc_action :: proc(
 }
 
 create_inline_proc_context :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	position: common.Position,
 ) -> (
@@ -88,19 +88,19 @@ create_inline_proc_context :: proc(
 	bool,
 ) {
 	ctx := InlineProcContext {
-		document    = document,
+		doc_ctx     = doc_ctx,
 		ast_context = ast_context,
 		all_calls   = make([dynamic]^ast.Call_Expr, context.temp_allocator),
 	}
 
-	abs_pos, ok := common.get_absolute_position(position, document.text)
+	abs_pos, ok := common.get_absolute_position(position, doc_ctx.text)
 	if !ok {
 		return ctx, false
 	}
 	ctx.position = abs_pos
 
 	// First try to find if we're on a call expression
-	ctx.call_expr = find_call_at_position(document.ast.decls[:], abs_pos)
+	ctx.call_expr = find_call_at_position(doc_ctx.ast.decls[:], abs_pos)
 
 	if ctx.call_expr != nil {
 		proc_name := get_call_proc_name(ctx.call_expr)
@@ -108,7 +108,7 @@ create_inline_proc_context :: proc(
 			return ctx, false
 		}
 		ctx.proc_name = proc_name
-		ctx.proc_decl, ctx.proc_lit = find_proc_definition(document, ast_context, proc_name)
+		ctx.proc_decl, ctx.proc_lit = find_proc_definition(doc_ctx, ast_context, proc_name)
 		if ctx.proc_lit == nil {
 			return ctx, false
 		}
@@ -116,11 +116,11 @@ create_inline_proc_context :: proc(
 	}
 
 	// Try to find if we're on a procedure definition
-	ctx.proc_decl, ctx.proc_lit, ctx.proc_name = find_proc_decl_at_position(document.ast.decls[:], abs_pos)
+	ctx.proc_decl, ctx.proc_lit, ctx.proc_name = find_proc_decl_at_position(doc_ctx.ast.decls[:], abs_pos)
 
 	if ctx.proc_decl != nil && ctx.proc_lit != nil && ctx.proc_name != "" {
 		// Find all calls to this procedure in the file
-		find_all_calls_to_proc(document.ast.decls[:], ctx.proc_name, &ctx.all_calls)
+		find_all_calls_to_proc(doc_ctx.ast.decls[:], ctx.proc_name, &ctx.all_calls)
 		return ctx, len(ctx.all_calls) > 0
 	}
 
@@ -310,11 +310,11 @@ get_call_proc_name :: proc(call: ^ast.Call_Expr) -> string {
 
 // Find a procedure definition by name in the current document
 find_proc_definition :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	name: string,
 ) -> (^ast.Value_Decl, ^ast.Proc_Lit) {
-	for stmt in document.ast.decls {
+	for stmt in doc_ctx.ast.decls {
 		if decl, proc_lit, found := get_proc_from_decl(stmt, name); found {
 			return decl, proc_lit
 		}
@@ -718,7 +718,7 @@ generate_single_inline_edit :: proc(ctx: ^InlineProcContext, call: ^ast.Call_Exp
 		return {}, false
 	}
 
-	src := ctx.document.ast.src
+	src := ctx.doc_ctx.ast.src
 
 	// Build parameter name to argument mapping
 	param_to_arg := make(map[string]string, context.temp_allocator)
@@ -742,7 +742,7 @@ generate_single_inline_edit :: proc(ctx: ^InlineProcContext, call: ^ast.Call_Exp
 	}
 
 	// Find the containing statement for this call to determine context
-	containing_stmt := find_containing_stmt_for_call(ctx.document.ast.decls[:], call)
+	containing_stmt := find_containing_stmt_for_call(ctx.doc_ctx.ast.decls[:], call)
 
 	body, body_ok := ctx.proc_lit.body.derived.(^ast.Block_Stmt)
 	if !body_ok {
@@ -897,7 +897,7 @@ generate_inlined_body :: proc(
 		return ""
 	}
 
-	src := ctx.document.ast.src
+	src := ctx.doc_ctx.ast.src
 
 	// Determine if this is a simple expression context or a statement context
 	is_expr_context := !is_standalone_call(containing_stmt, call)
@@ -978,14 +978,14 @@ generate_multi_stmt_inline :: proc(
 		return ""
 	}
 
-	src := ctx.document.ast.src
+	src := ctx.doc_ctx.ast.src
 	sb := strings.builder_make(context.temp_allocator)
 
 	// Get local variable names from the procedure body that might conflict
 	local_vars := collect_local_vars(body, src)
 	
 	// Get variables at call site that might conflict
-	call_site_vars := collect_call_site_vars(ctx.document, containing_stmt, src)
+	call_site_vars := collect_call_site_vars(ctx.doc_ctx, containing_stmt, src)
 	
 	// Build rename map for conflicting variables
 	local_renames := make(map[string]string, context.temp_allocator)
@@ -1235,11 +1235,11 @@ collect_local_vars :: proc(body: ^ast.Block_Stmt, src: string) -> [dynamic]strin
 }
 
 // Collect variable names visible at the call site
-collect_call_site_vars :: proc(document: ^Document, containing_stmt: ^ast.Stmt, src: string) -> map[string]bool {
+collect_call_site_vars :: proc(doc_ctx: DocumentContext, containing_stmt: ^ast.Stmt, src: string) -> map[string]bool {
 	vars := make(map[string]bool, context.temp_allocator)
 	
 	// Find the block containing the call and collect all variables declared before it
-	for decl in document.ast.decls {
+	for decl in doc_ctx.ast.decls {
 		collect_vars_before_stmt(decl, containing_stmt, &vars)
 	}
 	
@@ -1429,13 +1429,13 @@ needs_parentheses :: proc(expr: string) -> bool {
 
 // Generate the edit to delete the procedure definition
 generate_proc_delete_edit :: proc(ctx: ^InlineProcContext) -> TextEdit {
-	src := ctx.document.ast.src
+	src := ctx.doc_ctx.ast.src
 
 	// Get the range of the entire procedure declaration
 	decl_range := common.get_token_range(ctx.proc_decl, src)
 
 	// Extend to include the newline after the procedure if present
-	end_offset, _ := common.get_absolute_position(decl_range.end, ctx.document.text)
+	end_offset, _ := common.get_absolute_position(decl_range.end, ctx.doc_ctx.text)
 	if end_offset < len(src) && src[end_offset] == '\n' {
 		decl_range.end.character += 1
 	}
@@ -1443,14 +1443,14 @@ generate_proc_delete_edit :: proc(ctx: ^InlineProcContext) -> TextEdit {
 	// Also try to delete any blank line before if the line above is blank
 	if decl_range.start.line > 0 {
 		// Check if we should delete a preceding newline
-		start_offset, _ := common.get_absolute_position(decl_range.start, ctx.document.text)
+		start_offset, _ := common.get_absolute_position(decl_range.start, ctx.doc_ctx.text)
 		if start_offset > 0 {
 			// Look for newline before
 			check_pos := start_offset - 1
 			if src[check_pos] == '\n' {
 				decl_range.start.line -= 1
 				// Find the position of the previous newline
-				if column, ok := common.get_last_column(decl_range.start.line, ctx.document.text); ok {
+				if column, ok := common.get_last_column(decl_range.start.line, ctx.doc_ctx.text); ok {
 					decl_range.start.character = column
 				}
 			}

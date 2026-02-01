@@ -58,7 +58,7 @@ expect_code_action_diff :: proc(t: ^testing.T, diff_source: string, action_name:
 	defer teardown(&src)
 
 	input_range := build_action_range(&src)
-	actions, ok := server.get_code_actions(src.document, input_range, &src.config)
+	actions, ok := server.get_code_actions(src.doc_ctx, input_range, &src.config)
 	if !ok {
 		testing.expect(t, false, "Failed to get code actions")
 		return
@@ -67,13 +67,13 @@ expect_code_action_diff :: proc(t: ^testing.T, diff_source: string, action_name:
 	// Find the requested action
 	for action in actions {
 		if action.title != action_name do continue
-		edits, found := action.edit.changes[src.document.uri.uri]
+		edits, found := action.edit.changes[src.doc_ctx.uri.uri]
 		if !found {
 			testing.expect(t, false, "Action found but has no edits")
 			return
 		}
 
-		source := string(src.document.text)
+		source := string(src.doc_ctx.text)
 
 		actual_after := apply_text_edits(source, edits)
 

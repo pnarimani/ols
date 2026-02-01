@@ -61,22 +61,22 @@ Can be transformed to:
 */
 @(private = "package")
 add_redundant_else_action :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	position: common.AbsolutePosition,
 	uri: string,
 	actions: ^[dynamic]CodeAction,
 ) {
-	context_info := find_if_with_redundant_else(document.ast.decls[:], position)
+	context_info := find_if_with_redundant_else(doc_ctx.ast.decls[:], position)
 	if context_info.if_stmt == nil {
 		return
 	}
 
-	new_text, ok := generate_else_removed(document, context_info.if_stmt)
+	new_text, ok := generate_else_removed(doc_ctx, context_info.if_stmt)
 	if !ok {
 		return
 	}
 
-	range := common.get_token_range(context_info.if_stmt^, document.ast.src)
+	range := common.get_token_range(context_info.if_stmt^, doc_ctx.ast.src)
 
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 	append(&textEdits, TextEdit{range = range, newText = new_text})
@@ -296,8 +296,8 @@ is_valid_branch_stmt :: proc(branch: ^ast.Branch_Stmt, ctx: IfContextInfo) -> bo
 }
 
 // Generate the transformed code with else removed
-generate_else_removed :: proc(document: ^Document, if_stmt: ^ast.If_Stmt) -> (string, bool) {
-	src := document.ast.src
+generate_else_removed :: proc(doc_ctx: DocumentContext, if_stmt: ^ast.If_Stmt) -> (string, bool) {
+	src := doc_ctx.ast.src
 	indent := get_line_indentation(src, if_stmt.pos.offset)
 
 	sb := strings.builder_make(context.temp_allocator)

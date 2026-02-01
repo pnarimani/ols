@@ -35,17 +35,18 @@ Completion_Type :: enum {
 }
 
 get_completion_list :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	position: common.Position,
 	completion_context: CompletionContext,
 	config: ^common.Config,
+	symbols: ^SymbolCollection,
 ) -> (
 	CompletionList,
 	bool,
 ) {
 	list: CompletionList
 
-	position_context, ok := get_document_position_context(document, position, .Completion)
+	position_context, ok := get_document_position_context(doc_ctx, position, .Completion)
 
 	if !ok || position_context.abort_completion {
 		return list, true
@@ -69,21 +70,22 @@ get_completion_list :: proc(
 	}
 
 	ast_context := make_ast_context(
-		document.ast,
-		document.imports,
-		document.package_name,
-		document.uri.uri,
-		document.fullpath,
+		doc_ctx.ast,
+		doc_ctx.imports,
+		doc_ctx.package_name,
+		doc_ctx.uri.uri,
+		doc_ctx.fullpath,
+		symbols,
 	)
 	ast_context.position_hint = position_context.hint
 
-	get_globals(document.ast, &ast_context)
+	get_globals(doc_ctx.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 	ast_context.value_decl = position_context.value_decl
 
 	if position_context.function != nil {
-		get_locals(document.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 
 	completion_type: Completion_Type = .Identifier
@@ -968,7 +970,7 @@ get_selector_completion :: proc(
 
 		pkg := selector.pkg
 
-		if searched, ok := fuzzy_search(field, {pkg}, ast_context.fullpath); ok {
+		if searched, ok := fuzzy_search(ast_context.symbols, field, {pkg}, ast_context.fullpath); ok {
 			for search in searched {
 				symbol := search.symbol
 
@@ -1698,7 +1700,7 @@ get_identifier_completion :: proc(
 	append(&pkgs, ast_context.document_package)
 	append(&pkgs, "$builtin")
 
-	if fuzzy_results, ok := fuzzy_search(lookup_name, pkgs[:], ast_context.fullpath); ok {
+	if fuzzy_results, ok := fuzzy_search(ast_context.symbols, lookup_name, pkgs[:], ast_context.fullpath); ok {
 		for r in fuzzy_results {
 			r := r
 			resolve_unresolved_symbol(ast_context, &r.symbol)
@@ -2056,8 +2058,10 @@ append_non_imported_packages :: proc(
 		return
 	}
 
+	pkg_aliases := find_all_package_aliases()
+
 	i := len(items)
-	for collection, pkgs in build_cache.pkg_aliases {
+	for collection, pkgs in pkg_aliases {
 		for pkg in pkgs {
 			fullpath := path.join({config.collections[collection], pkg})
 			found := false

@@ -3,22 +3,9 @@ package server
 import "core:log"
 import "core:strings"
 
-Indexer :: struct {
-	builtin_packages: [dynamic]string,
-	runtime_package:  string,
-	index:            MemoryIndex,
-}
-
-@(thread_local)
-indexer: Indexer
-
 FuzzyResult :: struct {
 	symbol: Symbol,
 	score:  f32,
-}
-
-clear_index_cache :: proc() {
-	memory_index_clear_cache(&indexer.index)
 }
 
 should_skip_private_symbol :: proc(symbol: Symbol, current_pkg, current_file: string) -> bool {
@@ -42,23 +29,26 @@ should_skip_private_symbol :: proc(symbol: Symbol, current_pkg, current_file: st
 	return false
 }
 
-lookup :: proc(name: string, pkg: string, current_file: string, loc := #caller_location) -> (Symbol, bool) {
-	if name == "" {
+lookup :: proc(symbols: ^SymbolCollection, name: string, pkg: string, current_file: string, loc := #caller_location) -> (Symbol, bool) {
+	if name == "" || symbols == nil {
 		return {}, false
 	}
 
-	if symbol, ok := memory_index_lookup(&indexer.index, name, pkg); ok {
-		current_pkg := get_package_from_filepath(current_file)
-		if should_skip_private_symbol(symbol, current_pkg, current_file) {
-			return {}, false
+	if _pkg, ok := &symbols.packages[pkg]; ok {
+		if symbol, ok := _pkg.symbols[name]; ok {
+			current_pkg := get_package_from_filepath(current_file)
+			if should_skip_private_symbol(symbol, current_pkg, current_file) {
+				return {}, false
+			}
+			return symbol, true
 		}
-		return symbol, true
 	}
 
 	return {}, false
 }
 
 fuzzy_search :: proc(
+	symbols: ^SymbolCollection,
 	name: string,
 	pkgs: []string,
 	current_file: string,
@@ -68,7 +58,10 @@ fuzzy_search :: proc(
 	[]FuzzyResult,
 	bool,
 ) {
-	results, ok := memory_index_fuzzy_search(&indexer.index, name, pkgs, current_file, resolve_fields, limit = limit)
+	if symbols == nil {
+		return {}, false
+	}
+	results, ok := symbol_collection_fuzzy_search(symbols, name, pkgs, current_file, resolve_fields, limit = limit)
 	if !ok {
 		return {}, false
 	}

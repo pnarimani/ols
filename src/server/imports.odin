@@ -4,7 +4,7 @@ import "core:mem"
 
 import "base:runtime"
 
-find_unused_imports :: proc(document: ^Document, allocator := context.temp_allocator) -> []Package {
+find_unused_imports :: proc(doc_ctx: DocumentContext, allocator := context.temp_allocator) -> []Package {
 	arena: runtime.Arena
 
 	_ = runtime.arena_init(&arena, mem.Megabyte * 40, runtime.default_allocator())
@@ -13,7 +13,7 @@ find_unused_imports :: proc(document: ^Document, allocator := context.temp_alloc
 
 	context.allocator = runtime.arena_allocator(&arena)
 
-	symbols_and_nodes := resolve_entire_file(document)
+	symbols_and_nodes := resolve_entire_file(doc_ctx)
 
 	pkgs := make(map[string]struct{}, context.temp_allocator)
 
@@ -23,7 +23,7 @@ find_unused_imports :: proc(document: ^Document, allocator := context.temp_alloc
 
 	unused := make([dynamic]Package, allocator)
 
-	for imp in document.imports {
+	for imp in doc_ctx.imports {
 		if imp.base != "_" && imp.name not_in pkgs {
 			append(&unused, imp)
 		}

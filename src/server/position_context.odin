@@ -109,7 +109,7 @@ get_document_position_decls :: proc(decls: []^ast.Stmt, position_context: ^Docum
 	Figure out what exactly is at the given position and whether it is in a function, struct, etc.
 */
 get_document_position_context :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	position: common.Position,
 	hint: DocumentPositionContextHint,
 ) -> (
@@ -119,12 +119,12 @@ get_document_position_context :: proc(
 	position_context: DocumentPositionContext
 
 	position_context.hint = hint
-	position_context.file = document.ast
+	position_context.file = doc_ctx.ast
 	position_context.line = position.line
 
 	position_context.functions = make([dynamic]^ast.Proc_Lit, context.temp_allocator)
 
-	absolute_position, ok := common.get_absolute_position(position, document.text)
+	absolute_position, ok := common.get_absolute_position(position, doc_ctx.text)
 
 	if !ok {
 		log.error("failed to get absolute position")
@@ -133,9 +133,9 @@ get_document_position_context :: proc(
 
 	position_context.position = absolute_position
 
-	exists_in_decl := get_document_position_decls(document.ast.decls[:], &position_context)
+	exists_in_decl := get_document_position_decls(doc_ctx.ast.decls[:], &position_context)
 
-	for import_stmt in document.ast.imports {
+	for import_stmt in doc_ctx.ast.imports {
 		if position_in_node(import_stmt, position_context.position) {
 			position_context.import_stmt = import_stmt
 			break
@@ -167,15 +167,15 @@ get_document_position_context :: proc(
 	}
 
 	if hint == .Completion && position_context.selector == nil && position_context.field == nil {
-		fallback_position_context_completion(document, position, &position_context)
+		fallback_position_context_completion(doc_ctx, position, &position_context)
 	}
 
 	if (hint == .SignatureHelp || hint == .Completion) && position_context.call == nil {
-		fallback_position_context_signature(document, position, &position_context)
+		fallback_position_context_signature(doc_ctx, position, &position_context)
 	}
 
 	if hint == .SignatureHelp {
-		get_call_commas(&position_context, document)
+		get_call_commas(&position_context, doc_ctx)
 	}
 
 	return position_context, true
@@ -183,7 +183,7 @@ get_document_position_context :: proc(
 
 //terrible fallback code
 fallback_position_context_completion :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	position: common.Position,
 	position_context: ^DocumentPositionContext,
 ) {
@@ -411,7 +411,7 @@ fallback_position_context_completion :: proc(
 }
 
 fallback_position_context_signature :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	position: common.Position,
 	position_context: ^DocumentPositionContext,
 ) {

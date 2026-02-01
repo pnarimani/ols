@@ -13,7 +13,6 @@ import "core:os"
 import "core:path/filepath"
 import path "core:path/slashpath"
 import "core:strings"
-import "core:time"
 
 import "src:common"
 
@@ -158,10 +157,14 @@ should_collect_file :: proc(file_tags: parser.File_Tags) -> bool {
 	return true
 }
 
-try_build_package :: proc(pkg_name: string) {
-	if pkg, ok := build_cache.loaded_pkgs[pkg_name]; ok {
+// Build symbols from a package into the provided symbol collection.
+// No caching - symbols are built fresh each time.
+build_package_symbols :: proc(symbols: ^SymbolCollection, pkg_name: string, loaded_pkgs: ^map[string]bool) {
+	// Check if already loaded in this request to avoid infinite loops
+	if pkg_name in loaded_pkgs {
 		return
 	}
+	loaded_pkgs[pkg_name] = true
 
 	matches, err := filepath.glob(fmt.tprintf("%v/*.odin", pkg_name), context.temp_allocator)
 
@@ -170,140 +173,40 @@ try_build_package :: proc(pkg_name: string) {
 		return
 	}
 
-	arena: runtime.Arena
-	result := runtime.arena_init(&arena, mem.Megabyte * 40, runtime.default_allocator())
-	defer runtime.arena_destroy(&arena)
-
-	{
-		context.allocator = runtime.arena_allocator(&arena)
-
-		for fullpath in matches {
-			if skip_file(filepath.base(fullpath)) {
-				continue
-			}
-
-			data, ok := os.read_entire_file(fullpath, context.allocator)
-
-			if !ok {
-				log.errorf("failed to read entire file for indexing %v", fullpath)
-				continue
-			}
-
-			p := parser.Parser {
-				err   = log_error_handler,
-				warn  = log_warning_handler,
-				flags = {.Optional_Semicolons},
-			}
-
-			dir := filepath.base(filepath.dir(fullpath, context.allocator))
-
-			pkg := new(ast.Package)
-			pkg.kind = .Normal
-			pkg.fullpath = fullpath
-			pkg.name = dir
-
-			if dir == "runtime" {
-				pkg.kind = .Runtime
-			}
-
-			file := ast.File {
-				fullpath = fullpath,
-				src      = string(data),
-				pkg      = pkg,
-			}
-
-			ok = parser.parse_file(&p, &file)
-
-			if !ok {
-				if !strings.contains(fullpath, "builtin.odin") && !strings.contains(fullpath, "intrinsics.odin") {
-					log.errorf("error in parse file for indexing %v", fullpath)
-				}
-				continue
-			}
-
-			uri := common.create_uri(fullpath, context.allocator)
-
-			collect_symbols(&indexer.index.collection, file, uri.uri)
-
-			runtime.arena_free_all(&arena)
-		}
-	}
-
-	build_cache.loaded_pkgs[strings.clone(pkg_name, indexer.index.collection.allocator)] = PackageCacheInfo {
-		timestamp = time.now(),
-	}
-}
-
-
-remove_index_file :: proc(uri: common.Uri) -> common.Error {
-	ok: bool
-
-	fullpath := uri.path
-
-	when ODIN_OS == .Windows {
-		fullpath, _ = filepath.to_slash(fullpath, context.temp_allocator)
-	}
-
-	corrected_uri := common.create_uri(fullpath, context.temp_allocator)
-
-	for k, &v in indexer.index.collection.packages {
-		for k2, v2 in v.symbols {
-			if strings.equal_fold(corrected_uri.uri, v2.uri) {
-				free_symbol(v2, indexer.index.collection.allocator)
-				delete_key(&v.symbols, k2)
-			}
+	for fullpath in matches {
+		if skip_file(filepath.base(fullpath)) {
+			continue
 		}
 
-		for method, &symbols in v.methods {
-			for i := len(symbols) - 1; i >= 0; i -= 1 {
-				#no_bounds_check symbol := symbols[i]
-				if strings.equal_fold(corrected_uri.uri, symbol.uri) {
-					unordered_remove(&symbols, i)
-				}
-			}
+		data, ok := os.read_entire_file(fullpath, context.temp_allocator)
+
+		if !ok {
+			log.errorf("failed to read entire file for indexing %v", fullpath)
+			continue
 		}
-	}
 
-	return .None
-}
+		p := parser.Parser {
+			err   = log_error_handler,
+			warn  = log_warning_handler,
+			flags = {.Optional_Semicolons},
+		}
 
-index_file :: proc(uri: common.Uri, text: string) -> common.Error {
-	ok: bool
+		dir := filepath.base(filepath.dir(fullpath, context.temp_allocator))
 
-	fullpath := uri.path
+		pkg := new(ast.Package, context.temp_allocator)
+		pkg.kind = .Normal
+		pkg.fullpath = fullpath
+		pkg.name = dir
 
-	p := parser.Parser {
-		err   = log_error_handler,
-		warn  = log_warning_handler,
-		flags = {.Optional_Semicolons},
-	}
+		if dir == "runtime" {
+			pkg.kind = .Runtime
+		}
 
-	when ODIN_OS == .Windows {
-		correct := common.get_case_sensitive_path(fullpath, context.temp_allocator)
-		fullpath, _ = filepath.to_slash(correct, context.temp_allocator)
-	}
-
-	dir := filepath.base(filepath.dir(fullpath, context.temp_allocator))
-
-	pkg := new(ast.Package)
-	pkg.kind = .Normal
-	pkg.fullpath = fullpath
-	pkg.name = dir
-
-	if dir == "runtime" {
-		pkg.kind = .Runtime
-	}
-
-	file := ast.File {
-		fullpath = fullpath,
-		src      = text,
-		pkg      = pkg,
-	}
-
-	{
-		allocator := context.allocator
-		context.allocator = context.temp_allocator
-		defer context.allocator = allocator
+		file := ast.File {
+			fullpath = fullpath,
+			src      = string(data),
+			pkg      = pkg,
+		}
 
 		ok = parser.parse_file(&p, &file)
 
@@ -311,58 +214,59 @@ index_file :: proc(uri: common.Uri, text: string) -> common.Error {
 			if !strings.contains(fullpath, "builtin.odin") && !strings.contains(fullpath, "intrinsics.odin") {
 				log.errorf("error in parse file for indexing %v", fullpath)
 			}
-		}
-	}
-
-	corrected_uri := common.create_uri(fullpath, context.temp_allocator)
-
-	for k, &v in indexer.index.collection.packages {
-		for k2, v2 in v.symbols {
-			if corrected_uri.uri == v2.uri {
-				free_symbol(v2, indexer.index.collection.allocator)
-				delete_key(&v.symbols, k2)
-			}
+			continue
 		}
 
-		for method, &symbols in v.methods {
-			for i := len(symbols) - 1; i >= 0; i -= 1 {
-				#no_bounds_check symbol := symbols[i]
-				if corrected_uri.uri == symbol.uri {
-					unordered_remove(&symbols, i)
-				}
-			}
-		}
-	}
+		uri := common.create_uri(fullpath, context.temp_allocator)
 
-	if ret := collect_symbols(&indexer.index.collection, file, corrected_uri.uri); ret != .None {
-		log.errorf("failed to collect symbols on save %v", ret)
+		collect_symbols(symbols, file, uri.uri)
 	}
-
-	return .None
 }
 
-
-setup_index :: proc() {
-	build_cache.loaded_pkgs = make(map[string]PackageCacheInfo, 50, context.allocator)
-	symbol_collection := make_symbol_collection(context.allocator, &common.config)
-	indexer.index = make_memory_index(symbol_collection)
-
+// Get the builtin package path
+get_builtin_path :: proc() -> string {
 	dir_exe := common.get_executable_path(context.temp_allocator)
-	builtin_path := path.join({dir_exe, "builtin"}, context.temp_allocator)
-
-	if !os.exists(builtin_path) {
-		log.errorf(
-			"Failed to find the builtin folder at `%v`.\nPlease ensure the `builtin` folder that ships with `ols` is located next to the `ols` binary as it is required for ols to work with builtins",
-			builtin_path,
-		)
-		return
-	}
-
-	try_build_package(builtin_path)
+	return path.join({dir_exe, "builtin"}, context.temp_allocator)
 }
 
-free_index :: proc() {
-	delete_symbol_collection(indexer.index.collection)
+// Get the runtime package path
+get_runtime_path :: proc() -> string {
+	if base, ok := common.config.collections["base"]; ok {
+		return path.join({base, "runtime"}, context.temp_allocator)
+	}
+	return ""
+}
+
+// Build a fresh symbol collection for a request.
+// Includes builtins, runtime, and the specified imports.
+build_request_symbols :: proc(
+	imports: []Package,
+	allocator := context.temp_allocator,
+	config: ^common.Config = nil,
+) -> SymbolCollection {
+	// Use provided config or fall back to global config
+	actual_config := config if config != nil else &common.config
+	symbols := make_symbol_collection(allocator, actual_config)
+	loaded_pkgs := make(map[string]bool, 16, allocator)
+
+	// Always load builtins
+	builtin_path := get_builtin_path()
+	if os.exists(builtin_path) {
+		build_package_symbols(&symbols, builtin_path, &loaded_pkgs)
+	}
+
+	// Load runtime
+	runtime_path := get_runtime_path()
+	if runtime_path != "" && os.exists(runtime_path) {
+		build_package_symbols(&symbols, runtime_path, &loaded_pkgs)
+	}
+
+	// Load all imported packages
+	for imp in imports {
+		build_package_symbols(&symbols, imp.name, &loaded_pkgs)
+	}
+
+	return symbols
 }
 
 log_error_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {

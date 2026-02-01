@@ -1,15 +1,10 @@
 package server
 
-import "base:intrinsics"
-
 import "core:fmt"
 import "core:log"
-import "core:mem"
-import "core:mem/virtual"
 import "core:odin/ast"
 import "core:odin/parser"
 import "core:odin/tokenizer"
-import "core:os"
 import "core:path/filepath"
 import path "core:path/slashpath"
 import "core:strings"
@@ -33,59 +28,40 @@ Package :: struct {
 	import_decl:   ^ast.Import_Decl,
 }
 
+// DocumentContext holds parsed data for a document. Computed fresh per-request using temp allocator.
+// All data is owned by the allocator passed to create_document_context().
+DocumentContext :: struct {
+	uri:          common.Uri,    // Reference to Document.uri (not owned)
+	text:         []u8,          // Reference to Document.text (not owned)
+	ast:          ast.File,      // Parsed AST (owned by allocator)
+	imports:      []Package,     // Parsed imports (owned by allocator)
+	package_name: string,        // Package directory path (owned by allocator)
+	fullpath:     string,        // Full file path (owned by allocator)
+	errors:       []ParserError, // Parser errors (owned by allocator)
+}
+
 Document :: struct {
-	uri:              common.Uri,
-	fullpath:         string,
-	text:             []u8,
-	used_text:        int, //allow for the text to be reallocated with more data than needed
-	client_owned:     bool,
-	diagnosed_errors: bool,
-	ast:              ast.File,
-	imports:          []Package,
-	package_name:     string,
-	allocator:        ^virtual.Arena, //because parser does not support freeing I use arena allocators for each document
-	operating_on:     int, //atomic
-	version:          Maybe(int),
+	uri:  common.Uri,
+	text: []u8,
 }
 
 
 DocumentStorage :: struct {
-	documents:       map[string]Document,
-	free_allocators: [dynamic]^virtual.Arena,
+	documents: map[string]Document,
 }
 
 document_storage: DocumentStorage
 
 document_storage_shutdown :: proc() {
 	for k, v in document_storage.documents {
-		virtual.arena_destroy(v.allocator)
-		free(v.allocator)
+		delete(v.text)
+		common.delete_uri(v.uri)
 		delete(k)
 	}
 
-	for alloc in document_storage.free_allocators {
-		virtual.arena_destroy(alloc)
-		free(alloc)
-	}
-
-	delete(document_storage.free_allocators)
 	delete(document_storage.documents)
 }
 
-document_get_allocator :: proc() -> ^virtual.Arena {
-	if len(document_storage.free_allocators) > 0 {
-		return pop(&document_storage.free_allocators)
-	} else {
-		allocator := new(virtual.Arena)
-		_ = virtual.arena_init_growing(allocator)
-		return allocator
-	}
-}
-
-document_free_allocator :: proc(allocator: ^virtual.Arena) {
-	free_all(virtual.arena_allocator(allocator))
-	append(&document_storage.free_allocators, allocator)
-}
 
 document_get :: proc(uri_string: string) -> ^Document {
 	uri, parsed_ok := common.parse_uri(uri_string, context.temp_allocator)
@@ -101,15 +77,39 @@ document_get :: proc(uri_string: string) -> ^Document {
 		return nil
 	}
 
-	intrinsics.atomic_add(&document.operating_on, 1)
-
 	return document
 }
 
 document_release :: proc(document: ^Document) {
-	if document != nil {
-		intrinsics.atomic_sub(&document.operating_on, 1)
+	// No-op: reference counting removed
+}
+
+// Create a DocumentContext from a Document. Parses AST and imports fresh.
+// All allocations use the provided allocator (typically context.temp_allocator).
+// Caller is responsible for freeing allocator when done.
+create_document_context :: proc(
+	document: ^Document,
+	config: ^common.Config,
+	allocator := context.temp_allocator,
+) -> (
+	ctx: DocumentContext,
+	ok: bool,
+) {
+	if document == nil {
+		return {}, false
 	}
+
+	ctx.uri = document.uri
+	ctx.text = document.text
+	ctx.fullpath = get_fullpath_from_uri(document.uri.path, allocator)
+	ctx.package_name = get_package_name_from_uri(document.uri.path, allocator)
+	ctx.ast, ctx.errors, ok = parse_document_text(ctx.fullpath, document.text, allocator)
+	if !ok {
+		return {}, false
+	}
+	ctx.imports = parse_imports_from_ast(ctx.ast, ctx.package_name, document.text, config, allocator)
+
+	return ctx, true
 }
 
 /*
@@ -125,35 +125,17 @@ document_open :: proc(uri_string: string, text: string, config: ^common.Config, 
 	}
 
 	if document := &document_storage.documents[uri.path]; document != nil {
-		if document.client_owned {
-			log.errorf("Client called open on an already open document: %v ", document.uri.path)
-			return .InvalidRequest
-		}
-
+		// Document already exists, update it
+		common.delete_uri(document.uri)
+		delete(document.text)
+		
 		document.uri = uri
-		document.client_owned = true
-		document.text = transmute([]u8)text
-		document.used_text = len(document.text)
-		document.allocator = document_get_allocator()
-
-		document_setup(document)
-
-		if err := document_refresh(document, config, writer); err != .None {
-			return err
-		}
+		document.text = transmute([]u8)strings.clone(text)
 	} else {
+		// New document
 		document := Document {
-			uri          = uri,
-			text         = transmute([]u8)text,
-			client_owned = true,
-			used_text    = len(text),
-			allocator    = document_get_allocator(),
-		}
-
-		document_setup(&document)
-
-		if err := document_refresh(&document, config, writer); err != .None {
-			return err
+			uri  = uri,
+			text = transmute([]u8)strings.clone(text),
 		}
 
 		document_storage.documents[strings.clone(uri.path)] = document
@@ -162,33 +144,6 @@ document_open :: proc(uri_string: string, text: string, config: ^common.Config, 
 	return .None
 }
 
-document_setup :: proc(document: ^Document) {
-	//Right now not all clients return the case correct windows path, and that causes issues with indexing, so we ensure that it's case correct.
-	when ODIN_OS == .Windows {
-		package_name := path.dir(document.uri.path, context.temp_allocator)
-		forward, _ := filepath.to_slash(common.get_case_sensitive_path(package_name), context.temp_allocator)
-		if forward == "" {
-			document.package_name = package_name
-		} else {
-			document.package_name = strings.clone(forward)
-		}
-	} else {
-		document.package_name = path.dir(document.uri.path)
-	}
-
-	when ODIN_OS == .Windows {
-		correct := common.get_case_sensitive_path(document.uri.path)
-		fullpath: string
-		if correct == "" {
-			//This is basically here to handle the tests where the physical file doesn't actual exist.
-			document.fullpath, _ = filepath.to_slash(document.uri.path)
-		} else {
-			document.fullpath, _ = filepath.to_slash(correct)
-		}
-	} else {
-		document.fullpath = document.uri.path
-	}
-}
 
 /*
 	Function that applies changes to the given document through incremental syncronization
@@ -208,17 +163,15 @@ document_apply_changes :: proc(
 
 	document := &document_storage.documents[uri.path]
 
-	document.version = version
-
-	if !document.client_owned {
-		log.errorf("Client called change on an document not opened: %v ", document.uri.path)
+	if document == nil {
+		log.errorf("Client called change on an document not opened: %v ", uri.path)
 		return .InvalidRequest
 	}
 
 	for change in changes {
 		//for some reason sublime doesn't seem to care even if i tell it to do incremental sync
 		if range, ok := change.range.(common.Range); ok {
-			absolute_range, ok := common.get_absolute_range(range, document.text[:document.used_text])
+			absolute_range, ok := common.get_absolute_range(range, document.text)
 
 			if !ok {
 				return .ParseError
@@ -231,44 +184,30 @@ document_apply_changes :: proc(
 			middle := change.text
 
 			//upper bound is after the change
-			upper := document.text[absolute_range.end:document.used_text]
+			upper := document.text[absolute_range.end:]
 
 			//total new size needed
-			document.used_text = len(lower) + len(change.text) + len(upper)
+			new_size := len(lower) + len(change.text) + len(upper)
 
-			//Reduce the amount of allocation by allocating more memory than needed
-			if document.used_text > len(document.text) {
-				new_text := make([]u8, document.used_text * 2)
+			new_text := make([]u8, new_size)
 
-				//join the 3 splices into the text
-				copy(new_text, lower)
-				copy(new_text[len(lower):], middle)
-				copy(new_text[len(lower) + len(middle):], upper)
+			//join the 3 splices into the text
+			copy(new_text, lower)
+			copy(new_text[len(lower):], middle)
+			copy(new_text[len(lower) + len(middle):], upper)
 
-				delete(document.text)
+			delete(document.text)
 
-				document.text = new_text
-			} else {
-				//order matters here, we need to make sure we swap the data already in the text before the middle
-				copy(document.text, lower)
-				copy(document.text[len(lower) + len(middle):], upper)
-				copy(document.text[len(lower):], middle)
-			}
+			document.text = new_text
 		} else {
-			document.used_text = len(change.text)
-
-			if document.used_text > len(document.text) {
-				new_text := make([]u8, document.used_text * 2)
-				copy(new_text, change.text)
-				delete(document.text)
-				document.text = new_text
-			} else {
-				copy(document.text, change.text)
-			}
+			new_text := make([]u8, len(change.text))
+			copy(new_text, change.text)
+			delete(document.text)
+			document.text = new_text
 		}
 	}
 
-	return document_refresh(document, config, writer)
+	return .None
 }
 
 document_close :: proc(uri_string: string) -> common.Error {
@@ -282,81 +221,21 @@ document_close :: proc(uri_string: string) -> common.Error {
 
 	document := &document_storage.documents[uri.path]
 
-	if document == nil || !document.client_owned {
+	if document == nil {
 		log.errorf("Client called close on a document that was never opened: %v ", uri.path)
 		return .InvalidRequest
 	}
 
-	if document.uri.uri in file_resolve_cache.files {
-		delete_key(&file_resolve_cache.files, document.uri.uri)
-	}
-
-	document_free_allocator(document.allocator)
-
-	document.allocator = nil
-	document.client_owned = false
-
 	common.delete_uri(document.uri)
-
 	delete(document.text)
-	delete(document.package_name)
 
-	document.used_text = 0
-
-	return .None
-}
-
-document_refresh :: proc(document: ^Document, config: ^common.Config, writer: ^Writer) -> common.Error {
-	errors, ok := parse_document(document, config)
-
-	if !ok {
-		return .ParseError
-	}
-
-	if strings.contains(document.uri.uri, "base/builtin/builtin.odin") ||
-	   strings.contains(document.uri.uri, "base/intrinsics/intrinsics.odin") {
-		return .None
-	}
-
-	path := document.uri.path
-
-	when ODIN_OS == .Windows {
-		path = common.get_case_sensitive_path(path, context.temp_allocator)
-	}
-
-	uri := common.create_uri(path, context.temp_allocator)
-
-	remove_diagnostics(.Syntax, uri.uri)
-	remove_diagnostics(.Check, uri.uri)
-
-	check_unused_imports(document, config)
-	check_invert_if_suggestions(document, config)
-
-	if writer != nil && !config.disable_parser_errors {
-		document.diagnosed_errors = true
-
-		for error, i in errors {
-			add_diagnostics(
-				.Syntax,
-				uri.uri,
-				Diagnostic {
-					range = common.Range {
-						start = common.Position{line = error.line - 1, character = 0},
-						end = common.Position{line = error.line, character = 0},
-					},
-					severity = DiagnosticSeverity.Error,
-					code = "Syntax",
-					message = error.message,
-				},
-			)
-		}
-
-		push_diagnostics(writer)
-	}
+	delete_key(&document_storage.documents, uri.path)
 
 	return .None
 }
 
+// Scope parser errors to file-private. Reset at start of parse_document_text().
+@(private = "file")
 current_errors: [dynamic]ParserError
 
 parser_error_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {
@@ -370,53 +249,96 @@ parser_error_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {
 	append(&current_errors, error)
 }
 
-parse_document :: proc(document: ^Document, config: ^common.Config) -> ([]ParserError, bool) {
+// Parse document text into AST. Returns AST and errors. All allocations use provided allocator.
+// Caller is responsible for freeing allocator when done.
+parse_document_text :: proc(
+	uri_path: string,
+	text: []u8,
+	allocator := context.temp_allocator,
+) -> (
+	parsed_file: ast.File,
+	errors: []ParserError,
+	ok: bool,
+) {
+	context.allocator = allocator
+
 	p := parser.Parser {
 		err   = parser_error_handler,
 		warn  = common.parser_warning_handler,
 		flags = {.Optional_Semicolons},
 	}
 
-	current_errors = make([dynamic]ParserError, context.temp_allocator)
+	current_errors = make([dynamic]ParserError, allocator)
 
-	if document.uri.uri in file_resolve_cache.files {
-		delete_key(&file_resolve_cache.files, document.uri.uri)
-	}
+	fullpath := get_fullpath_from_uri(uri_path, allocator)
 
-	free_all(virtual.arena_allocator(document.allocator))
-
-	context.allocator = virtual.arena_allocator(document.allocator)
-
-	pkg := new(ast.Package)
+	pkg := new(ast.Package, allocator)
 	pkg.kind = .Normal
-	pkg.fullpath = document.fullpath
+	pkg.fullpath = fullpath
 
-	if strings.contains(document.fullpath, "base/runtime") {
+	if strings.contains(fullpath, "base/runtime") {
 		pkg.kind = .Runtime
 	}
 
-	document.ast = ast.File {
-		fullpath = document.fullpath,
-		src      = string(document.text[:document.used_text]),
+	parsed_file = ast.File {
+		fullpath = fullpath,
+		src      = string(text),
 		pkg      = pkg,
 	}
 
-	parser.parse_file(&p, &document.ast)
+	parser.parse_file(&p, &parsed_file)
 
-	parse_imports(document, config)
-
-	return current_errors[:], true
+	return parsed_file, current_errors[:], true
 }
 
-parse_imports :: proc(document: ^Document, config: ^common.Config) {
-	imports := make([dynamic]Package)
+// Get fullpath from URI path, handling Windows case sensitivity
+get_fullpath_from_uri :: proc(uri_path: string, allocator := context.temp_allocator) -> string {
+	when ODIN_OS == .Windows {
+		correct := common.get_case_sensitive_path(uri_path, allocator)
+		if correct == "" {
+			// Handle tests where physical file doesn't exist
+			result, _ := filepath.to_slash(uri_path, allocator)
+			return result
+		} else {
+			result, _ := filepath.to_slash(correct, allocator)
+			return result
+		}
+	} else {
+		return uri_path
+	}
+}
 
-	for imp, index in document.ast.imports {
+// Get package name from URI path
+get_package_name_from_uri :: proc(uri_path: string, allocator := context.temp_allocator) -> string {
+	when ODIN_OS == .Windows {
+		package_name := path.dir(uri_path, allocator)
+		forward, _ := filepath.to_slash(common.get_case_sensitive_path(package_name, allocator), allocator)
+		if forward == "" {
+			return package_name
+		} else {
+			return forward
+		}
+	} else {
+		return path.dir(uri_path, allocator)
+	}
+}
+
+// Parse imports from AST. Returns slice of Package. Uses provided allocator.
+parse_imports_from_ast :: proc(
+	parsed_file: ast.File,
+	package_name: string,
+	text: []u8,
+	config: ^common.Config,
+	allocator := context.temp_allocator,
+) -> []Package {
+	imports := make([dynamic]Package, allocator)
+
+	for imp, index in parsed_file.imports {
 		if i := strings.index(imp.fullpath, "\""); i == -1 {
 			continue
 		}
 		// TODO: Breakdown this range like with semantic tokens
-		range := get_import_range(imp, string(document.text))
+		range := get_import_range(imp, string(text))
 
 		//collection specified
 		if i := strings.index(imp.fullpath, ":"); i != -1 && i > 1 && i < len(imp.fullpath) - 1 {
@@ -435,7 +357,7 @@ parse_imports :: proc(document: ^Document, config: ^common.Config) {
 
 			import_: Package
 			import_.original = imp.fullpath
-			import_.name = strings.clone(path.join(elems = {dir, p}, allocator = context.temp_allocator))
+			import_.name = path.join(elems = {dir, p}, allocator = allocator)
 			import_.range = range
 			import_.import_decl = imp
 
@@ -456,10 +378,10 @@ parse_imports :: proc(document: ^Document, config: ^common.Config) {
 			import_: Package
 			import_.original = imp.fullpath
 			import_.name = path.join(
-				elems = {document.package_name, imp.fullpath[1:len(imp.fullpath) - 1]},
-				allocator = context.temp_allocator,
+				elems = {package_name, imp.fullpath[1:len(imp.fullpath) - 1]},
+				allocator = allocator,
 			)
-			import_.name = path.clean(import_.name)
+			import_.name = path.clean(import_.name, allocator)
 			import_.range = range
 			import_.import_decl = imp
 
@@ -474,13 +396,7 @@ parse_imports :: proc(document: ^Document, config: ^common.Config) {
 		}
 	}
 
-	for imp in imports {
-		try_build_package(imp.name)
-	}
-
-	try_build_package(document.package_name)
-
-	document.imports = imports[:]
+	return imports[:]
 }
 
 get_import_range :: proc(imp: ^ast.Import_Decl, src: string) -> common.Range {

@@ -28,20 +28,21 @@ write_hover_content :: proc(ast_context: ^AstContext, symbol: Symbol) -> MarkupC
 	return content
 }
 
-get_hover_information :: proc(document: ^Document, position: common.Position) -> (Hover, bool, bool) {
+get_hover_information :: proc(doc_ctx: DocumentContext, position: common.Position, symbols: ^SymbolCollection) -> (Hover, bool, bool) {
 	hover := Hover {
 		contents = {kind = "plaintext"},
 	}
 
 	ast_context := make_ast_context(
-		document.ast,
-		document.imports,
-		document.package_name,
-		document.uri.uri,
-		document.fullpath,
+		doc_ctx.ast,
+		doc_ctx.imports,
+		doc_ctx.package_name,
+		doc_ctx.uri.uri,
+		doc_ctx.fullpath,
+		symbols,
 	)
 
-	position_context, ok := get_document_position_context(document, position, .Hover)
+	position_context, ok := get_document_position_context(doc_ctx, position, .Hover)
 	if !ok {
 		log.warn("Failed to get position context")
 		return hover, false, false
@@ -49,10 +50,10 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(document.ast, &ast_context)
+	get_globals(doc_ctx.ast, &ast_context)
 
 	if position_context.function != nil {
-		get_locals(document.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 
 	if position_context.import_stmt != nil {
@@ -201,7 +202,7 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 
 	if position_context.field_value != nil &&
 	   position_in_node(position_context.field_value.field, position_context.position) {
-		hover.range = common.get_token_range(position_context.field_value.field^, document.ast.src)
+		hover.range = common.get_token_range(position_context.field_value.field^, doc_ctx.ast.src)
 		if position_context.comp_lit != nil {
 			if comp_symbol, ok := resolve_comp_literal(&ast_context, &position_context); ok {
 				if field, ok := position_context.field_value.field.derived.(^ast.Ident); ok {
@@ -338,7 +339,7 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 
 					if resolved, ok := resolve_symbol_return(
 						&ast_context,
-						lookup(ident.name, selector.pkg, ast_context.fullpath),
+						lookup(ast_context.symbols, ident.name, selector.pkg, ast_context.fullpath),
 					); ok {
 						build_documentation(&ast_context, &resolved, false)
 						resolved.name = ident.name
@@ -388,7 +389,7 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 		}
 	} else if position_context.implicit_selector_expr != nil {
 		implicit_selector := position_context.implicit_selector_expr
-		hover.range = common.get_token_range(implicit_selector, document.ast.src)
+		hover.range = common.get_token_range(implicit_selector, doc_ctx.ast.src)
 		if symbol, ok := resolve_implicit_selector(&ast_context, &position_context); ok {
 			#partial switch v in symbol.value {
 			case SymbolEnumValue:
@@ -438,7 +439,7 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 			ident.end = position_context.value_decl.end
 		}
 
-		hover.range = common.get_token_range(position_context.identifier^, document.ast.src)
+		hover.range = common.get_token_range(position_context.identifier^, doc_ctx.ast.src)
 
 		if position_context.call != nil {
 			if call, ok := position_context.call.derived.(^ast.Call_Expr); ok {

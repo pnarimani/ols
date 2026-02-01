@@ -35,17 +35,21 @@ CodeAction :: struct {
 	edit:        WorkspaceEdit,
 }
 
-get_code_actions :: proc(document: ^Document, range: common.Range, config: ^common.Config) -> ([]CodeAction, bool) {
+get_code_actions :: proc(doc_ctx: DocumentContext, range: common.Range, config: ^common.Config) -> ([]CodeAction, bool) {
+	// Build fresh symbols for this request
+	symbols := build_request_symbols(doc_ctx.imports, context.temp_allocator)
+
 	ast_context := make_ast_context(
-		document.ast,
-		document.imports,
-		document.package_name,
-		document.uri.uri,
-		document.fullpath,
+		doc_ctx.ast,
+		doc_ctx.imports,
+		doc_ctx.package_name,
+		doc_ctx.uri.uri,
+		doc_ctx.fullpath,
+		&symbols,
 		context.temp_allocator,
 	)
 
-	position_context, ok := get_document_position_context(document, range.start, .Hover)
+	position_context, ok := get_document_position_context(doc_ctx, range.start, .Hover)
 	if !ok {
 		log.warn("Failed to get position context")
 		return {}, false
@@ -53,41 +57,41 @@ get_code_actions :: proc(document: ^Document, range: common.Range, config: ^comm
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(document.ast, &ast_context)
+	get_globals(doc_ctx.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	if position_context.function != nil {
-		get_locals(document.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 
 	actions := make([dynamic]CodeAction, 0, context.allocator)
 
 	if position_context.selector_expr != nil {
 		if selector, ok := position_context.selector_expr.derived.(^ast.Selector_Expr); ok {
-			add_missing_imports(&ast_context, selector, strings.clone(document.uri.uri), config, &actions)
+			add_missing_imports(&ast_context, selector, strings.clone(doc_ctx.uri.uri), config, &actions)
 		}
 	} else if position_context.import_stmt != nil {
-		remove_unused_imports(document, strings.clone(document.uri.uri), config, &actions)
+		remove_unused_imports(doc_ctx, strings.clone(doc_ctx.uri.uri), config, &actions)
 	}
 
-	add_invert_if_action(document, position_context.position, strings.clone(document.uri.uri), &actions)
-	add_redundant_else_action(document, position_context.position, strings.clone(document.uri.uri), &actions)
-	add_extract_proc_action(document, &ast_context, range, strings.clone(document.uri.uri), &actions)
-	add_extract_variable_action(document, &ast_context, range, strings.clone(document.uri.uri), &actions)
-	add_inline_proc_action(document, &ast_context, range, strings.clone(document.uri.uri), &actions)
-	add_inline_variable_action(document, &ast_context, range, strings.clone(document.uri.uri), &actions)
+	add_invert_if_action(doc_ctx, position_context.position, strings.clone(doc_ctx.uri.uri), &actions)
+	add_redundant_else_action(doc_ctx, position_context.position, strings.clone(doc_ctx.uri.uri), &actions)
+	add_extract_proc_action(doc_ctx, &ast_context, range, strings.clone(doc_ctx.uri.uri), &actions)
+	add_extract_variable_action(doc_ctx, &ast_context, range, strings.clone(doc_ctx.uri.uri), &actions)
+	add_inline_proc_action(doc_ctx, &ast_context, range, strings.clone(doc_ctx.uri.uri), &actions)
+	add_inline_variable_action(doc_ctx, &ast_context, range, strings.clone(doc_ctx.uri.uri), &actions)
 
 	return actions[:], true
 }
 
 remove_unused_imports :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	uri: string,
 	config: ^common.Config,
 	actions: ^[dynamic]CodeAction,
 ) {
-	unused_imports := find_unused_imports(document, context.temp_allocator)
+	unused_imports := find_unused_imports(doc_ctx, context.temp_allocator)
 
 	if len(unused_imports) == 0 {
 		return
@@ -96,7 +100,7 @@ remove_unused_imports :: proc(
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 
 	for imp in unused_imports {
-		range := common.get_token_range(imp.import_decl, document.ast.src)
+		range := common.get_token_range(imp.import_decl, doc_ctx.ast.src)
 
 		import_edit := TextEdit {
 			range   = range,
@@ -104,7 +108,7 @@ remove_unused_imports :: proc(
 		}
 
 		if (range.start.line != 1) {
-			if column, ok := common.get_last_column(import_edit.range.start.line - 1, document.text); ok {
+			if column, ok := common.get_last_column(import_edit.range.start.line - 1, doc_ctx.text); ok {
 				import_edit.range.start.line -= 1
 				import_edit.range.start.character = column
 			}
@@ -143,7 +147,8 @@ add_missing_imports :: proc(
 		if _, ok := resolve_type_identifier(ast_context, name^); ok {
 			return
 		}
-		for collection, pkgs in build_cache.pkg_aliases {
+		pkg_aliases := find_all_package_aliases()
+		for collection, pkgs in pkg_aliases {
 			for pkg in pkgs {
 				fullpath := path.join({config.collections[collection], pkg})
 				found := false

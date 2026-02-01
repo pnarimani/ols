@@ -30,6 +30,7 @@ AstContext :: struct {
 	file:                      ast.File,
 	allocator:                 mem.Allocator,
 	imports:                   []Package, //imports for the current document
+	symbols:                   ^SymbolCollection, //per-request symbol collection
 	current_package:           string,
 	document_package:          string,
 	deferred_package:          [DeferredDepth]string, //When a package change happens when resolving
@@ -64,6 +65,7 @@ make_ast_context :: proc(
 	package_name: string,
 	uri: string,
 	fullpath: string,
+	symbols: ^SymbolCollection,
 	allocator := context.temp_allocator,
 ) -> AstContext {
 	ast_context := AstContext {
@@ -74,6 +76,7 @@ make_ast_context :: proc(
 		call_expr_recursion_cache = make(map[rawptr]SymbolResult, 0, allocator),
 		file                      = file,
 		imports                   = imports,
+		symbols                   = symbols,
 		use_locals                = true,
 		use_usings                = true,
 		document_package          = package_name,
@@ -1399,7 +1402,8 @@ resolve_call_directive :: proc(ast_context: ^AstContext, call: ^ast.Call_Expr) -
 			return resolve_type_expression(ast_context, call.args[1])
 		}
 	case "location":
-		return lookup("Source_Code_Location", indexer.runtime_package, call.pos.file)
+		runtime_path := get_runtime_path()
+		return lookup(ast_context.symbols, "Source_Code_Location", runtime_path, call.pos.file)
 	case "hash", "load_hash":
 		ident := new_type(ast.Ident, call.pos, call.end, ast_context.allocator)
 		ident.name = "int"
@@ -1683,10 +1687,8 @@ resolve_selector_expression :: proc(ast_context: ^AstContext, node: ^ast.Selecto
 				}
 			}
 		case SymbolPackageValue:
-			try_build_package(ast_context.current_package)
-
 			if node.field != nil {
-				return resolve_symbol_return(ast_context, lookup(node.field.name, selector.pkg, node.pos.file))
+				return resolve_symbol_return(ast_context, lookup(ast_context.symbols, node.field.name, selector.pkg, node.pos.file))
 			} else {
 				return Symbol{}, false
 			}
@@ -1790,7 +1792,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 		for u in ast_context.usings {
 			for imp in ast_context.imports {
 				if strings.compare(imp.name, u.pkg_name) == 0 {
-					if symbol, ok := lookup(node.name, imp.name, node.pos.file); ok {
+					if symbol, ok := lookup(ast_context.symbols, node.name, imp.name, node.pos.file); ok {
 						return resolve_symbol_return(ast_context, symbol)
 					}
 				}
@@ -1810,17 +1812,16 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 				value = SymbolPackageValue{},
 			}
 
-			try_build_package(symbol.pkg)
-
 			return symbol, true
 		}
 	}
 
 	//This could also be the runtime package, which is not required to be imported, but itself is used with selector expression in runtime functions: `my_runtime_proc :proc(a: runtime.*)`
 	if node.name == "runtime" {
+		runtime_path := get_runtime_path()
 		symbol := Symbol {
 			type  = .Package,
-			pkg   = indexer.runtime_package,
+			pkg   = runtime_path,
 			value = SymbolPackageValue{},
 		}
 
@@ -1834,8 +1835,15 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 
 	switch node.name {
 	case "context":
-		for built in indexer.builtin_packages {
-			if symbol, ok := lookup("Context", built, ""); ok {
+		// Look up Context in the builtin package
+		if symbol, ok := lookup(ast_context.symbols, "Context", "$builtin", ""); ok {
+			symbol.type = .Variable
+			return symbol, ok
+		}
+		// Also try the runtime package
+		runtime_path := get_runtime_path()
+		if runtime_path != "" {
+			if symbol, ok := lookup(ast_context.symbols, "Context", runtime_path, ""); ok {
 				symbol.type = .Variable
 				return symbol, ok
 			}
@@ -1851,32 +1859,32 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 			value = SymbolPackageValue{},
 		}
 
-		try_build_package(symbol.pkg)
-
 		return symbol, true
 	}
 
 	is_runtime := strings.contains(ast_context.current_package, "base/runtime")
 
 	if is_runtime {
-		if symbol, ok := lookup(node.name, "$builtin", node.pos.file); ok {
+		if symbol, ok := lookup(ast_context.symbols, node.name, "$builtin", node.pos.file); ok {
 			return resolve_symbol_return(ast_context, symbol)
 		}
 	}
 
 	//last option is to check the index
-	if symbol, ok := lookup(node.name, ast_context.current_package, node.pos.file); ok {
+	if symbol, ok := lookup(ast_context.symbols, node.name, ast_context.current_package, node.pos.file); ok {
 		return resolve_symbol_return(ast_context, symbol)
 	}
 
 	if !is_runtime {
-		if symbol, ok := lookup(node.name, "$builtin", node.pos.file); ok {
+		if symbol, ok := lookup(ast_context.symbols, node.name, "$builtin", node.pos.file); ok {
 			return resolve_symbol_return(ast_context, symbol)
 		}
 	}
 
-	for built in indexer.builtin_packages {
-		if symbol, ok := lookup(node.name, built, node.pos.file); ok {
+	// Try the runtime package as a last resort
+	runtime_path := get_runtime_path()
+	if runtime_path != "" {
+		if symbol, ok := lookup(ast_context.symbols, node.name, runtime_path, node.pos.file); ok {
 			return resolve_symbol_return(ast_context, symbol)
 		}
 	}
@@ -2805,7 +2813,7 @@ resolve_location_identifier :: proc(ast_context: ^AstContext, node: ast.Ident) -
 		usings := get_using_packages(ast_context)
 
 		for pkg in usings {
-			if symbol, ok := lookup(node.name, pkg, node.pos.file); ok {
+			if symbol, ok := lookup(ast_context.symbols, node.name, pkg, node.pos.file); ok {
 				return symbol, ok
 			}
 		}
@@ -2832,18 +2840,16 @@ resolve_location_identifier :: proc(ast_context: ^AstContext, node: ast.Ident) -
 				range = imp.range,
 			}
 
-			try_build_package(symbol.pkg)
-
 			return symbol, true
 		}
 	}
 
 	pkg := get_package_from_node(node)
-	if symbol, ok := lookup(node.name, pkg, node.pos.file); ok {
+	if symbol, ok := lookup(ast_context.symbols, node.name, pkg, node.pos.file); ok {
 		return symbol, ok
 	}
 
-	if symbol, ok := lookup(node.name, "$builtin", node.pos.file); ok {
+	if symbol, ok := lookup(ast_context.symbols, node.name, "$builtin", node.pos.file); ok {
 		return resolve_symbol_return(ast_context, symbol)
 	}
 
@@ -3024,8 +3030,25 @@ resolve_location_implicit_selector :: proc(
 }
 
 resolve_container_allocator :: proc(ast_context: ^AstContext, container_name: string) -> (Symbol, bool) {
-	for built in indexer.builtin_packages {
-		if symbol, ok := lookup(container_name, built, ast_context.fullpath); ok {
+	// Try $builtin first
+	if symbol, ok := lookup(ast_context.symbols, container_name, "$builtin", ast_context.fullpath); ok {
+		if v, ok := symbol.value.(SymbolStructValue); ok {
+			for name, i in v.names {
+				if name == "allocator" {
+					if symbol, ok := resolve_type_expression(ast_context, v.types[i]); ok {
+						construct_struct_field_symbol(&symbol, container_name, v, i)
+						build_documentation(ast_context, &symbol, true)
+						return symbol, true
+					}
+				}
+			}
+		}
+	}
+
+	// Try runtime package
+	runtime_path := get_runtime_path()
+	if runtime_path != "" {
+		if symbol, ok := lookup(ast_context.symbols, container_name, runtime_path, ast_context.fullpath); ok {
 			if v, ok := symbol.value.(SymbolStructValue); ok {
 				for name, i in v.names {
 					if name == "allocator" {
@@ -3044,8 +3067,23 @@ resolve_container_allocator :: proc(ast_context: ^AstContext, container_name: st
 }
 
 resolve_container_allocator_location :: proc(ast_context: ^AstContext, container_name: string) -> (Symbol, bool) {
-	for built in indexer.builtin_packages {
-		if symbol, ok := lookup(container_name, built, ast_context.fullpath); ok {
+	// Try $builtin first
+	if symbol, ok := lookup(ast_context.symbols, container_name, "$builtin", ast_context.fullpath); ok {
+		if v, ok := symbol.value.(SymbolStructValue); ok {
+			for name, i in v.names {
+				if name == "allocator" {
+					symbol.range = v.ranges[i]
+					symbol.type = .Field
+					return symbol, true
+				}
+			}
+		}
+	}
+
+	// Try runtime package
+	runtime_path := get_runtime_path()
+	if runtime_path != "" {
+		if symbol, ok := lookup(ast_context.symbols, container_name, runtime_path, ast_context.fullpath); ok {
 			if v, ok := symbol.value.(SymbolStructValue); ok {
 				for name, i in v.names {
 					if name == "allocator" {
@@ -3118,7 +3156,7 @@ resolve_symbol_selector :: proc(
 			}
 		}
 	case SymbolPackageValue:
-		if pkg, ok := lookup(field, symbol.pkg, symbol.uri); ok {
+		if pkg, ok := lookup(ast_context.symbols, field, symbol.pkg, symbol.uri); ok {
 			symbol.range = pkg.range
 			symbol.uri = pkg.uri
 		} else {
@@ -4132,7 +4170,7 @@ field_exists_in_comp_lit :: proc(comp_lit: ^ast.Comp_Lit, name: string) -> bool 
 /*
 	Parser gives ranges of expression, but not actually where the commas are placed.
 */
-get_call_commas :: proc(position_context: ^DocumentPositionContext, document: ^Document) {
+get_call_commas :: proc(position_context: ^DocumentPositionContext, doc_ctx: DocumentContext) {
 	if position_context.call == nil {
 		return
 	}
@@ -4144,11 +4182,11 @@ get_call_commas :: proc(position_context: ^DocumentPositionContext, document: ^D
 	brace_count := 0
 
 	if call, ok := position_context.call.derived.(^ast.Call_Expr); ok {
-		if document.text[call.open.offset] == '(' {
+		if doc_ctx.text[call.open.offset] == '(' {
 			paren_count -= 1
 		}
 		for i := call.open.offset; i < call.close.offset; i += 1 {
-			switch document.text[i] {
+			switch doc_ctx.text[i] {
 			case '[':
 				paren_count += 1
 			case ']':

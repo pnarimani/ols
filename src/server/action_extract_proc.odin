@@ -35,6 +35,7 @@ ControlFlowType :: enum {
 
 ExtractProcContext :: struct {
 	using inference_context: InferenceContext,
+	doc_ctx:                 DocumentContext,
 	selection_start:         common.AbsolutePosition,
 	selection_end:           common.AbsolutePosition,
 	containing_proc:         ^ast.Proc_Lit,
@@ -62,7 +63,7 @@ ReturnInfo :: struct {
 
 @(private = "package")
 add_extract_proc_action :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	range: common.Range,
 	uri: string,
@@ -72,7 +73,7 @@ add_extract_proc_action :: proc(
 		return
 	}
 
-	ctx, ok := create_extract_context(document, ast_context, range)
+	ctx, ok := create_extract_context(doc_ctx, ast_context, range)
 	if !ok {
 		return
 	}
@@ -117,7 +118,7 @@ is_valid_selection :: proc(range: common.Range) -> bool {
 }
 
 create_extract_context :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	range: common.Range,
 ) -> (
@@ -127,11 +128,12 @@ create_extract_context :: proc(
 	ctx := ExtractProcContext {
 		variables         = make(map[string]VariableUsage, context.temp_allocator),
 		selected_stmts    = make([dynamic]^ast.Stmt, context.temp_allocator),
-		inference_context = make_inference_context(document, ast_context, context.temp_allocator),
+		inference_context = make_inference_context(nil, ast_context, context.temp_allocator),
+		doc_ctx           = doc_ctx,
 	}
 
-	start_pos, start_ok := common.get_absolute_position(range.start, document.text)
-	end_pos, end_ok := common.get_absolute_position(range.end, document.text)
+	start_pos, start_ok := common.get_absolute_position(range.start, doc_ctx.text)
+	end_pos, end_ok := common.get_absolute_position(range.end, doc_ctx.text)
 	if !start_ok || !end_ok {
 		return ctx, false
 	}
@@ -139,7 +141,7 @@ create_extract_context :: proc(
 	ctx.selection_start = start_pos
 	ctx.selection_end = end_pos
 
-	ctx.containing_proc = find_containing_proc(document.ast.decls[:], ctx.selection_start)
+	ctx.containing_proc = find_containing_proc(doc_ctx.ast.decls[:], ctx.selection_start)
 	if ctx.containing_proc == nil {
 		return ctx, false
 	}
@@ -1371,7 +1373,7 @@ generate_extract_edit :: proc(
 	WorkspaceEdit,
 	bool,
 ) {
-	src := ctx.document.ast.src
+	src := ctx.doc_ctx.ast.src
 
 	params := build_parameter_list(ctx)
 	returns := build_return_list(ctx)
@@ -1401,7 +1403,7 @@ generate_extract_edit :: proc(
 	// Find the top-level declaration containing the procedure and insert after it
 	// This ensures extracted procedures are placed at package scope, not inside nested procedures
 	insert_range: common.Range
-	top_level_decl := find_top_level_decl(ctx.document.ast.decls[:], ctx.containing_proc)
+	top_level_decl := find_top_level_decl(ctx.doc_ctx.ast.decls[:], ctx.containing_proc)
 	if top_level_decl != nil {
 		insert_pos := common.token_pos_to_position(top_level_decl.end, src)
 		// Move to the start of the next line (after the closing brace)
@@ -1532,7 +1534,7 @@ build_proc_definition :: proc(
 		}
 		strings.write_string(&sb, " {\n")
 		strings.write_string(&sb, "\treturn ")
-		strings.write_string(&sb, string(ctx.document.text[ctx.selection_start:ctx.selection_end]))
+		strings.write_string(&sb, string(ctx.doc_ctx.text[ctx.selection_start:ctx.selection_end]))
 		strings.write_string(&sb, "\n}")
 		return strings.to_string(sb)
 	}
@@ -1676,7 +1678,7 @@ transform_extracted_code :: proc(
 
 	if len(deref_vars) == 0 && ctx.control_flow_type == .None {
 		// No transformations needed, return original code
-		return string(ctx.document.text[ctx.selection_start:ctx.selection_end])
+		return string(ctx.doc_ctx.text[ctx.selection_start:ctx.selection_end])
 	}
 
 	// Transform the code by walking through and replacing variable references
@@ -1688,11 +1690,11 @@ transform_extracted_code :: proc(
 	for stmt in ctx.selected_stmts {
 		// Write any text between statements
 		if stmt.pos.offset > last_offset {
-			strings.write_string(&sb, string(ctx.document.text[last_offset:stmt.pos.offset]))
+			strings.write_string(&sb, string(ctx.doc_ctx.text[last_offset:stmt.pos.offset]))
 		}
 
 		// Transform this statement
-		transformed := transform_statement(stmt, ctx.document.text, deref_vars, ctx.control_flow_type, returns)
+		transformed := transform_statement(stmt, ctx.doc_ctx.text, deref_vars, ctx.control_flow_type, returns)
 		strings.write_string(&sb, transformed)
 
 		last_offset = stmt.end.offset
@@ -1700,7 +1702,7 @@ transform_extracted_code :: proc(
 
 	// Write any remaining text after the last statement
 	if last_offset < ctx.selection_end {
-		strings.write_string(&sb, string(ctx.document.text[last_offset:ctx.selection_end]))
+		strings.write_string(&sb, string(ctx.doc_ctx.text[last_offset:ctx.selection_end]))
 	}
 
 	return strings.to_string(sb)

@@ -13,7 +13,7 @@ INLINE_VARIABLE_ACTION_TITLE :: "Inline Variable"
 INLINE_VARIABLE_ACTION_KIND :: "refactor.inline"
 
 InlineVariableContext :: struct {
-	document:         ^Document,
+	doc_ctx:          DocumentContext,
 	ast_context:      ^AstContext,
 	position:         common.AbsolutePosition,
 	// The variable declaration containing the variable to inline
@@ -34,7 +34,7 @@ InlineVariableContext :: struct {
 
 @(private = "package")
 add_inline_variable_action :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	range: common.Range,
 	uri: string,
@@ -45,7 +45,7 @@ add_inline_variable_action :: proc(
 		return
 	}
 
-	ctx, ok := create_inline_variable_context(document, ast_context, range.start)
+	ctx, ok := create_inline_variable_context(doc_ctx, ast_context, range.start)
 	if !ok {
 		return
 	}
@@ -83,7 +83,7 @@ add_inline_variable_action :: proc(
 }
 
 create_inline_variable_context :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	position: common.Position,
 ) -> (
@@ -91,19 +91,19 @@ create_inline_variable_context :: proc(
 	bool,
 ) {
 	ctx := InlineVariableContext {
-		document    = document,
+		doc_ctx     = doc_ctx,
 		ast_context = ast_context,
 		all_usages  = make([dynamic]^ast.Ident, context.temp_allocator),
 	}
 
-	abs_pos, ok := common.get_absolute_position(position, document.text)
+	abs_pos, ok := common.get_absolute_position(position, doc_ctx.text)
 	if !ok {
 		return ctx, false
 	}
 	ctx.position = abs_pos
 
 	// Find the containing procedure
-	ctx.containing_proc = find_containing_proc(document.ast.decls[:], abs_pos)
+	ctx.containing_proc = find_containing_proc(doc_ctx.ast.decls[:], abs_pos)
 	if ctx.containing_proc == nil {
 		return ctx, false
 	}
@@ -773,7 +773,7 @@ check_reassignment_in_stmt :: proc(stmt: ^ast.Stmt, var_name: string, var_decl: 
 // Generate the workspace edit for inlining the variable
 generate_inline_variable_edit :: proc(ctx: ^InlineVariableContext, uri: string) -> (WorkspaceEdit, bool) {
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
-	src := ctx.document.ast.src
+	src := ctx.doc_ctx.ast.src
 
 	// Get the initialization expression text
 	init_text := string(src[ctx.init_expr.pos.offset:ctx.init_expr.end.offset])
@@ -1057,7 +1057,7 @@ is_target_ident :: proc(expr: ^ast.Expr, target: ^ast.Ident) -> bool {
 
 // Generate the edit to delete the variable declaration
 generate_variable_delete_edit :: proc(ctx: ^InlineVariableContext) -> TextEdit {
-	src := ctx.document.ast.src
+	src := ctx.doc_ctx.ast.src
 
 	// Delete the entire line containing the declaration
 	decl_range := common.get_token_range(ctx.var_decl, src)
@@ -1066,7 +1066,7 @@ generate_variable_delete_edit :: proc(ctx: ^InlineVariableContext) -> TextEdit {
 	decl_range.start.character = 0
 
 	// Extend to include the newline after if present
-	end_offset, _ := common.get_absolute_position(decl_range.end, ctx.document.text)
+	end_offset, _ := common.get_absolute_position(decl_range.end, ctx.doc_ctx.text)
 	if end_offset < len(src) && src[end_offset] == '\n' {
 		// Move end position to the start of the next line
 		decl_range.end.line += 1

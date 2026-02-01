@@ -17,10 +17,10 @@ import "core:strings"
 
 import "src:common"
 
-get_document_links :: proc(document: ^Document) -> ([]DocumentLink, bool) {
+get_document_links :: proc(doc_ctx: DocumentContext) -> ([]DocumentLink, bool) {
 	links := make([dynamic]DocumentLink, 0, context.temp_allocator)
 
-	for imp in document.ast.imports {
+	for imp in doc_ctx.ast.imports {
 		if len(imp.relpath.text) <= 1 {
 			continue
 		}
@@ -49,7 +49,7 @@ get_document_links :: proc(document: ^Document) -> ([]DocumentLink, bool) {
 			},
 		}
 
-		range := common.get_token_range(node, string(document.text))
+		range := common.get_token_range(node, string(doc_ctx.text))
 
 		link := DocumentLink {
 			range   = range,

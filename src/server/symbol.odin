@@ -592,7 +592,7 @@ expand_usings :: proc(ast_context: ^AstContext, b: ^SymbolStructValueBuilder) {
 expand_objc :: proc(ast_context: ^AstContext, b: ^SymbolStructValueBuilder) {
 	symbol := b.symbol
 	if .ObjC in symbol.flags {
-		pkg := indexer.index.collection.packages[symbol.pkg]
+		pkg := ast_context.symbols.packages[symbol.pkg]
 
 		if obj_struct, ok := pkg.objc_structs[symbol.name]; ok {
 			_objc_function: for function, i in obj_struct.functions {

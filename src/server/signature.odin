@@ -64,9 +64,10 @@ seperate_proc_field_arguments :: proc(procedure: ^Symbol) {
 
 
 get_signature_information :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	position: common.Position,
 	config: ^common.Config,
+	symbols: ^SymbolCollection,
 ) -> (
 	SignatureHelp,
 	bool,
@@ -74,14 +75,15 @@ get_signature_information :: proc(
 	signature_help: SignatureHelp
 
 	ast_context := make_ast_context(
-		document.ast,
-		document.imports,
-		document.package_name,
-		document.uri.uri,
-		document.fullpath,
+		doc_ctx.ast,
+		doc_ctx.imports,
+		doc_ctx.package_name,
+		doc_ctx.uri.uri,
+		doc_ctx.fullpath,
+		symbols,
 	)
 
-	position_context, ok := get_document_position_context(document, position, .SignatureHelp)
+	position_context, ok := get_document_position_context(doc_ctx, position, .SignatureHelp)
 	if !ok {
 		log.warn("Failed to get position context")
 		return signature_help, true
@@ -93,10 +95,10 @@ get_signature_information :: proc(
 		return signature_help, true
 	}
 
-	get_globals(document.ast, &ast_context)
+	get_globals(doc_ctx.ast, &ast_context)
 
 	if position_context.function != nil {
-		get_locals(document.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 	signature_information := make([dynamic]SignatureInformation, context.temp_allocator)
 

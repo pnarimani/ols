@@ -13,7 +13,7 @@ EXTRACT_VARIABLE_ACTION_KIND :: "refactor.extract"
 DEFAULT_VARIABLE_NAME :: "extracted"
 
 ExtractVariableContext :: struct {
-	document:        ^Document,
+	doc_ctx:         DocumentContext,
 	ast_context:     ^AstContext,
 	selection_start: common.AbsolutePosition,
 	selection_end:   common.AbsolutePosition,
@@ -29,7 +29,7 @@ ExtractVariableContext :: struct {
 
 @(private = "package")
 add_extract_variable_action :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	range: common.Range,
 	uri: string,
@@ -39,7 +39,7 @@ add_extract_variable_action :: proc(
 		return
 	}
 
-	ctx, ok := create_extract_variable_context(document, ast_context, range)
+	ctx, ok := create_extract_variable_context(doc_ctx, ast_context, range)
 	if !ok {
 		return
 	}
@@ -187,7 +187,7 @@ collect_identifiers_recursive :: proc(expr: ^ast.Expr, idents: ^[dynamic]string)
 }
 
 create_extract_variable_context :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	ast_context: ^AstContext,
 	range: common.Range,
 ) -> (
@@ -195,12 +195,12 @@ create_extract_variable_context :: proc(
 	bool,
 ) {
 	ctx := ExtractVariableContext {
-		document = document,
+		doc_ctx = doc_ctx,
 		ast_context = ast_context,
 	}
 
-	start_pos, start_ok := common.get_absolute_position(range.start, document.text)
-	end_pos, end_ok := common.get_absolute_position(range.end, document.text)
+	start_pos, start_ok := common.get_absolute_position(range.start, doc_ctx.text)
+	end_pos, end_ok := common.get_absolute_position(range.end, doc_ctx.text)
 	if !start_ok || !end_ok {
 		return ctx, false
 	}
@@ -209,7 +209,7 @@ create_extract_variable_context :: proc(
 	ctx.selection_end = end_pos
 
 	// Use shared utility from action_utils.odin
-	ctx.containing_proc = find_containing_proc(document.ast.decls[:], ctx.selection_start)
+	ctx.containing_proc = find_containing_proc(doc_ctx.ast.decls[:], ctx.selection_start)
 	if ctx.containing_proc == nil {
 		return ctx, false
 	}
@@ -232,7 +232,7 @@ find_selected_expression :: proc(ctx: ^ExtractVariableContext) {
 
 	ctx.selected_expr, ctx.containing_stmt = find_expression_in_stmts(body.stmts[:], ctx)
 	if ctx.containing_stmt != nil {
-		ctx.stmt_start_pos = common.token_pos_to_position(ctx.containing_stmt.pos, ctx.document.ast.src)
+		ctx.stmt_start_pos = common.token_pos_to_position(ctx.containing_stmt.pos, ctx.doc_ctx.ast.src)
 	}
 }
 
@@ -556,7 +556,7 @@ generate_extract_variable_edit :: proc(
 	WorkspaceEdit,
 	bool,
 ) {
-	src := ctx.document.ast.src
+	src := ctx.doc_ctx.ast.src
 
 	// Get the original expression text from source
 	expr_text := string(src[ctx.selection_start:ctx.selection_end])

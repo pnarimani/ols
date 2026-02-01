@@ -27,22 +27,26 @@ reset_position_context :: proc(position_context: ^DocumentPositionContext) {
 }
 
 resolve_ranged_file :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	range: common.Range,
 	allocator := context.allocator,
 ) -> map[uintptr]SymbolAndNode {
+	// Build fresh symbols for this request
+	request_symbols := build_request_symbols(doc_ctx.imports, allocator)
+
 	ast_context := make_ast_context(
-		document.ast,
-		document.imports,
-		document.package_name,
-		document.uri.uri,
-		document.fullpath,
+		doc_ctx.ast,
+		doc_ctx.imports,
+		doc_ctx.package_name,
+		doc_ctx.uri.uri,
+		doc_ctx.fullpath,
+		&request_symbols,
 		allocator,
 	)
 
 	position_context: DocumentPositionContext
 
-	get_globals(document.ast, &ast_context)
+	get_globals(doc_ctx.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
@@ -50,14 +54,14 @@ resolve_ranged_file :: proc(
 
 	margin := 20
 
-	for decl in document.ast.decls {
+	for decl in doc_ctx.ast.decls {
 		if _, is_value := decl.derived.(^ast.Value_Decl); !is_value {
 			continue
 		}
 
 		//Look for declarations that overlap with range
 		if range.start.line - margin <= decl.end.line && decl.pos.line <= range.end.line + margin {
-			resolve_decl(&position_context, &ast_context, document, decl, &symbols, .None, allocator)
+			resolve_decl(&position_context, &ast_context, doc_ctx, decl, &symbols, .None, allocator)
 			clear(&ast_context.locals)
 		}
 	}
@@ -66,33 +70,37 @@ resolve_ranged_file :: proc(
 }
 
 resolve_entire_file :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	flag := ResolveReferenceFlag.None,
 	allocator := context.allocator,
 ) -> map[uintptr]SymbolAndNode {
+	// Build fresh symbols for this request
+	request_symbols := build_request_symbols(doc_ctx.imports, allocator)
+
 	ast_context := make_ast_context(
-		document.ast,
-		document.imports,
-		document.package_name,
-		document.uri.uri,
-		document.fullpath,
+		doc_ctx.ast,
+		doc_ctx.imports,
+		doc_ctx.package_name,
+		doc_ctx.uri.uri,
+		doc_ctx.fullpath,
+		&request_symbols,
 		allocator,
 	)
 
 	position_context: DocumentPositionContext
 
-	get_globals(document.ast, &ast_context)
+	get_globals(doc_ctx.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	symbols := make(map[uintptr]SymbolAndNode, 10000, allocator)
 
-	for decl in document.ast.decls {
+	for decl in doc_ctx.ast.decls {
 		if _, is_value := decl.derived.(^ast.Value_Decl); !is_value {
 			continue
 		}
 
-		resolve_decl(&position_context, &ast_context, document, decl, &symbols, flag, allocator)
+		resolve_decl(&position_context, &ast_context, doc_ctx, decl, &symbols, flag, allocator)
 		clear(&ast_context.locals)
 	}
 
@@ -103,7 +111,7 @@ FileResolveData :: struct {
 	ast_context:      ^AstContext,
 	symbols:          ^map[uintptr]SymbolAndNode,
 	id_counter:       int,
-	document:         ^Document,
+	doc_ctx:          DocumentContext,
 	position_context: ^DocumentPositionContext,
 	flag:             ResolveReferenceFlag,
 }
@@ -112,7 +120,7 @@ FileResolveData :: struct {
 resolve_decl :: proc(
 	position_context: ^DocumentPositionContext,
 	ast_context: ^AstContext,
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	decl: ^ast.Node,
 	symbols: ^map[uintptr]SymbolAndNode,
 	flag: ResolveReferenceFlag,
@@ -122,7 +130,7 @@ resolve_decl :: proc(
 		position_context = position_context,
 		ast_context      = ast_context,
 		symbols          = symbols,
-		document         = document,
+		doc_ctx          = doc_ctx,
 		flag             = flag,
 	}
 
@@ -524,7 +532,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 					data.symbols[cast(uintptr)name] = SymbolAndNode {
 						node = name,
 						symbol = Symbol{
-							range = common.get_token_range(name, string(data.document.text)),
+							range = common.get_token_range(name, string(data.doc_ctx.text)),
 							uri = strings.clone(common.create_uri(field.pos.file, data.ast_context.allocator).uri, data.ast_context.allocator),
 						},
 					}
@@ -546,7 +554,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 				data.symbols[cast(uintptr)field] = SymbolAndNode {
 					node = field,
 					symbol = Symbol{
-						range = common.get_token_range(field, string(data.document.text)),
+						range = common.get_token_range(field, string(data.doc_ctx.text)),
 						uri = strings.clone(common.create_uri(field.pos.file, data.ast_context.allocator).uri, data.ast_context.allocator),
 					},
 				}
@@ -557,7 +565,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 							node = ident,
 							symbol = Symbol{
 								name = ident.name,
-								range = common.get_token_range(ident, string(data.document.text)),
+								range = common.get_token_range(ident, string(data.doc_ctx.text)),
 								uri = strings.clone(common.create_uri(field.pos.file, data.ast_context.allocator).uri, data.ast_context.allocator),
 							},
 						}
@@ -566,7 +574,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 							node = binary,
 							symbol = Symbol{
 								name = "binary",
-								range = common.get_token_range(binary, string(data.document.text)),
+								range = common.get_token_range(binary, string(data.doc_ctx.text)),
 								uri = strings.clone(common.create_uri(field.pos.file, data.ast_context.allocator).uri, data.ast_context.allocator),
 							},
 						}
@@ -601,7 +609,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 			data.symbols[cast(uintptr)n.name] = SymbolAndNode {
 				node = n.name,
 				symbol = Symbol{
-					range = common.get_token_range(n.name, string(data.document.text)),
+					range = common.get_token_range(n.name, string(data.doc_ctx.text)),
 					uri = strings.clone(common.create_uri(n.pos.file, data.ast_context.allocator).uri, data.ast_context.allocator),
 				},
 			}

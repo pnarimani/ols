@@ -6,35 +6,10 @@ import "core:strings"
 
 import "src:common"
 
-MemoryIndex :: struct {
-	collection:        SymbolCollection,
-	last_package_name: string,
-	last_package:      ^map[string]Symbol,
-}
-
-make_memory_index :: proc(collection: SymbolCollection) -> MemoryIndex {
-	return MemoryIndex{collection = collection}
-}
-
-memory_index_clear_cache :: proc(index: ^MemoryIndex) {
-	index.last_package_name = ""
-	index.last_package = nil
-}
-
-memory_index_lookup :: proc(index: ^MemoryIndex, name: string, pkg: string) -> (Symbol, bool) {
-	if index.last_package_name == pkg && index.last_package != nil {
-		return index.last_package[name]
-	}
-
-	if _pkg, ok := &index.collection.packages[pkg]; ok {
-		index.last_package = &_pkg.symbols
-		index.last_package_name = pkg
+symbol_collection_lookup :: proc(collection: ^SymbolCollection, name: string, pkg: string) -> (Symbol, bool) {
+	if _pkg, ok := &collection.packages[pkg]; ok {
 		return _pkg.symbols[name]
-	} else {
-		index.last_package = nil
-		index.last_package_name = ""
 	}
-
 	return {}, false
 }
 
@@ -51,8 +26,8 @@ score_name :: proc(matchers: []^common.FuzzyMatcher, name: string) -> (f32, bool
 	return score, true
 }
 
-memory_index_fuzzy_search :: proc(
-	index: ^MemoryIndex,
+symbol_collection_fuzzy_search :: proc(
+	collection: ^SymbolCollection,
 	name: string,
 	pkgs: []string,
 	current_file: string,
@@ -74,7 +49,7 @@ memory_index_fuzzy_search :: proc(
 	current_pkg := get_package_from_filepath(current_file)
 
 	for pkg in pkgs {
-		if pkg, ok := index.collection.packages[pkg]; ok {
+		if pkg, ok := collection.packages[pkg]; ok {
 			for _, symbol in pkg.symbols {
 				if should_skip_private_symbol(symbol, current_pkg, current_file) {
 					continue

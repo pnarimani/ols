@@ -45,16 +45,16 @@ Block_Text_Options :: struct {
 
 @(private = "package")
 add_invert_if_action :: proc(
-	document: ^Document,
+	doc_ctx: DocumentContext,
 	position: common.AbsolutePosition,
 	uri: string,
 	actions: ^[dynamic]CodeAction,
 ) {
 	inv_ctx := If_Inversion_Context {
-		src = document.ast.src,
+		src = doc_ctx.ast.src,
 	}
 
-	if !find_if_stmt_at_position(&inv_ctx, document.ast.decls[:], position) {
+	if !find_if_stmt_at_position(&inv_ctx, doc_ctx.ast.decls[:], position) {
 		return
 	}
 
@@ -66,12 +66,12 @@ add_invert_if_action :: proc(
 	range: common.Range
 	if should_edit_statements_after_if(inv_ctx) {
 		last_stmt := inv_ctx.following_stmts[len(inv_ctx.following_stmts) - 1]
-		range.start = common.token_pos_to_position(inv_ctx.if_stmt.pos, document.ast.src)
+		range.start = common.token_pos_to_position(inv_ctx.if_stmt.pos, doc_ctx.ast.src)
 		end_pos := last_stmt.end
 		end_pos.offset -= 1
-		range.end = common.token_pos_to_position(end_pos, document.ast.src)
+		range.end = common.token_pos_to_position(end_pos, doc_ctx.ast.src)
 	} else {
-		range = common.get_token_range(inv_ctx.if_stmt^, document.ast.src)
+		range = common.get_token_range(inv_ctx.if_stmt^, doc_ctx.ast.src)
 	}
 
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
