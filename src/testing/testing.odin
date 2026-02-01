@@ -58,7 +58,8 @@ setup :: proc(src: ^Source) {
 	// Create a fresh symbol collection for this test
 	// This includes builtins from the filesystem for builtin function testing
 	// Pass the test config so that enable_fake_method etc. are respected
-	src.symbols = server.build_request_symbols({}, &src.config)
+	// Pass empty string for current_package since test files don't have a real package directory
+	src.symbols = server.build_request_symbols({}, "", &src.config)
 
 	// Create DocumentContext for the test document
 	src.doc_ctx, _ = server.create_document_context(src.document, &src.config)

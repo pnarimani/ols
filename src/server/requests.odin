@@ -515,10 +515,10 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 		if abs_final_path, ok := filepath.abs(final_path); ok {
 			slashed_path, _ := filepath.to_slash(abs_final_path, context.temp_allocator)
 
-			config.collections[strings.clone(it.name)] = strings.clone(slashed_path)
+			config.collections[strings.clone(it.name, common.config_storage.allocator)] = strings.clone(slashed_path, common.config_storage.allocator)
 		} else {
 			log.errorf("Failed to find absolute address of collection: %v", final_path)
-			config.collections[strings.clone(it.name)] = strings.clone(final_path)
+			config.collections[strings.clone(it.name, common.config_storage.allocator)] = strings.clone(final_path, common.config_storage.allocator)
 		}
 	}
 
@@ -577,35 +577,35 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 
 		// base
 		if "base" not_in config.collections {
-			config.collections[strings.clone("base")] = path.join(
+			config.collections[strings.clone("base", common.config_storage.allocator)] = path.join(
 				elems = {forward_path, "base"},
-				allocator = context.allocator,
+				allocator = common.config_storage.allocator,
 			)
 		}
 
 		// core
 		if "core" not_in config.collections {
-			config.collections[strings.clone("core")] = path.join(
+			config.collections[strings.clone("core", common.config_storage.allocator)] = path.join(
 				elems = {forward_path, "core"},
-				allocator = context.allocator,
+				allocator = common.config_storage.allocator,
 			)
 		}
 
 		// vendor
 		if "vendor" not_in config.collections {
-			config.collections[strings.clone("vendor")] = path.join(
+			config.collections[strings.clone("vendor", common.config_storage.allocator)] = path.join(
 				elems = {forward_path, "vendor"},
-				allocator = context.allocator,
+				allocator = common.config_storage.allocator,
 			)
 		}
 
 		// shared
 		if "shared" not_in config.collections {
-			shared_path := path.join(elems = {forward_path, "shared"}, allocator = context.allocator)
+			shared_path := path.join(elems = {forward_path, "shared"}, allocator = common.config_storage.allocator)
 			if os.exists(shared_path) {
-				config.collections[strings.clone("shared")] = shared_path
+				config.collections[strings.clone("shared", common.config_storage.allocator)] = shared_path
 			} else {
-				delete(shared_path)
+				delete(shared_path, common.config_storage.allocator)
 			}
 		}
 	}
@@ -631,12 +631,11 @@ request_initialize :: proc(
 		return .ParseError
 	}
 
-	config.client_name = strings.clone(initialize_params.clientInfo.name)
-	config.workspace_folders = make([dynamic]common.WorkspaceFolder)
+	config.client_name = strings.clone(initialize_params.clientInfo.name, common.config_storage.allocator)
 
 	for s in initialize_params.workspaceFolders {
 		workspace: common.WorkspaceFolder
-		workspace.uri = strings.clone(s.uri)
+		workspace.uri = strings.clone(s.uri, common.config_storage.allocator)
 		append(&config.workspace_folders, workspace)
 	}
 

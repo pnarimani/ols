@@ -55,9 +55,11 @@ os_write :: proc(handle: rawptr, data: []byte) -> (int, int) {
 request_thread: ^thread.Thread
 
 run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
+	common.config_storage_init()
+	defer common.config_storage_shutdown()
 	server.document_storage_init()
+	defer server.document_storage_shutdown()
 
-	common.config.collections = make(map[string]string)
 	common.config.running = true
 
 	request_thread_data := server.RequestThreadData {
@@ -78,19 +80,6 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 	for common.config.running {
 		server.consume_requests(&common.config, writer)
 	}
-
-	for k, v in common.config.collections {
-		delete(k)
-		delete(v)
-	}
-
-	delete(common.config.collections)
-	delete(common.config.workspace_folders)
-
-	server.document_storage_shutdown()
-
-	server.shutdown_file_logger()
-
 }
 
 end :: proc() {

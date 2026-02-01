@@ -238,8 +238,8 @@ get_runtime_path :: proc() -> string {
 }
 
 // Build a fresh symbol collection for a request.
-// Includes builtins, runtime, and the specified imports.
-build_request_symbols :: proc(imports: []Package, config: ^common.Config = nil) -> SymbolCollection {
+// Includes builtins, runtime, the current package, and all imported packages.
+build_request_symbols :: proc(imports: []Package, current_package: string, config: ^common.Config = nil) -> SymbolCollection {
 	// Use provided config or fall back to global config
 	actual_config := config if config != nil else &common.config
 	symbols := make_symbol_collection(actual_config)
@@ -255,6 +255,11 @@ build_request_symbols :: proc(imports: []Package, config: ^common.Config = nil) 
 	runtime_path := get_runtime_path()
 	if runtime_path != "" && os.exists(runtime_path) {
 		build_package_symbols(&symbols, runtime_path, &loaded_pkgs)
+	}
+
+	// Load current document's package
+	if current_package != "" && os.exists(current_package) {
+		build_package_symbols(&symbols, current_package, &loaded_pkgs)
 	}
 
 	// Load all imported packages

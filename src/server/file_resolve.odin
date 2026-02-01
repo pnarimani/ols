@@ -28,7 +28,7 @@ reset_position_context :: proc(position_context: ^DocumentPositionContext) {
 
 resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> map[uintptr]SymbolAndNode {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports)
+	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -67,7 +67,7 @@ resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> ma
 
 resolve_entire_file :: proc(doc_ctx: DocumentContext, flag := ResolveReferenceFlag.None) -> map[uintptr]SymbolAndNode {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports)
+	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

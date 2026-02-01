@@ -11,7 +11,7 @@ import "src:common"
 
 get_rename :: proc(doc_ctx: DocumentContext, new_text: string, position: common.Position) -> (WorkspaceEdit, bool) {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, &common.config)
+	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name, &common.config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -70,7 +70,7 @@ get_rename :: proc(doc_ctx: DocumentContext, new_text: string, position: common.
 
 get_prepare_rename :: proc(doc_ctx: DocumentContext, position: common.Position) -> (common.Range, bool) {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports)
+	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

@@ -44,7 +44,7 @@ get_code_actions :: proc(
 	bool,
 ) {
 	// Build fresh symbols for this request
-	symbols := build_request_symbols(doc_ctx.imports, config)
+	symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name, config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

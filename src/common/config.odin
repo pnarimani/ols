@@ -1,5 +1,7 @@
 package common
 
+import "core:mem"
+
 ConfigProfile :: struct {
 	os:           string,
 	arch:         string,
@@ -52,4 +54,32 @@ Config :: struct {
 	profile:                                 ConfigProfile,
 }
 
+ConfigStorage :: struct {
+	allocator: mem.Allocator,
+}
+
+config_storage: ConfigStorage
 config: Config
+
+// Initialize config storage with a persistent allocator.
+// Must be called before any config operations.
+config_storage_init :: proc() {
+	config_storage.allocator = context.allocator
+	config.collections = make(map[string]string, config_storage.allocator)
+	config.workspace_folders = make([dynamic]WorkspaceFolder, config_storage.allocator)
+}
+
+config_storage_shutdown :: proc() {
+	for k, v in config.collections {
+		delete(k, config_storage.allocator)
+		delete(v, config_storage.allocator)
+	}
+
+	delete(config.collections)
+	
+	for ws in config.workspace_folders {
+		delete(ws.uri, config_storage.allocator)
+	}
+
+	delete(config.workspace_folders)
+}

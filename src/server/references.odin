@@ -401,7 +401,7 @@ get_references :: proc(
 	bool,
 ) {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, &common.config)
+	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name, &common.config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
