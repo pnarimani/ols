@@ -5,18 +5,13 @@ import "core:testing"
 import "src:common"
 import "src:server"
 
-expect_reference_locations :: proc(
-	t: ^testing.T,
-	src: ^Source,
-	expect_locations: []common.Location,
-	expect_excluded: []common.Location = nil,
-) {
+expect_reference_locations :: proc(t: ^testing.T, src: ^Source) {
 	setup(src)
 	defer teardown(src)
 
 	locations, ok := server.get_references(src.doc_ctx, src.position)
 
-	for expect_location in expect_locations {
+	for expect_location in src.locations {
 		match := false
 		for location in locations {
 			if location.range == expect_location.range {
@@ -33,14 +28,6 @@ expect_reference_locations :: proc(
 		log.error("\nReceived:\n")
 		for location in locations {
 			log.errorf("%v \n", location)
-		}
-	}
-
-	for expect_exclude in expect_excluded {
-		for location in locations {
-			if expect_exclude.range == location.range {
-				log.errorf("Expected location %v to not be included\n", expect_exclude)
-			}
 		}
 	}
 }

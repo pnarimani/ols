@@ -30,6 +30,7 @@ Source :: struct {
 	position:     common.Position,
 	end_position: common.Position, // For range selection tests
 	has_range:    bool, // True if {<} and {>} markers were found
+	locations:    []common.Location, // Locations marked by {:} pairs
 }
 
 // Helper to create a RequestContext from a Source for testing
@@ -102,12 +103,13 @@ teardown :: proc(src: ^Source) {
 }
 
 // Parse position markers from source text
-// Supports: {*} for cursor position, {<} for range start, {>} for range end
+// Supports: {*} for cursor position, {<} for range start, {>} for range end, {:} pairs for Location ranges
 @(private)
 parse_position_markers :: proc(src: ^Source) {
 	CURSOR_MARKER :: "{*}"
 	RANGE_START_MARKER :: "{<}"
 	RANGE_END_MARKER :: "{>}"
+	LOCATION_MARKER :: "{:}"
 	MARKER_LENGTH :: 3
 
 	current, last: u8
@@ -115,6 +117,9 @@ parse_position_markers :: proc(src: ^Source) {
 	found_cursor := false
 	found_range_start := false
 	found_range_end := false
+
+	// Track location markers (pairs of {:})
+	location_positions := make([dynamic]common.Position, context.temp_allocator)
 
 	// First pass: find markers and record positions
 	write_index := 0
@@ -156,6 +161,12 @@ parse_position_markers :: proc(src: ^Source) {
 				read_index += MARKER_LENGTH
 				last = current
 				continue
+			} else if marker == LOCATION_MARKER {
+				pos := common.Position{line = current_line, character = current_character}
+				append(&location_positions, pos)
+				read_index += MARKER_LENGTH
+				last = current
+				continue
 			}
 		}
 
@@ -173,4 +184,20 @@ parse_position_markers :: proc(src: ^Source) {
 
 	// Update the document text length
 	src.document.text = transmute([]u8)src.main[:write_index]
+
+	// Build locations from {:} marker pairs
+	if len(location_positions) > 0 {
+		locations := make([dynamic]common.Location, context.temp_allocator)
+		for i := 0; i + 1 < len(location_positions); i += 2 {
+			loc := common.Location{
+				uri = common.make_encoded_path(src.document.filepath),
+				range = common.Range{
+					start = location_positions[i],
+					end = location_positions[i + 1],
+				},
+			}
+			append(&locations, loc)
+		}
+		src.locations = locations[:]
+	}
 }
