@@ -19,7 +19,7 @@ should_skip_private_symbol :: proc(symbol: analysis.Symbol, current_pkg, current
 		return false
 	}
 
-	symbol_file := strings.trim_prefix(symbol.uri, "file://")
+	symbol_file := strings.trim_prefix(symbol.filepath, "file://")
 	current_file := strings.trim_prefix(current_file, "file://")
 	if .PrivateFile in symbol.flags && symbol_file != current_file {
 		return true

@@ -183,7 +183,7 @@ prepare_references :: proc(
 					symbol = analysis.Symbol {
 						range = common.get_token_range(field.name, ast_context.file.src),
 						pkg   = ast_context.current_package,
-						uri   = common.make_encoded_path(doc_ctx.path, context.temp_allocator),
+						filepath   = common.make_encoded_path(doc_ctx.path, context.temp_allocator),
 					}
 					return symbol, .Field, true
 				}
@@ -203,7 +203,7 @@ prepare_references :: proc(
 						symbol = analysis.Symbol {
 							range = common.get_token_range(name, ast_context.file.src),
 							pkg   = ast_context.current_package,
-							uri   = common.make_encoded_path(doc_ctx.path, context.temp_allocator),
+							filepath   = common.make_encoded_path(doc_ctx.path, context.temp_allocator),
 						}
 						return symbol, .Field, true
 					}
@@ -230,8 +230,8 @@ prepare_references :: proc(
 			return
 		}
 	}
-	if symbol.uri == "" {
-		symbol.uri = common.make_encoded_path(doc_ctx.path, context.temp_allocator)
+	if symbol.filepath == "" {
+		symbol.filepath = common.make_encoded_path(doc_ctx.path, context.temp_allocator)
 	}
 
 	return symbol, resolve_flag, true
@@ -257,7 +257,7 @@ resolve_references :: proc(
 	symbols_and_nodes := resolve_entire_file(doc_ctx, resolve_flag)
 
 	for k, v in symbols_and_nodes {
-		if strings.equal_fold(v.symbol.uri, symbol.uri) && v.symbol.range == symbol.range {
+		if strings.equal_fold(v.symbol.filepath, symbol.filepath) && v.symbol.range == symbol.range {
 			node_encoded_path := common.make_encoded_path(v.node.pos.file, context.temp_allocator)
 
 			range := common.get_token_range(v.node^, ast_context.file.src)
@@ -366,7 +366,7 @@ resolve_references :: proc(
 		if in_pkg || symbol.pkg == inner_doc_ctx.package_name {
 			symbols_and_nodes := resolve_entire_file(inner_doc_ctx, resolve_flag)
 			for k, v in symbols_and_nodes {
-				if strings.equal_fold(v.symbol.uri, symbol.uri) && v.symbol.range == symbol.range {
+				if strings.equal_fold(v.symbol.filepath, symbol.filepath) && v.symbol.range == symbol.range {
 					node_encoded_path := common.make_encoded_path(v.node.pos.file, context.temp_allocator)
 					range := common.get_token_range(v.node^, string(inner_doc_ctx.text))
 					//We don't have to have the `.` with, otherwise it renames the dot.

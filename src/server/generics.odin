@@ -550,7 +550,7 @@ resolve_generic_function_symbol :: proc(
 				if ident, ok := call_expr.args[i].derived.(^ast.Ident); ok && symbol.name == "" {
 					symbol.name = ident.name
 				}
-				file := strings.trim_prefix(symbol.uri, "file://")
+				file := strings.trim_prefix(symbol.filepath, "file://")
 
 				if file == "" {
 					file = call_expr.args[i].pos.file
@@ -580,12 +580,12 @@ resolve_generic_function_symbol :: proc(
 				symbol_expr.pos.offset = call_expr.pos.offset
 				symbol_expr.end.offset = call_expr.end.offset
 
-				symbol_expr = analysis.clone_expr(symbol_expr, nil)
-				param_type := analysis.clone_expr(param.type, nil)
+				symbol_expr = analysis.clone_expr(symbol_expr)
+				param_type := analysis.clone_expr(param.type)
 
 				if resolve_poly(ast_context, symbol_expr, symbol, param_type, &poly_map) {
 					if poly, ok := name.derived.(^ast.Poly_Type); ok {
-						poly_map[poly.type.name] = analysis.clone_expr(call_expr.args[i], nil)
+						poly_map[poly.type.name] = analysis.clone_expr(call_expr.args[i])
 					}
 				}
 			}
@@ -621,7 +621,7 @@ resolve_generic_function_symbol :: proc(
 			continue
 		}
 
-		field := cast(^ast.Field)analysis.clone_node(result, nil)
+		field := cast(^ast.Field)analysis.clone_node(result)
 
 		if ident, ok := unwrap_ident(field.type); ok {
 			if expr, ok := poly_map[ident.name]; ok {
@@ -635,7 +635,7 @@ resolve_generic_function_symbol :: proc(
 	}
 
 	for param in params {
-		field := cast(^ast.Field)analysis.clone_node(param, nil)
+		field := cast(^ast.Field)analysis.clone_node(param)
 
 		if field.type != nil {
 			if poly_type, ok := field.type.derived.(^ast.Poly_Type); ok {

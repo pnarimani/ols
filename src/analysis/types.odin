@@ -3,6 +3,7 @@ package analysis
 import "core:mem"
 import "core:odin/ast"
 import "core:odin/tokenizer"
+import "core:strings"
 
 import "src:common"
 
@@ -11,7 +12,7 @@ SymbolCollection :: struct {
 	allocator:      mem.Allocator,
 	config:         ^common.Config,
 	packages:       map[string]SymbolPackage,
-	unique_strings: map[string]string, //store all our strings as unique strings and reference them to save memory.
+	intern:         strings.Intern,
 }
 
 ObjcFunction :: struct {
@@ -255,7 +256,7 @@ SymbolFlags :: bit_set[SymbolFlag]
 
 Symbol :: struct {
 	range:       common.Range, //the range of the symbol in the file
-	uri:         string, //uri of the file the symbol resides
+	filepath:    string,
 	pkg:         string, //absolute directory path where the symbol resides
 	name:        string, //name of the symbol
 	doc:         string,

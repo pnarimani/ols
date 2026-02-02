@@ -530,7 +530,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 						node = name,
 						symbol = analysis.Symbol{
 							range = common.get_token_range(name, string(data.doc_ctx.text)),
-							uri = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
+							filepath = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
 						},
 					}
 				}
@@ -552,7 +552,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 					node = field,
 					symbol = analysis.Symbol{
 						range = common.get_token_range(field, string(data.doc_ctx.text)),
-						uri = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
+						filepath = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
 					},
 				}
 				// In the case of a Field_Value, we explicitly add them so we can find the LHS correctly for things like renaming
@@ -563,7 +563,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 							symbol = analysis.Symbol{
 								name = ident.name,
 								range = common.get_token_range(ident, string(data.doc_ctx.text)),
-								uri = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
+								filepath = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
 							},
 						}
 					} else if binary, ok := field.field.derived.(^ast.Binary_Expr); ok {
@@ -572,7 +572,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 							symbol = analysis.Symbol{
 								name = "binary",
 								range = common.get_token_range(binary, string(data.doc_ctx.text)),
-								uri = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
+								filepath = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
 							},
 						}
 					}
@@ -607,7 +607,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 				node = n.name,
 				symbol = analysis.Symbol{
 					range = common.get_token_range(n.name, string(data.doc_ctx.text)),
-					uri = common.make_encoded_path(n.pos.file, data.ast_context.allocator),
+					filepath = common.make_encoded_path(n.pos.file, data.ast_context.allocator),
 				},
 			}
 		}

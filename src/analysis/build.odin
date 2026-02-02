@@ -26,8 +26,9 @@ init_symbol_cache :: proc(config: ^common.Config) {
 		allocator      = context.allocator,
 		config         = config,
 		packages       = make(map[string]SymbolPackage, 64),
-		unique_strings = make(map[string]string, 256),
 	}
+
+	strings.intern_init(&g_symbol_cache.intern)
 
 	// Load builtins at startup
 	builtin_path := get_builtin_path()
@@ -53,7 +54,7 @@ shutdown_symbol_cache :: proc() {
 		delete(pkg.proc_group_members)
 	}
 	clear(&g_symbol_cache.packages)
-	clear(&g_symbol_cache.unique_strings)
+	strings.intern_destroy(&g_symbol_cache.intern)
 }
 
 // Update the cache for a specific document.

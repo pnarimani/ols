@@ -19,7 +19,7 @@ write_struct_type :: proc(
 	using analysis
 	b.poly = v.poly_params
 	// We clone this so we don't override docs and comments with temp allocated docs and comments
-	v := cast(^ast.Struct_Type)analysis.clone_node(v, nil)
+	v := cast(^ast.Struct_Type)analysis.clone_node(v)
 	construct_struct_field_docs(ast_context.file, v)
 	for field in v.fields.list {
 		for n in field.names {
@@ -31,7 +31,7 @@ write_struct_type :: proc(
 
 				append(&b.names, identifier.name)
 				if v.poly_params != nil {
-					append(&b.types, analysis.clone_type(field.type, nil))
+					append(&b.types, analysis.clone_type(field.type))
 				} else {
 					append(&b.types, field.type)
 				}

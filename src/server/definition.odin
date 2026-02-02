@@ -81,10 +81,10 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 			if resolved, ok := resolve_location_identifier(&ast_context, ident^); ok {
 				location.range = resolved.range
 
-				if resolved.uri == "" {
+				if resolved.filepath == "" {
 					location.uri = common.make_encoded_path(req_ctx.doc_ctx.path, context.temp_allocator)
 				} else {
-					location.uri = resolved.uri
+					location.uri = resolved.filepath
 				}
 
 				append(&locations, location)
@@ -105,7 +105,7 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 				)
 			}
 			location.range = resolved.range
-			uri = resolved.uri
+			uri = resolved.filepath
 		} else {
 			return {}, false
 		}
@@ -115,14 +115,14 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 		if position_context.comp_lit != nil {
 			if resolved, ok := resolve_location_comp_lit_field(&ast_context, &position_context); ok {
 				location.range = resolved.range
-				uri = resolved.uri
+				uri = resolved.filepath
 			} else {
 				return {}, false
 			}
 		} else if position_context.call != nil {
 			if resolved, ok := resolve_location_proc_param_name(&ast_context, &position_context); ok {
 				location.range = resolved.range
-				uri = resolved.uri
+				uri = resolved.filepath
 			} else {
 				return {}, false
 			}
@@ -134,7 +134,7 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 			position_context.implicit_selector_expr,
 		); ok {
 			location.range = resolved.range
-			uri = resolved.uri
+			uri = resolved.filepath
 		} else {
 			return {}, false
 		}
@@ -148,11 +148,11 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 			}
 			if v, ok := resolved.value.(analysis.SymbolAggregateValue); ok {
 				for symbol in v.symbols {
-					append(&locations, common.Location{range = symbol.range, uri = symbol.uri})
+					append(&locations, common.Location{range = symbol.range, uri = symbol.filepath})
 				}
 			}
 			location.range = resolved.range
-			uri = resolved.uri
+			uri = resolved.filepath
 		} else {
 			return {}, false
 		}
@@ -215,10 +215,10 @@ try_resolve_proc_group_overload :: proc(
 		if resolved.name != "" {
 			if global, ok := ast_context.globals[resolved.name]; ok {
 				resolved.range = common.get_token_range(global.name_expr, ast_context.file.src)
-				resolved.uri = common.make_encoded_path(global.name_expr.pos.file, ast_context.allocator)
+				resolved.filepath = common.make_encoded_path(global.name_expr.pos.file, ast_context.allocator)
 			} else if indexed_symbol, ok := lookup(resolved.name, resolved.pkg, ast_context.fullpath); ok {
 				resolved.range = indexed_symbol.range
-				resolved.uri = indexed_symbol.uri
+				resolved.filepath = indexed_symbol.filepath
 			}
 		}
 		return resolved

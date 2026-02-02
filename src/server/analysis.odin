@@ -973,7 +973,7 @@ resolve_function_overload :: proc(ast_context: ^AstContext, group: ^ast.Proc_Gro
 						type = candidate.symbol.type,
 						name = candidate.symbol.name,
 						pkg = candidate.symbol.pkg,
-						uri = candidate.symbol.uri,
+						filepath = candidate.symbol.filepath,
 						value = analysis.SymbolAggregateValue{symbols = symbols[:]},
 					},
 					true
@@ -1305,7 +1305,7 @@ internal_resolve_type_expression :: proc(ast_context: ^AstContext, node: ^ast.Ex
 		out.type = .Type
 		out.pkg = get_package_from_node(v.node)
 		out.name = ast_context.field_name.name
-		out.uri = common.make_encoded_path(v.pos.file, ast_context.allocator)
+		out.filepath = common.make_encoded_path(v.pos.file, ast_context.allocator)
 		out.value = analysis.SymbolSliceValue {
 			expr = v.expr,
 		}
@@ -1809,7 +1809,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 					name = ident.name,
 					pkg = ast_context.current_package,
 					value = analysis.SymbolBasicValue{ident = ident},
-					uri = common.make_encoded_path(ident.pos.file, ast_context.allocator),
+					filepath = common.make_encoded_path(ident.pos.file, ast_context.allocator),
 				},
 				true
 		}
@@ -2687,7 +2687,7 @@ resolve_symbol_return :: proc(ast_context: ^AstContext, symbol: analysis.Symbol,
 				s.comment = symbol.comment
 			}
 			s.range = symbol.range
-			s.uri = symbol.uri
+			s.filepath = symbol.filepath
 			return s, true
 		} else {
 			return s, false
@@ -2713,7 +2713,7 @@ resolve_symbol_return :: proc(ast_context: ^AstContext, symbol: analysis.Symbol,
 			types := make([dynamic]^ast.Expr)
 
 			for type in v.types {
-				append(&types, analysis.clone_expr(type, nil))
+				append(&types, analysis.clone_expr(type))
 			}
 
 			v.types = types[:]
@@ -2726,9 +2726,9 @@ resolve_symbol_return :: proc(ast_context: ^AstContext, symbol: analysis.Symbol,
 		if v.poly != nil {
 			clear(&b.types)
 			for type in v.types {
-				append(&b.types, analysis.clone_expr(type, nil))
+				append(&b.types, analysis.clone_expr(type))
 			}
-			b.poly = cast(^ast.Field_List)analysis.clone_type(v.poly, nil)
+			b.poly = cast(^ast.Field_List)analysis.clone_type(v.poly)
 			resolve_poly_struct(ast_context, &b, v.poly)
 		}
 
@@ -2834,7 +2834,7 @@ resolve_location_identifier :: proc(ast_context: ^AstContext, node: ast.Ident) -
 	if local, ok := get_local(ast_context^, node); ok {
 		symbol.range = common.get_token_range(local.lhs, ast_context.file.src)
 		symbol.pkg = ast_context.document_package
-		symbol.uri = common.make_encoded_path(local.lhs.pos.file, ast_context.allocator)
+		symbol.filepath = common.make_encoded_path(local.lhs.pos.file, ast_context.allocator)
 		symbol.flags |= {.Local}
 		return symbol, true
 	}
@@ -2852,7 +2852,7 @@ resolve_location_identifier :: proc(ast_context: ^AstContext, node: ast.Ident) -
 	if global, ok := ast_context.globals[node.name]; ok {
 		symbol.range = common.get_token_range(global.name_expr, ast_context.file.src)
 		symbol.pkg = ast_context.document_package
-		symbol.uri = common.make_encoded_path(global.expr.pos.file, ast_context.allocator)
+		symbol.filepath = common.make_encoded_path(global.expr.pos.file, ast_context.allocator)
 		return symbol, true
 	}
 
@@ -3033,7 +3033,7 @@ resolve_location_implicit_selector :: proc(
 				for name, i in value.names {
 					if strings.compare(name, implicit_selector.field.name) == 0 {
 						symbol.range = value.ranges[i]
-						symbol.uri = enum_symbol.uri
+						symbol.filepath = enum_symbol.filepath
 						return symbol, ok
 					}
 				}
@@ -3045,7 +3045,7 @@ resolve_location_implicit_selector :: proc(
 			for name, i in value.names {
 				if strings.compare(name, implicit_selector.field.name) == 0 {
 					symbol.range = value.ranges[i]
-					symbol.uri = enum_symbol.uri
+					symbol.filepath = enum_symbol.filepath
 					return symbol, ok
 				}
 			}
@@ -3186,9 +3186,9 @@ resolve_symbol_selector :: proc(
 			}
 		}
 	case analysis.SymbolPackageValue:
-		if pkg, ok := lookup(field, symbol.pkg, symbol.uri); ok {
+		if pkg, ok := lookup(field, symbol.pkg, symbol.filepath); ok {
 			symbol.range = pkg.range
-			symbol.uri = pkg.uri
+			symbol.filepath = pkg.filepath
 		} else {
 			return {}, false
 		}
@@ -3549,7 +3549,7 @@ make_symbol_procedure_from_ast :: proc(
 		type  = .Function if !type else .Type_Function,
 		pkg   = pkg,
 		name  = name,
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	return_types := make([dynamic]^ast.Field, ast_context.allocator)
@@ -3603,7 +3603,7 @@ make_symbol_array_from_ast :: proc(ast_context: ^AstContext, v: ast.Array_Type, 
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if v.len != nil {
@@ -3637,7 +3637,7 @@ make_symbol_dynamic_array_from_ast :: proc(
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	symbol.value = analysis.SymbolDynamicArrayValue {
@@ -3659,7 +3659,7 @@ make_symbol_matrix_from_ast :: proc(ast_context: ^AstContext, v: ast.Matrix_Type
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	symbol.value = analysis.SymbolMatrixValue {
@@ -3682,7 +3682,7 @@ make_symbol_multi_pointer_from_ast :: proc(
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	symbol.value = analysis.SymbolMultiPointerValue {
@@ -3698,7 +3698,7 @@ make_symbol_map_from_ast :: proc(ast_context: ^AstContext, v: ast.Map_Type, name
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	symbol.value = analysis.SymbolMapValue {
@@ -3748,7 +3748,7 @@ make_symbol_union_from_ast :: proc(
 		type  = .Union,
 		pkg   = get_package_from_node(v.node),
 		name  = name,
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if inlined {
@@ -3760,7 +3760,7 @@ make_symbol_union_from_ast :: proc(
 
 	for variant in v.variants {
 		if v.poly_params != nil {
-			append(&types, analysis.clone_type(variant, nil))
+			append(&types, analysis.clone_type(variant))
 		} else {
 			append(&types, variant)
 		}
@@ -3796,7 +3796,7 @@ make_symbol_enum_from_ast :: proc(
 		type  = .Enum,
 		name  = name,
 		pkg   = get_package_from_node(v.node),
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if inlined {
@@ -3855,7 +3855,7 @@ make_symbol_bitset_from_ast :: proc(
 		type  = .Enum,
 		name  = ident.name,
 		pkg   = get_package_from_node(v.node),
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if inlined {
@@ -3883,7 +3883,7 @@ make_symbol_struct_from_ast :: proc(
 		type  = .Struct,
 		pkg   = get_package_from_node(v.node),
 		name  = name,
-		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
+		filepath   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if inlined {
@@ -3904,14 +3904,14 @@ make_symbol_bit_field_from_ast :: proc(
 	inlined := false,
 ) -> analysis.Symbol {
 	// We clone this so we don't override docs and comments with temp allocated docs and comments
-	v := cast(^ast.Bit_Field_Type)analysis.clone_node(v, nil)
+	v := cast(^ast.Bit_Field_Type)analysis.clone_node(v)
 	analysis.construct_bit_field_field_docs(ast_context.file, v)
 	symbol := analysis.Symbol{
 		range = common.get_token_range(v, ast_context.file.src),
 		type  = .Struct,
 		pkg   = get_package_from_node(v.node),
 		name  = name,
-		uri   = common.make_encoded_path(v.pos.file),
+		filepath   = common.make_encoded_path(v.pos.file),
 	}
 
 	if inlined {

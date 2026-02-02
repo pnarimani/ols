@@ -458,7 +458,7 @@ handle_matching :: proc(
 			return false
 		}
 
-		if result_symbol.uri != arg_symbol.uri || result_symbol.range != arg_symbol.range {
+		if result_symbol.filepath != arg_symbol.filepath || result_symbol.range != arg_symbol.range {
 			return true
 		}
 
@@ -1699,7 +1699,7 @@ get_identifier_completion :: proc(
 		for r in fuzzy_results {
 			r := r
 			resolve_unresolved_symbol(ast_context, &r.symbol)
-			path, _ := common.make_path(r.symbol.uri, context.temp_allocator)
+			path, _ := common.make_path(r.symbol.filepath, context.temp_allocator)
 			if path != ast_context.fullpath {
 				append(results, CompletionResult{score = r.score, symbol = r.symbol})
 			}

@@ -5,46 +5,16 @@ import "core:strings"
 
 import "src:common"
 
-// ============================================================================
-// String interning
-// ============================================================================
-
-get_index_unique_string :: proc {
-	get_index_unique_string_collection,
-	get_index_unique_string_collection_raw,
-}
-
 @(private = "package")
-get_index_unique_string_collection :: proc(collection: ^SymbolCollection, s: string) -> string {
-	return get_index_unique_string_collection_raw(&collection.unique_strings, s)
-}
-
-get_index_unique_string_collection_raw :: proc(unique_strings: ^map[string]string, s: string) -> string {
-	if _, ok := unique_strings[s]; !ok {
-		str := strings.clone(s)
-		unique_strings[str] = str
-	}
-
-	return unique_strings[s]
+get_interned_string :: proc(s: string) -> string {
+	unique_strings := &g_symbol_cache.intern
+	str, _ := strings.intern_get(unique_strings, s)
+	return str
 }
 
 // ============================================================================
 // SymbolCollection management (private)
 // ============================================================================
-
-@(private = "package")
-make_symbol_collection :: proc(config: ^common.Config) -> SymbolCollection {
-	return SymbolCollection {
-		config = config,
-		packages = make(map[string]SymbolPackage, 16),
-		unique_strings = make(map[string]string, 16),
-	}
-}
-
-@(private = "package")
-delete_symbol_collection :: proc(collection: SymbolCollection) {
-	// No-op: temp allocator cleanup is automatic at request end
-}
 
 @(private = "package")
 get_or_create_package :: proc(collection: ^SymbolCollection, pkg_name: string) -> ^SymbolPackage {
