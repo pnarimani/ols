@@ -37,6 +37,14 @@ SymbolPackage :: struct {
 	methods:            map[Method][dynamic]Symbol,
 	imports:            [dynamic]string, //Used for references to figure whether the package is even able to reference the symbol
 	proc_group_members: map[string]bool, // Tracks procedure names that are part of proc groups (used by fake methods)
+	file_sources:       map[string]FileSource, // uri -> source info for cross-file refactoring
+}
+
+// Store file source for cross-file refactoring (used by tests)
+FileSource :: struct {
+	uri:      string,
+	fullpath: string,
+	text:     string,
 }
 
 // ============================================================================

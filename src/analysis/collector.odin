@@ -1,7 +1,6 @@
 #+feature using-stmt
 package analysis
 
-import "core:mem"
 import "core:odin/ast"
 import "core:path/filepath"
 import path "core:path/slashpath"

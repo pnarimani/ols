@@ -8,21 +8,22 @@ import "core:odin/parser"
 import "core:path/filepath"
 import "core:strings"
 import "core:testing"
-import "src:documents"
 import "src:analysis"
 import "src:common"
+import "src:documents"
 import "src:server"
 
 Package :: struct {
-	pkg:    string,
-	source: string,
+	pkg:      string,
+	filename: string,
+	source:   string,
 }
 
 Source :: struct {
 	main:         string,
 	packages:     []Package,
 	document:     ^documents.DocumentData,
-	doc_ctx:      documents.Document, 
+	doc_ctx:      documents.Document,
 	collections:  map[string]string,
 	config:       common.Config,
 	position:     common.Position,
@@ -32,11 +33,7 @@ Source :: struct {
 
 // Helper to create a RequestContext from a Source for testing
 make_test_request_context :: proc(src: ^Source) -> server.RequestContext {
-	return server.RequestContext {
-		doc_ctx = src.doc_ctx,
-		config = &src.config,
-		position = src.position,
-	}
+	return server.RequestContext{doc_ctx = src.doc_ctx, config = &src.config, position = src.position}
 }
 
 @(private)
@@ -45,10 +42,21 @@ setup :: proc(src: ^Source) {
 	// The parser internally uses context.allocator so we need to redirect it
 	context.allocator = context.temp_allocator
 
+	// Initialize the config storage - this is needed for initialize_default_collections
+	// which uses common.config_storage.allocator for its allocations
+	common.config_storage.allocator = context.temp_allocator
+
+	// Initialize the documents module for cross-file operations
+	documents.init()
+
 	src.main = strings.clone(src.main, context.temp_allocator)
 	src.document = new(documents.DocumentData, context.temp_allocator)
 	src.document.uri = common.create_uri("test/test.odin", context.temp_allocator)
 	src.document.text = transmute([]u8)src.main
+
+	// Initialize the config.collections map before calling initialize_default_collections
+	src.config.collections = make(map[string]string, context.temp_allocator)
+	server.initialize_default_collections(&src.config, "")
 
 	// Parse position markers: {*} for cursor, {<} for range start, {>} for range end
 	parse_position_markers(src)
@@ -72,43 +80,11 @@ setup :: proc(src: ^Source) {
 	}
 
 	for src_pkg in src.packages {
-		uri := common.create_uri(fmt.aprintf("test/%v/package.odin", src_pkg.pkg), context.temp_allocator)
-
+		filename := src_pkg.filename if src_pkg.filename != "" else "package"
+		uri := common.create_uri(fmt.aprintf("test/%v/%v.odin", src_pkg.pkg, filename))
 		fullpath := uri.path
-
-		p := parser.Parser {
-			err   = parser.default_error_handler,
-			warn  = parser.default_error_handler,
-			flags = {.Optional_Semicolons},
-		}
-
-		dir := filepath.base(filepath.dir(fullpath, context.temp_allocator))
-
-		pkg := new(ast.Package, context.temp_allocator)
-		pkg.kind = .Normal
-		pkg.fullpath = fullpath
-		pkg.name = dir
-
-		if dir == "runtime" {
-			pkg.kind = .Runtime
-		}
-
-		file := ast.File {
-			fullpath = fullpath,
-			src      = src_pkg.source,
-			pkg      = pkg,
-		}
-
-		ok := parser.parse_file(&p, &file)
-
-
-		if !ok || file.syntax_error_count > 0 {
-			panic("Parser error in test package source")
-		}
-
-		if ret := analysis.collect_symbols_to_cache(file, uri.uri); ret != .None {
-			return
-		}
+		documents.open(uri, src_pkg.source)
+		analysis.load_file(fullpath, src_pkg.source)
 	}
 }
 
@@ -116,6 +92,7 @@ setup :: proc(src: ^Source) {
 teardown :: proc(src: ^Source) {
 	analysis.shutdown_symbol_cache()
 	server.shutdown_diagnostic_store()
+	documents.shutdown()
 	free_all(context.temp_allocator)
 }
 
@@ -601,6 +578,33 @@ build_action_range :: proc(src: ^Source) -> common.Range {
 		return common.Range{start = src.position, end = src.end_position}
 	}
 	return common.Range{start = src.position, end = src.position}
+}
+
+expect_no_action :: proc(t: ^testing.T, main: string, action_name: string, packages: []Package = {}) {
+	src := Source {
+		main     = main,
+		packages = packages,
+	}
+
+	setup(&src)
+	defer teardown(&src)
+
+	input_range := build_action_range(&src)
+	actions, ok := server.get_code_actions(src.doc_ctx, input_range, &src.config)
+	if !ok {
+		// No actions returned is fine for this test
+		return
+	}
+
+	// Check that the action_name is NOT present
+	for action in actions {
+		if action.title == action_name {
+			testing.expectf(t, false, "Action '%s' should not be available, but was found", action_name)
+			return
+		}
+	}
+
+	// Test passes - action was not found
 }
 
 expect_action :: proc(t: ^testing.T, src: ^Source, expect_action_names: []string) {

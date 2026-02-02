@@ -30,10 +30,13 @@ package ols_testing
 //   3. Apply the code action to "before"
 //   4. Verify result matches "after"
 
+import "core:fmt"
 import "core:strings"
 import "core:testing"
 
+import "src:analysis"
 import "src:common"
+import "src:documents"
 import "src:server"
 
 // Test a code action using diff format.
@@ -251,4 +254,174 @@ normalize_source :: proc(source: string) -> string {
 	}
 
 	return strings.to_string(builder)
+}
+
+// ============================================================================
+// Multi-file Code Action Testing
+// ============================================================================
+//
+// Test code actions that affect multiple files using the Source struct.
+//
+// Usage:
+//   - main_diff: The main file where the code action is triggered (with diff markers)
+//   - main_pkg: Optional package name for the main file (if different from "test")
+//   - package_diffs: Additional files that may be affected
+//     - pkg: Package name (use "test" for same package as main)
+//     - filename: Optional filename (for same-package different file)
+//     - source: Diff-formatted source code
+//
+// Each source follows the same diff format as expect_code_action_diff.
+
+// Extended Package type for multi-file testing that includes expected result
+Package_Diff :: struct {
+	pkg:      string, // Package name
+	filename: string, // Optional: filename within package
+	source:   string, // Diff-formatted source (before code with markers)
+}
+
+// Test a code action that affects multiple files.
+// main_diff contains the main file's diff source (where action is triggered)
+// main_pkg is optional - if the main file is in a different package than "test"
+// package_diffs contains additional files as Package_Diff structs
+expect_code_action_diff_multi_file :: proc(
+	t: ^testing.T,
+	main_diff: string,
+	action_name: string,
+	package_diffs: []Package_Diff = {},
+) {
+	// Parse main file diff
+	main_before, main_expected, main_ok := parse_diff_source(main_diff)
+	if !main_ok {
+		testing.expect(t, false, "Failed to parse main file diff source")
+		return
+	}
+
+	// Build packages for Source from package_diffs (using before code)
+	packages := make([]Package, len(package_diffs), context.temp_allocator)
+	package_expected := make([]string, len(package_diffs), context.temp_allocator)
+
+	for pkg_diff, i in package_diffs {
+		before, expected, ok := parse_diff_source(pkg_diff.source)
+		if !ok {
+			testing.expectf(t, false, "Failed to parse diff for package '%s'", pkg_diff.pkg)
+			return
+		}
+		packages[i] = Package {
+			pkg      = pkg_diff.pkg,
+			filename = pkg_diff.filename,
+			source   = before,
+		}
+		package_expected[i] = expected
+	}
+
+	src := Source {
+		main     = main_before,
+		packages = packages,
+	}
+
+	setup(&src)
+	defer teardown(&src)
+
+	input_range := build_action_range(&src)
+	actions, ok := server.get_code_actions(src.doc_ctx, input_range, &src.config)
+	if !ok {
+		testing.expect(t, false, "Failed to get code actions")
+		return
+	}
+
+	// Find the requested action
+	for action in actions {
+		if action.title != action_name do continue
+
+		// Check main file edits
+		all_match := true
+		main_uri := src.doc_ctx.uri.uri
+
+		edits, found := action.edit.changes[main_uri]
+		if found {
+			actual_after := apply_text_edits(main_before, edits)
+			normalized_expected := normalize_source(main_expected)
+			normalized_actual := normalize_source(actual_after)
+
+			if normalized_expected != normalized_actual {
+				testing.expectf(
+					t,
+					false,
+					"\nCode action result mismatch for main file.\n\nExpected:\n%s\n\nActual:\n%s",
+					normalized_expected,
+					normalized_actual,
+				)
+				all_match = false
+			}
+		} else {
+			// No edits for main file - it should remain unchanged
+			normalized_expected := normalize_source(main_expected)
+			normalized_before := normalize_source(main_before)
+			if normalized_expected != normalized_before {
+				testing.expectf(
+					t,
+					false,
+					"\nMain file expected changes but got none.\n\nExpected:\n%s\n\nActual:\n%s",
+					normalized_expected,
+					normalized_before,
+				)
+				all_match = false
+			}
+		}
+
+		// Check package file edits
+		for pkg_diff, i in package_diffs {
+			pkg := packages[i]
+			expected := package_expected[i]
+
+			// Build expected URI for this file
+			filename := pkg.filename if pkg.filename != "" else "package"
+			uri := common.create_uri(
+				fmt.tprintf("test/%s/%s.odin", pkg.pkg, filename),
+				context.temp_allocator,
+			).uri
+
+			pkg_edits, pkg_found := action.edit.changes[uri]
+			if pkg_found {
+				actual_after := apply_text_edits(pkg.source, pkg_edits)
+				normalized_expected := normalize_source(expected)
+				normalized_actual := normalize_source(actual_after)
+
+				if normalized_expected != normalized_actual {
+					testing.expectf(
+						t,
+						false,
+						"\nCode action result mismatch for package '%s' file '%s'.\n\nExpected:\n%s\n\nActual:\n%s",
+						pkg.pkg,
+						filename,
+						normalized_expected,
+						normalized_actual,
+					)
+					all_match = false
+				}
+			} else {
+				// No edits for this file - it should remain unchanged
+				normalized_expected := normalize_source(expected)
+				normalized_before := normalize_source(pkg.source)
+				if normalized_expected != normalized_before {
+					testing.expectf(
+						t,
+						false,
+						"\nPackage '%s' file '%s' expected changes but got none.\n\nExpected:\n%s\n\nActual:\n%s",
+						pkg.pkg,
+						filename,
+						normalized_expected,
+						normalized_before,
+					)
+					all_match = false
+				}
+			}
+		}
+
+		if all_match {
+			return
+		}
+	}
+
+	testing.expectf(t, false, "Action '%s' not found", action_name)
 }

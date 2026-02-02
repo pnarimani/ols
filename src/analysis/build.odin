@@ -51,6 +51,7 @@ shutdown_symbol_cache :: proc() {
 		delete(pkg.methods)
 		delete(pkg.imports)
 		delete(pkg.proc_group_members)
+		delete(pkg.file_sources)
 	}
 	clear(&g_symbol_cache.packages)
 	clear(&g_symbol_cache.unique_strings)
@@ -240,41 +241,55 @@ load_package :: proc(pkg_name: string) {
 			continue
 		}
 
-		p := parser.Parser {
-			err   = log_error_handler,
-			warn  = log_warning_handler,
-			flags = {.Optional_Semicolons},
+		load_file(fullpath, string(data))
+	}
+}
+
+load_file :: proc(fullpath, text: string) {
+	p := parser.Parser {
+		err   = log_error_handler,
+		warn  = log_warning_handler,
+		flags = {.Optional_Semicolons},
+	}
+
+	dir := filepath.base(filepath.dir(fullpath, context.temp_allocator))
+
+	pkg := new(ast.Package, context.temp_allocator)
+	pkg.kind = .Normal
+	pkg.fullpath = fullpath
+	pkg.name = dir
+
+	if dir == "runtime" {
+		pkg.kind = .Runtime
+	}
+
+	file := ast.File {
+		fullpath = fullpath,
+		src      = text,
+		pkg      = pkg,
+	}
+
+	ok := parser.parse_file(&p, &file)
+
+	if !ok {
+		if !strings.contains(fullpath, "builtin.odin") && !strings.contains(fullpath, "intrinsics.odin") {
+			log.errorf("error in parse file for indexing %v", fullpath)
 		}
+		return
+	}
 
-		dir := filepath.base(filepath.dir(fullpath, context.temp_allocator))
+	uri := common.create_uri(fullpath, context.temp_allocator)
 
-		pkg := new(ast.Package, context.temp_allocator)
-		pkg.kind = .Normal
-		pkg.fullpath = fullpath
-		pkg.name = dir
-
-		if dir == "runtime" {
-			pkg.kind = .Runtime
+	collect_symbols(&g_symbol_cache, file, uri.uri)
+	
+	// Store file source for cross-file refactoring
+	forward_dir, _ := filepath.to_slash(filepath.dir(fullpath, context.temp_allocator), context.temp_allocator)
+	if sym_pkg, ok := &g_symbol_cache.packages[forward_dir]; ok {
+		sym_pkg.file_sources[uri.uri] = FileSource{
+			uri      = strings.clone(uri.uri, g_symbol_cache.allocator),
+			fullpath = strings.clone(fullpath, g_symbol_cache.allocator),
+			text     = strings.clone(text, g_symbol_cache.allocator),
 		}
-
-		file := ast.File {
-			fullpath = fullpath,
-			src      = string(data),
-			pkg      = pkg,
-		}
-
-		ok = parser.parse_file(&p, &file)
-
-		if !ok {
-			if !strings.contains(fullpath, "builtin.odin") && !strings.contains(fullpath, "intrinsics.odin") {
-				log.errorf("error in parse file for indexing %v", fullpath)
-			}
-			continue
-		}
-
-		uri := common.create_uri(fullpath, context.temp_allocator)
-
-		collect_symbols(&g_symbol_cache, file, uri.uri)
 	}
 }
 

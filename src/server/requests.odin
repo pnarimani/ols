@@ -579,47 +579,65 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 	}
 
 	log.infof("resolved odin root to: %q", odin_core_env)
+	log.infof("uri path: %q", uri.path)
 
 	// Insert the default collections if they are not specified in the config.
 	if odin_core_env != "" {
 		forward_path, _ := filepath.to_slash(odin_core_env, context.temp_allocator)
-
-		// base
-		if "base" not_in config.collections {
-			config.collections[strings.clone("base", common.config_storage.allocator)] = path.join(
-				elems = {forward_path, "base"},
-				allocator = common.config_storage.allocator,
-			)
-		}
-
-		// core
-		if "core" not_in config.collections {
-			config.collections[strings.clone("core", common.config_storage.allocator)] = path.join(
-				elems = {forward_path, "core"},
-				allocator = common.config_storage.allocator,
-			)
-		}
-
-		// vendor
-		if "vendor" not_in config.collections {
-			config.collections[strings.clone("vendor", common.config_storage.allocator)] = path.join(
-				elems = {forward_path, "vendor"},
-				allocator = common.config_storage.allocator,
-			)
-		}
-
-		// shared
-		if "shared" not_in config.collections {
-			shared_path := path.join(elems = {forward_path, "shared"}, allocator = common.config_storage.allocator)
-			if os.exists(shared_path) {
-				config.collections[strings.clone("shared", common.config_storage.allocator)] = shared_path
-			} else {
-				delete(shared_path, common.config_storage.allocator)
-			}
-		}
+		initialize_default_collections(config, forward_path)
 	}
 
 	log.info(config.collections)
+}
+
+get_odin_directory :: proc() -> string {
+	root_buf: [1024]byte
+	root_slice := root_buf[:]
+	root_command := strings.concatenate({"odin", " root"})
+	code, ok, out := common.run_executable(root_command, &root_slice)
+	if ok && !strings.contains(string(out), "Usage") {
+		return strings.clone(string(out))
+	}
+	return ""
+}
+
+initialize_default_collections :: proc(config: ^common.Config, forward_path: string) {
+	forward_path := forward_path
+	forward_path = forward_path if forward_path != "" else get_odin_directory()
+
+	// base
+	if "base" not_in config.collections {
+		config.collections[strings.clone("base", common.config_storage.allocator)] = path.join(
+			elems = {forward_path, "base"},
+			allocator = common.config_storage.allocator,
+		)
+	}
+
+	// core
+	if "core" not_in config.collections {
+		config.collections[strings.clone("core", common.config_storage.allocator)] = path.join(
+			elems = {forward_path, "core"},
+			allocator = common.config_storage.allocator,
+		)
+	}
+
+	// vendor
+	if "vendor" not_in config.collections {
+		config.collections[strings.clone("vendor", common.config_storage.allocator)] = path.join(
+			elems = {forward_path, "vendor"},
+			allocator = common.config_storage.allocator,
+		)
+	}
+
+	// shared
+	if "shared" not_in config.collections {
+		shared_path := path.join(elems = {forward_path, "shared"}, allocator = common.config_storage.allocator)
+		if os.exists(shared_path) {
+			config.collections[strings.clone("shared", common.config_storage.allocator)] = shared_path
+		} else {
+			delete(shared_path, common.config_storage.allocator)
+		}
+	}
 }
 
 request_initialize :: proc(

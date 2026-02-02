@@ -129,6 +129,14 @@ get_code_actions :: proc(
 		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
 		&actions,
 	)
+	add_inline_alias_action(
+		doc_ctx,
+		&ast_context,
+		config,
+		range,
+		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		&actions,
+	)
 
 	return actions[:], true
 }
