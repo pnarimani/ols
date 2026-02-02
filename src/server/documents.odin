@@ -1,5 +1,6 @@
 package server
 
+import "core:log"
 import "core:fmt"
 import "core:odin/ast"
 import "core:odin/parser"
@@ -68,7 +69,13 @@ document_apply_changes :: proc(
 			text  = change.text,
 		}
 	}
-	return documents.apply_changes(uri_string, doc_changes, version)
+
+	path, parsed_ok := common.make_path(uri_string, context.temp_allocator)
+	if !parsed_ok {
+		log.errorf("document_apply_changes: failed to parse URI string: %v", uri_string)
+		return .ParseError
+	}
+	return documents.apply_changes(path, doc_changes, version)
 }
 
 document_close :: documents.close

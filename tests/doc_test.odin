@@ -13,7 +13,8 @@ doc_apply_changes_full_replace :: proc(t: ^testing.T) {
 
 	// Open a document
 	original := "hello world"
-	document, err := doc.open("file:///test/test.odin", original)
+	path := "test/test.odin"
+	document, err := doc.open(path, original)
 	testing.expect(t, err == .None, "open should succeed")
 	testing.expect(t, document != nil, "document should not be nil")
 	testing.expect_value(t, string(document.text), original)
@@ -23,11 +24,11 @@ doc_apply_changes_full_replace :: proc(t: ^testing.T) {
 	changes := []doc.ContentChangeEvent{
 		{range = nil, text = new_text},
 	}
-	err = doc.apply_changes("file:///test/test.odin", changes)
+	err = doc.apply_changes(path, changes)
 	testing.expect(t, err == .None, "apply_changes should succeed")
 
 	// Verify the document was updated
-	updated := doc.get("file:///test/test.odin")
+	updated := doc.get(path)
 	testing.expect(t, updated != nil, "document should still exist")
 	testing.expect_value(t, string(updated.text), new_text)
 }
@@ -39,7 +40,8 @@ doc_apply_changes_insert_at_beginning :: proc(t: ^testing.T) {
 
 	// Open a document
 	original := "world"
-	document, _ := doc.open("file:///test/test.odin", original)
+	path := "test/test.odin"
+	document, _ := doc.open(path, original)
 	testing.expect(t, document != nil, "document should not be nil")
 
 	// Insert "hello " at the beginning
@@ -52,10 +54,10 @@ doc_apply_changes_insert_at_beginning :: proc(t: ^testing.T) {
 			text = "hello ",
 		},
 	}
-	err := doc.apply_changes("file:///test/test.odin", changes)
+	err := doc.apply_changes(path, changes)
 	testing.expect(t, err == .None, "apply_changes should succeed")
 
-	updated := doc.get("file:///test/test.odin")
+	updated := doc.get(path)
 	testing.expect_value(t, string(updated.text), "hello world")
 }
 
@@ -66,7 +68,8 @@ doc_apply_changes_insert_at_end :: proc(t: ^testing.T) {
 
 	// Open a document
 	original := "hello"
-	document, _ := doc.open("file:///test/test.odin", original)
+	path := "test/test.odin"
+	document, _ := doc.open(path, original)
 	testing.expect(t, document != nil, "document should not be nil")
 
 	// Insert " world" at the end
@@ -79,10 +82,10 @@ doc_apply_changes_insert_at_end :: proc(t: ^testing.T) {
 			text = " world",
 		},
 	}
-	err := doc.apply_changes("file:///test/test.odin", changes)
+	err := doc.apply_changes(path, changes)
 	testing.expect(t, err == .None, "apply_changes should succeed")
 
-	updated := doc.get("file:///test/test.odin")
+	updated := doc.get(path)
 	testing.expect_value(t, string(updated.text), "hello world")
 }
 
@@ -93,7 +96,8 @@ doc_apply_changes_replace_middle :: proc(t: ^testing.T) {
 
 	// Open a document
 	original := "hello world"
-	document, _ := doc.open("file:///test/test.odin", original)
+	path := "test/test.odin"
+	document, _ := doc.open(path, original)
 	testing.expect(t, document != nil, "document should not be nil")
 
 	// Replace "world" with "odin"
@@ -106,10 +110,10 @@ doc_apply_changes_replace_middle :: proc(t: ^testing.T) {
 			text = "odin",
 		},
 	}
-	err := doc.apply_changes("file:///test/test.odin", changes)
+	err := doc.apply_changes(path, changes)
 	testing.expect(t, err == .None, "apply_changes should succeed")
 
-	updated := doc.get("file:///test/test.odin")
+	updated := doc.get(path)
 	testing.expect_value(t, string(updated.text), "hello odin")
 }
 
@@ -120,7 +124,8 @@ doc_apply_changes_delete :: proc(t: ^testing.T) {
 
 	// Open a document
 	original := "hello world"
-	document, _ := doc.open("file:///test/test.odin", original)
+	path := "test/test.odin"
+	document, _ := doc.open(path, original)
 	testing.expect(t, document != nil, "document should not be nil")
 
 	// Delete " world"
@@ -133,10 +138,10 @@ doc_apply_changes_delete :: proc(t: ^testing.T) {
 			text = "",
 		},
 	}
-	err := doc.apply_changes("file:///test/test.odin", changes)
+	err := doc.apply_changes(path, changes)
 	testing.expect(t, err == .None, "apply_changes should succeed")
 
-	updated := doc.get("file:///test/test.odin")
+	updated := doc.get(path)
 	testing.expect_value(t, string(updated.text), "hello")
 }
 
@@ -147,7 +152,8 @@ doc_apply_changes_multiline :: proc(t: ^testing.T) {
 
 	// Open a multiline document
 	original := "line1\nline2\nline3"
-	document, _ := doc.open("file:///test/test.odin", original)
+	path := "test/test.odin"
+	document, _ := doc.open(path, original)
 	testing.expect(t, document != nil, "document should not be nil")
 
 	// Replace "line2" with "replaced"
@@ -160,10 +166,10 @@ doc_apply_changes_multiline :: proc(t: ^testing.T) {
 			text = "replaced",
 		},
 	}
-	err := doc.apply_changes("file:///test/test.odin", changes)
+	err := doc.apply_changes(path, changes)
 	testing.expect(t, err == .None, "apply_changes should succeed")
 
-	updated := doc.get("file:///test/test.odin")
+	updated := doc.get(path)
 	testing.expect_value(t, string(updated.text), "line1\nreplaced\nline3")
 }
 
@@ -174,7 +180,8 @@ doc_apply_changes_multiline_span :: proc(t: ^testing.T) {
 
 	// Open a multiline document
 	original := "line1\nline2\nline3"
-	document, _ := doc.open("file:///test/test.odin", original)
+	path := "test/test.odin"
+	document, _ := doc.open(path, original)
 	testing.expect(t, document != nil, "document should not be nil")
 
 	// Replace from middle of line1 to middle of line3
@@ -187,10 +194,10 @@ doc_apply_changes_multiline_span :: proc(t: ^testing.T) {
 			text = "X",
 		},
 	}
-	err := doc.apply_changes("file:///test/test.odin", changes)
+	err := doc.apply_changes(path, changes)
 	testing.expect(t, err == .None, "apply_changes should succeed")
 
-	updated := doc.get("file:///test/test.odin")
+	updated := doc.get(path)
 	testing.expect_value(t, string(updated.text), "linXe3")
 }
 
@@ -201,7 +208,8 @@ doc_apply_changes_multiple_sequential :: proc(t: ^testing.T) {
 
 	// Open a document
 	original := "abc"
-	document, _ := doc.open("file:///test/test.odin", original)
+	path := "test/test.odin"
+	document, _ := doc.open(path, original)
 	testing.expect(t, document != nil, "document should not be nil")
 
 	// Apply multiple changes in sequence (like typing)
@@ -215,7 +223,7 @@ doc_apply_changes_multiple_sequential :: proc(t: ^testing.T) {
 			text = "d",
 		},
 	}
-	doc.apply_changes("file:///test/test.odin", changes1)
+	doc.apply_changes(path, changes1)
 
 	changes2 := []doc.ContentChangeEvent{
 		{
@@ -226,8 +234,7 @@ doc_apply_changes_multiple_sequential :: proc(t: ^testing.T) {
 			text = "e",
 		},
 	}
-	doc.apply_changes("file:///test/test.odin", changes2)
-
-	updated := doc.get("file:///test/test.odin")
+	doc.apply_changes(path, changes2)
+	updated := doc.get(path)
 	testing.expect_value(t, string(updated.text), "abcde")
 }

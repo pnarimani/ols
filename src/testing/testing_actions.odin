@@ -14,10 +14,10 @@ build_action_range :: proc(src: ^Source) -> common.Range {
 	return common.Range{start = src.position, end = src.position}
 }
 
-expect_no_action :: proc(t: ^testing.T, main: string, action_name: string, packages: []Package = {}) {
+expect_no_action :: proc(t: ^testing.T, main: string, action_name: string, packages: []FileInPackage = {}) {
 	src := Source {
 		main     = main,
-		packages = packages,
+		extra_files = packages,
 	}
 
 	setup(&src)

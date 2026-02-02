@@ -2,35 +2,36 @@ package ols_testing
 
 import "core:fmt"
 import "core:log"
-import "core:mem/virtual"
 import "core:odin/ast"
-import "core:odin/parser"
-import "core:path/filepath"
 import "core:strings"
-import "core:testing"
 import "src:analysis"
 import "src:common"
 import "src:documents"
 import "src:server"
 import "src:workspace"
 
-Package :: struct {
-	pkg:      string,
-	filename: string,
-	source:   string,
+FileInPackage :: struct {
+	pkg:               string,
+	filename:          string,
+	source:            string,
+	position:          common.Position,
+	end_position:      common.Position, // For range selection tests
+	has_range:         bool, // True if {<} and {>} markers were found
+	encoded_locations: []common.Location,
 }
 
 Source :: struct {
-	main:         string,
-	packages:     []Package,
-	document:     ^documents.DocumentData,
-	doc_ctx:      documents.Document,
-	collections:  map[string]string,
-	config:       common.Config,
-	position:     common.Position,
-	end_position: common.Position, // For range selection tests
-	has_range:    bool, // True if {<} and {>} markers were found
-	locations:    []common.Location, // Locations marked by {:} pairs
+	main:              string,
+	main_filepath:     string,
+	extra_files:       []FileInPackage,
+	document:          ^documents.DocumentData,
+	doc_ctx:           documents.Document,
+	collections:       map[string]string,
+	config:            common.Config,
+	position:          common.Position,
+	end_position:      common.Position, // For range selection tests
+	has_range:         bool, // True if {<} and {>} markers were found
+	encoded_locations: []common.Location, // Locations marked by {:} pairs
 }
 
 // Helper to create a RequestContext from a Source for testing
@@ -46,35 +47,29 @@ setup :: proc(src: ^Source) {
 
 	// Initialize the config storage - this is needed for initialize_default_collections
 	// which uses common.config_storage.allocator for its allocations
+	// log.info("Setting up config")
 	common.config_storage.allocator = context.temp_allocator
-
-	// Initialize the documents module for cross-file operations
-	documents.init()
-
-	src.main = strings.clone(src.main, context.temp_allocator)
-	src.document = new(documents.DocumentData, context.temp_allocator)
-	src.document.filepath = "test/test.odin"
-	src.document.text = transmute([]u8)src.main
-
-	// Initialize the config.collections map before calling initialize_default_collections
 	src.config.collections = make(map[string]string, context.temp_allocator)
 	server.initialize_default_collections(&src.config, "")
 
-	// Parse position markers: {*} for cursor, {<} for range start, {>} for range end
+	// Initialize the documents module for cross-file operations
+	// log.info("Initializing documents module")
+	documents.init()
+	analysis.init_symbol_cache(&src.config)
+	server.init_diagnostic_store()
+
+	src.main_filepath = "test/test.odin"
+
+	// Initialize the config.collections map before calling initialize_default_collections
+	// log.info("parsing main source")
 	parse_position_markers(src)
 
-	workspace.register_mock_file(src.document.filepath, src.main)
-
-	// Reset and initialize the symbol cache for this test
-	// This ensures each test starts with a fresh cache
-	analysis.init_symbol_cache(&src.config)
-
-	// Initialize the diagnostic store for this test
-	server.init_diagnostic_store(context.temp_allocator)
+	// log.infof("Source after marker parsing:\n%v", src.main)
+	workspace.register_mock_file(src.main_filepath, src.main)
+	src.document = documents.get(src.main_filepath)
 
 	// Create documents.Document for the test document
 	src.doc_ctx, _ = server.create_document_context(src.document, &src.config)
-
 
 	// Run diagnostics checks if enabled in config
 	server.run_hint_diagnostics(src.doc_ctx, &src.config)
@@ -84,7 +79,7 @@ setup :: proc(src: ^Source) {
 		return
 	}
 
-	for src_pkg in src.packages {
+	for src_pkg in src.extra_files {
 		filename := src_pkg.filename if src_pkg.filename != "" else "package"
 		fullpath := fmt.aprintf("test/%v/%v.odin", src_pkg.pkg, filename)
 		workspace.register_mock_file(fullpath, src_pkg.source)
@@ -112,92 +107,97 @@ parse_position_markers :: proc(src: ^Source) {
 	LOCATION_MARKER :: "{:}"
 	MARKER_LENGTH :: 3
 
-	current, last: u8
-	current_line, current_character: int
-	found_cursor := false
-	found_range_start := false
-	found_range_end := false
+	MarkerType :: enum {
+		Cursor,
+		RangeStart,
+		RangeEnd,
+		Location,
+	}
 
-	// Track location markers (pairs of {:})
-	location_positions := make([dynamic]common.Position, context.temp_allocator)
+	Marker :: struct {
+		type:     MarkerType,
+		position: common.Position,
+	}
 
-	// First pass: find markers and record positions
-	write_index := 0
-	for read_index := 0; read_index < len(src.main); {
-		current = src.main[read_index]
+	markers := make([dynamic]Marker, context.temp_allocator)
+	builder := strings.builder_make(context.temp_allocator)
 
-		if last == '\r' {
-			current_line += 1
-			current_character = 0
+	line, character := 0, 0
+
+	// Single pass: collect markers and build cleaned source
+	for i := 0; i < len(src.main); {
+		current := src.main[i]
+
+		// Update line tracking before processing character
+		if i > 0 && src.main[i - 1] == '\r' {
+			line += 1
+			character = 0
 		} else if current == '\n' {
-			current_line += 1
-			current_character = 0
+			line += 1
+			character = 0
 		}
 
 		// Check for markers
-		remaining := len(src.main) - read_index
-		if remaining >= MARKER_LENGTH {
-			marker := src.main[read_index:read_index + MARKER_LENGTH]
+		if remaining := len(src.main) - i; remaining >= MARKER_LENGTH {
+			marker_str := src.main[i:i + MARKER_LENGTH]
+			marker_type: Maybe(MarkerType)
 
-			if marker == CURSOR_MARKER && !found_cursor {
-				src.position.character = current_character
-				src.position.line = current_line
-				found_cursor = true
-				read_index += MARKER_LENGTH
-				last = current
-				continue
-			} else if marker == RANGE_START_MARKER && !found_range_start {
-				src.position.character = current_character
-				src.position.line = current_line
-				found_range_start = true
-				src.has_range = true
-				read_index += MARKER_LENGTH
-				last = current
-				continue
-			} else if marker == RANGE_END_MARKER && !found_range_end {
-				src.end_position.character = current_character
-				src.end_position.line = current_line
-				found_range_end = true
-				read_index += MARKER_LENGTH
-				last = current
-				continue
-			} else if marker == LOCATION_MARKER {
-				pos := common.Position{line = current_line, character = current_character}
-				append(&location_positions, pos)
-				read_index += MARKER_LENGTH
-				last = current
+			switch marker_str {
+			case CURSOR_MARKER:
+				marker_type = .Cursor
+			case RANGE_START_MARKER:
+				marker_type = .RangeStart
+			case RANGE_END_MARKER:
+				marker_type = .RangeEnd
+			case LOCATION_MARKER:
+				marker_type = .Location
+			}
+
+			if type, ok := marker_type.?; ok {
+				append(&markers, Marker{type = type, position = {line = line, character = character}})
+				i += MARKER_LENGTH
 				continue
 			}
 		}
 
-		// Copy character
-		(transmute([]u8)src.main)[write_index] = current
-		write_index += 1
-
+		// Copy character to cleaned output
+		strings.write_byte(&builder, current)
 		if current != '\n' && current != '\r' {
-			current_character += 1
+			character += 1
 		}
-
-		last = current
-		read_index += 1
+		i += 1
 	}
 
-	// Update the document text length
-	src.document.text = transmute([]u8)src.main[:write_index]
+	// Update source with cleaned text
+	src.main = strings.to_string(builder)
+
+	// Process collected markers
+	location_positions := make([dynamic]common.Position, context.temp_allocator)
+
+	for marker in markers {
+		switch marker.type {
+		case .Cursor:
+			src.position = marker.position
+		case .RangeStart:
+			src.position = marker.position
+			src.has_range = true
+		case .RangeEnd:
+			src.end_position = marker.position
+		case .Location:
+			append(&location_positions, marker.position)
+		}
+	}
 
 	// Build locations from {:} marker pairs
 	if len(location_positions) > 0 {
 		locations := make([dynamic]common.Location, context.temp_allocator)
 		for i := 0; i + 1 < len(location_positions); i += 2 {
-			loc := common.Location{
-				uri = common.make_encoded_path(src.document.filepath),
-				range = common.Range{
-					start = location_positions[i],
-					end = location_positions[i + 1],
-				},
+			loc := common.Location {
+				uri   = common.make_encoded_path(src.main_filepath),
+				range = {start = location_positions[i], end = location_positions[i + 1]},
 			}
 			append(&locations, loc)
 		}
-		src.locations = locations[:]
+		src.encoded_locations = locations[:]
 	}
 }

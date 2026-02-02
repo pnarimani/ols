@@ -11,7 +11,7 @@ expect_reference_locations :: proc(t: ^testing.T, src: ^Source) {
 
 	locations, ok := server.get_references(src.doc_ctx, src.position)
 
-	for expect_location in src.locations {
+	for expect_location in src.encoded_locations {
 		match := false
 		for location in locations {
 			if location.range == expect_location.range {

@@ -305,7 +305,7 @@ main :: proc() {
 	y := x
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Variable is reassigned - cannot inline
@@ -321,7 +321,7 @@ main :: proc() {
 	{*}x := 10
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Variable has no usages - action not useful
@@ -337,7 +337,7 @@ main :: proc() {
 	x := {*}10
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Cursor not on variable name
@@ -354,7 +354,7 @@ main :: proc() {
 	helper()
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Cannot inline procedure declarations
@@ -373,7 +373,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Variable is modified in loop
@@ -391,7 +391,7 @@ main :: proc() {
 	x := GLOBAL
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Global constants - not inside a procedure
@@ -408,7 +408,7 @@ main :: proc() {
 	x := a + b
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Multiple variables in one declaration - not supported
@@ -425,7 +425,7 @@ main :: proc() {
 	x := a + b
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Multiple variables in one declaration - not supported
@@ -447,7 +447,7 @@ main :: proc() {
 	y := {*}x
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Variable is reassigned - cannot inline from usage site either
@@ -467,7 +467,7 @@ main :: proc() {
 	result := {*}sum
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Variable is modified - cannot inline from usage site
@@ -484,7 +484,7 @@ main :: proc() {
 	x := {*}a + b
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Multiple variables in one declaration - not supported from usage site either

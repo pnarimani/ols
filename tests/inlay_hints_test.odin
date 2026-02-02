@@ -18,7 +18,7 @@ ast_inlay_hints_default_params :: proc(t: ^testing.T) {
 			bar(1[[, b = false]][[, c = 42]])
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_inlay_hints_default_params = true,
 		},
@@ -41,7 +41,7 @@ ast_inlay_hints_default_params_after_named :: proc(t: ^testing.T) {
 			my_function(b=true, a=1[[, c = 42]])
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_inlay_hints_params = true,
 			enable_inlay_hints_default_params = true,
@@ -62,7 +62,7 @@ ast_inlay_hints_params :: proc(t: ^testing.T) {
 			my_function([[param1 = ]]123, [[param2 = ]]"hello")
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config   = {
 			enable_inlay_hints_params = true,
 		},
@@ -82,7 +82,7 @@ ast_inlay_hints_mixed_params :: proc(t: ^testing.T) {
 			my_function([[required = ]]42[[, optional = false]])
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config   = {
 			enable_inlay_hints_params = true,
 			enable_inlay_hints_default_params = true,
@@ -107,7 +107,7 @@ ast_inlay_hints_selector_call :: proc(t: ^testing.T) {
 			p->move([[dx = ]]1.0, [[dy = ]]2.0)
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_inlay_hints_params = true,
 		},
@@ -128,7 +128,7 @@ ast_inlay_hints_no_hints_same_name :: proc(t: ^testing.T) {
 			my_function(value)
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_inlay_hints_params = true,
 		},
@@ -150,7 +150,7 @@ ast_inlay_hints_variadic_params :: proc(t: ^testing.T) {
 			variadic_func([[args = ]]1, 2, default=3)
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_inlay_hints_params = true,
 			enable_inlay_hints_default_params = true,
@@ -175,7 +175,7 @@ ast_inlay_hints_multi_return_params :: proc(t: ^testing.T) {
 			takes_three_optional([[a, b = ]]returns_two()[[, c = 3]])
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_inlay_hints_params = true,
 			enable_inlay_hints_default_params = true,
@@ -196,7 +196,7 @@ ast_inlay_hints_disabled :: proc(t: ^testing.T) {
 			my_function(42)
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_inlay_hints_params = false,
 			enable_inlay_hints_default_params = false,
@@ -220,7 +220,7 @@ ast_inlay_hints_implicit_return_values :: proc(t: ^testing.T) {
 			return value, true
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_inlay_hints_implicit_return = true,
 		},

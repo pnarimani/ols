@@ -18,7 +18,7 @@ ast_hover_in_nested_blocks :: proc(t: ^testing.T) {
 		}
 			
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_hover(t, &source, "test.My_Struct :: struct {\n\tproperty: int,\n}")
@@ -34,7 +34,7 @@ ast_hover_default_intialized_parameter :: proc(t: ^testing.T) {
 		}
 
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_hover(t, &source, "test.a: bool")
@@ -51,7 +51,7 @@ ast_hover_default_parameter_enum :: proc(t: ^testing.T) {
 			procedure{*}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_hover(
@@ -69,7 +69,7 @@ ast_hover_parameter :: proc(t: ^testing.T) {
 			cool{*}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_hover(t, &source, "test.cool: int")
@@ -77,11 +77,11 @@ ast_hover_parameter :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_external_package_parameter :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {
@@ -99,7 +99,7 @@ ast_hover_external_package_parameter :: proc(t: ^testing.T) {
 			cool{*}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.cool: my_package.My_Struct")
@@ -107,11 +107,11 @@ ast_hover_external_package_parameter :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_external_package_parameter_pointer :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {
@@ -129,7 +129,7 @@ ast_hover_external_package_parameter_pointer :: proc(t: ^testing.T) {
 			cool{*}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.cool: ^my_package.My_Struct")
@@ -137,11 +137,11 @@ ast_hover_external_package_parameter_pointer :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_procedure_package_parameter :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {
@@ -159,7 +159,7 @@ ast_hover_procedure_package_parameter :: proc(t: ^testing.T) {
 			
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package: package")
@@ -319,11 +319,11 @@ ast_hover_on_union_assertion_with_or_return :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_field_selector_completion :: proc(t: ^testing.T) {
 
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {
@@ -348,7 +348,7 @@ ast_hover_struct_field_selector_completion :: proc(t: ^testing.T) {
 		}
 		
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.My_Struct :: struct {\n\tone:   int,\n\ttwo:   int,\n\tthree: int,\n}")
@@ -357,11 +357,11 @@ ast_hover_struct_field_selector_completion :: proc(t: ^testing.T) {
 @(test)
 ast_hover_package_with_value_decl_same_name :: proc(t: ^testing.T) {
 
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package{pkg = "my_package", source = `package my_package
+		test.FileInPackage{pkg = "my_package", source = `package my_package
 		my_package :: proc() -> int {}
 		`},
 	)
@@ -373,7 +373,7 @@ ast_hover_package_with_value_decl_same_name :: proc(t: ^testing.T) {
 			_ = my_package.my_pack{*}age()
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.my_package :: proc() -> int")
@@ -398,7 +398,7 @@ ast_hover_proc_group :: proc(t: ^testing.T) {
 		}	
 
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_hover(t, &source, "test.add :: proc(a, b: int) -> int\n---\ndocs\n---\ncomment")
@@ -464,11 +464,11 @@ ast_hover_union_implicit_selector :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_foreign_package_name_collision :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 
@@ -500,7 +500,7 @@ ast_hover_foreign_package_name_collision :: proc(t: ^testing.T) {
 			}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "node.bar: ^my_package.bar")
@@ -528,11 +528,11 @@ ast_hover_struct :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_proc_param_with_struct_from_another_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {
@@ -550,7 +550,7 @@ ast_hover_proc_param_with_struct_from_another_package :: proc(t: ^testing.T) {
 			cool
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.My_Struct :: struct {\n\tone:   int,\n\ttwo:   int,\n\tthree: int,\n}")
@@ -804,11 +804,11 @@ ast_hover_proc_overloading_named_arguments :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_proc_overloading_in_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		foo_none :: proc(allocator := context.allocator,  loc := #caller_location) -> (int, bool) {
@@ -840,7 +840,7 @@ ast_hover_proc_overloading_in_package :: proc(t: ^testing.T) {
 			result, ok := my_package.fo{*}o(10)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(
@@ -852,11 +852,11 @@ ast_hover_proc_overloading_in_package :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_proc_overloading_return_value_from_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		foo_none :: proc(allocator := context.allocator,  loc := #caller_location) -> (int, bool) {
@@ -888,7 +888,7 @@ ast_hover_proc_overloading_return_value_from_package :: proc(t: ^testing.T) {
 			res{*}ult, ok := my_package.foo("Hello, world!")
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.result: int")
@@ -1048,11 +1048,11 @@ ast_hover_proc_overloading_arg_with_selector_expr :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_proc_overloading_named_arg_with_selector_expr_with_another_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		foo_none :: proc(x := 1) -> (int, bool) {
@@ -1081,7 +1081,7 @@ ast_hover_proc_overloading_named_arg_with_selector_expr_with_another_package :: 
 			result, ok := my_package.f{*}oo(f.i)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc(x := 1) -> (_: int, _: bool)\n---\nDocs\n---\ncomment")
@@ -1089,11 +1089,11 @@ ast_hover_proc_overloading_named_arg_with_selector_expr_with_another_package :: 
 
 @(test)
 ast_hover_proc_overloading_named_arg_with_selector_expr_multiple_packages :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		foo_none :: proc(x := 1) -> (int, bool) {
@@ -1108,7 +1108,7 @@ ast_hover_proc_overloading_named_arg_with_selector_expr_multiple_packages :: pro
 		}
 		`,
 		},
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package2",
 			source = `package my_package2
 			
@@ -1131,7 +1131,7 @@ ast_hover_proc_overloading_named_arg_with_selector_expr_multiple_packages :: pro
 			result, ok := my_package.f{*}oo(bar.my_int)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc(x := 1) -> (_: int, _: bool)")
@@ -1139,11 +1139,11 @@ ast_hover_proc_overloading_named_arg_with_selector_expr_multiple_packages :: pro
 
 @(test)
 ast_hover_distinguish_symbols_in_packages_proc :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		foo :: proc(x := 1) -> (int, bool) {
@@ -1165,7 +1165,7 @@ ast_hover_distinguish_symbols_in_packages_proc :: proc(t: ^testing.T) {
 			result, ok := my_package.f{*}oo(1)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc(x := 1) -> (_: int, _: bool)")
@@ -1173,11 +1173,11 @@ ast_hover_distinguish_symbols_in_packages_proc :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_distinguish_symbols_in_packages_struct :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package{pkg = "my_package", source = `package my_package
+		test.FileInPackage{pkg = "my_package", source = `package my_package
 
 			Foo :: struct {
 				foo: string,
@@ -1196,7 +1196,7 @@ ast_hover_distinguish_symbols_in_packages_struct :: proc(t: ^testing.T) {
 			foo := my_package.F{*}oo{}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.Foo :: struct {\n\tfoo: string,\n}")
@@ -1204,11 +1204,11 @@ ast_hover_distinguish_symbols_in_packages_struct :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_distinguish_symbols_in_packages_local_struct :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package{pkg = "my_package", source = `package my_package
+		test.FileInPackage{pkg = "my_package", source = `package my_package
 
 			Foo :: struct {
 				foo: string,
@@ -1228,7 +1228,7 @@ ast_hover_distinguish_symbols_in_packages_local_struct :: proc(t: ^testing.T) {
 			foo := my_package.F{*}oo{}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.Foo :: struct {\n\tfoo: string,\n}")
@@ -1236,9 +1236,9 @@ ast_hover_distinguish_symbols_in_packages_local_struct :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_distinguish_symbols_in_packages_variable :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 
 			my_var := "my_var"
 		`})
@@ -1253,7 +1253,7 @@ ast_hover_distinguish_symbols_in_packages_variable :: proc(t: ^testing.T) {
 			foo := my_package.my_va{*}r
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.my_var: string")
@@ -1293,9 +1293,9 @@ ast_hover_inside_multi_pointer_struct :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_proc_overloading_parametric_type :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 
 			Foo :: struct {}
 		`})
@@ -1317,7 +1317,7 @@ ast_hover_proc_overloading_parametric_type :: proc(t: ^testing.T) {
 			f{*}oo := new(my_package.Foo, 1, 2)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foo: ^my_package.Foo")
@@ -1325,11 +1325,11 @@ ast_hover_proc_overloading_parametric_type :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_proc_overloading_parametric_type_external_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 			new_ints :: proc($T: typeid, a, b: int) -> ^T {}
@@ -1355,7 +1355,7 @@ ast_hover_proc_overloading_parametric_type_external_package :: proc(t: ^testing.
 			f{*}oo := my_package.new(my_package.Foo, 1, 2)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foo: ^my_package.Foo")
@@ -1417,11 +1417,11 @@ ast_hover_struct_documentation_using :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_struct_documentation_using_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		InnerInner :: struct {
@@ -1452,7 +1452,7 @@ ast_hover_struct_documentation_using_package :: proc(t: ^testing.T) {
 		main :: proc() {
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(
@@ -1484,11 +1484,11 @@ ast_hover_proc_comments :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_proc_comments_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package{pkg = "my_package", source = `package my_package
+		test.FileInPackage{pkg = "my_package", source = `package my_package
 
 			foo :: proc() { // do foo
 
@@ -1504,7 +1504,7 @@ ast_hover_proc_comments_package :: proc(t: ^testing.T) {
 			my_package.fo{*}o()
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc()\n---\ndo foo")
@@ -1530,9 +1530,9 @@ ast_hover_struct_field_distinct :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_struct_field_distinct_external_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 
 			A :: distinct u64
 		`})
@@ -1544,7 +1544,7 @@ ast_hover_struct_field_distinct_external_package :: proc(t: ^testing.T) {
 			f{*}b: my_package.A,
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "S.fb: my_package.A")
@@ -1563,9 +1563,9 @@ ast_hover_distinct_definition :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_distinct_definition_external_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 
 			A :: distinct u64
 		`})
@@ -1577,7 +1577,7 @@ ast_hover_distinct_definition_external_package :: proc(t: ^testing.T) {
 			a: my_package.A{*},
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.A :: distinct u64")
@@ -1620,11 +1620,11 @@ ast_hover_poly_type :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_poly_type_external_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "small_array",
 			source = `package small_array
 
@@ -1658,7 +1658,7 @@ ast_hover_poly_type_external_package :: proc(t: ^testing.T) {
 			}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foo: test.Foo")
@@ -1666,11 +1666,11 @@ ast_hover_poly_type_external_package :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_poly_type_external_package_with_external_type :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "small_array",
 			source = `package small_array
 
@@ -1706,7 +1706,7 @@ ast_hover_poly_type_external_package_with_external_type :: proc(t: ^testing.T) {
 			}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foo: small_array.Foo")
@@ -1727,11 +1727,11 @@ ast_hover_struct_poly_type :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_struct_poly_type_external_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "small_array",
 			source = `package small_array
 
@@ -1754,7 +1754,7 @@ ast_hover_struct_poly_type_external_package :: proc(t: ^testing.T) {
 
 		fo{*}os: small_array.Small_Array(MAX, Foo)
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foos: small_array.Small_Array(MAX, Foo)")
@@ -1762,11 +1762,11 @@ ast_hover_struct_poly_type_external_package :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_poly_proc_mixed_packages :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "foo_package",
 			source = `package foo_package
 		foo :: proc(t: $T) -> T {
@@ -1774,7 +1774,7 @@ ast_hover_poly_proc_mixed_packages :: proc(t: ^testing.T) {
 		}
 		`,
 		},
-		test.Package{pkg = "bar_package", source = `package bar_package
+		test.FileInPackage{pkg = "bar_package", source = `package bar_package
 			Bar :: struct {
 				bar: int,
 			}
@@ -1793,7 +1793,7 @@ ast_hover_poly_proc_mixed_packages :: proc(t: ^testing.T) {
 		}
 	}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.f: bar_package.Bar")
@@ -1801,11 +1801,11 @@ ast_hover_poly_proc_mixed_packages :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_poly_struct_proc_field :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		Foo :: struct($T: typeid) {
@@ -1833,7 +1833,7 @@ ast_hover_poly_struct_proc_field :: proc(t: ^testing.T) {
 		}
 	}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "Foo.foo: proc(t: ^Bar) -> Bar")
@@ -1866,9 +1866,9 @@ ast_hover_poly_struct_poly_proc_fields :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_poly_struct_poly_proc_fields_resolved :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 			Bazz :: struct{}
 		`})
 
@@ -1891,7 +1891,7 @@ ast_hover_poly_struct_poly_proc_fields_resolved :: proc(t: ^testing.T) {
 		}
 	}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(
@@ -2086,11 +2086,11 @@ ast_hover_struct_with_bit_field_using :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_struct_with_bit_field_using_across_packages :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 			Foo :: bit_field u8 {
@@ -2116,7 +2116,7 @@ ast_hover_struct_with_bit_field_using_across_packages :: proc(t: ^testing.T) {
 			bar: int,
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(
 		t,
@@ -2299,11 +2299,11 @@ ast_hover_struct_field_value_when_not_specifying_type_at_use :: proc(t: ^testing
 
 @(test)
 ast_hover_overload_proc_strings_from_different_packages :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 			foo_int :: proc(a: string, b: int){}
@@ -2316,7 +2316,7 @@ ast_hover_overload_proc_strings_from_different_packages :: proc(t: ^testing.T) {
 
 		`,
 		},
-		test.Package{pkg = "str", source = `package str
+		test.FileInPackage{pkg = "str", source = `package str
 			get_str :: proc() -> string {
 				return "foo"
 			}
@@ -2332,7 +2332,7 @@ ast_hover_overload_proc_strings_from_different_packages :: proc(t: ^testing.T) {
 			my_package.f{*}oo(foo_str, 1)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.foo :: proc(a: string, b: int)")
 }
@@ -3171,11 +3171,11 @@ ast_hover_enum_explicit_type :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_documentation_reexported :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 			// Documentation for Foo
@@ -3189,18 +3189,18 @@ ast_hover_documentation_reexported :: proc(t: ^testing.T) {
 
 		F{*}oo :: my_package.Foo
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.Foo :: struct{}\n---\nDocumentation for Foo")
 }
 
 @(test)
 ast_hover_override_documentation_reexported :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 			// Documentation for Foo
@@ -3215,7 +3215,7 @@ ast_hover_override_documentation_reexported :: proc(t: ^testing.T) {
 		// New docs for Foo
 		F{*}oo :: my_package.Foo
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.Foo :: struct{}\n---\nNew docs for Foo")
 }
@@ -3241,11 +3241,11 @@ ast_hover_switch_initialiser :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_type_switch_with_using :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 			Foo :: struct{}
@@ -3269,7 +3269,7 @@ ast_hover_type_switch_with_using :: proc(t: ^testing.T) {
 			}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.v: ^my_package.Foo")
 }
@@ -3293,11 +3293,11 @@ ast_hover_union_with_poly :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_union_with_poly_from_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package{pkg = "my_package", source = `package my_package
+		test.FileInPackage{pkg = "my_package", source = `package my_package
 
 			Foo :: union($T: typeid) {
 				T,
@@ -3312,7 +3312,7 @@ ast_hover_union_with_poly_from_package :: proc(t: ^testing.T) {
 			fo{*}o: my_package.Foo(int)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.foo: my_package.Foo(int)")
 }
@@ -3992,11 +3992,11 @@ ast_hover_struct_tags_align :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_struct_tags_align_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 			Foo :: struct($T: typeid) #align(4) {
@@ -4012,7 +4012,7 @@ ast_hover_struct_tags_align_package :: proc(t: ^testing.T) {
 			foo := my_package.F{*}oo(int){}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.Foo :: struct(int) #align(4) {}")
@@ -4267,11 +4267,11 @@ ast_hover_soa_pointer_field_variable :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_overload_private_procs :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 
@@ -4295,7 +4295,7 @@ ast_hover_overload_private_procs :: proc(t: ^testing.T) {
 			foo := my_package.fo{*}o(s)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "@(private=\"file\")\nmy_package.foo :: proc(s: string)")
 }
@@ -4369,9 +4369,9 @@ ast_hover_implicit_selector_return :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_basic_value_cast_from_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 			Bar :: int
 		`})
 	source := test.Source {
@@ -4383,7 +4383,7 @@ ast_hover_basic_value_cast_from_package :: proc(t: ^testing.T) {
 			b{*}ar := my_package.Bar(foo)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.bar: my_package.Bar")
 }
@@ -5001,9 +5001,9 @@ ast_hover_proc_overload_generic_map :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_proc_overload_basic_type_alias :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 			Bar :: int
 		`})
 
@@ -5023,7 +5023,7 @@ ast_hover_proc_overload_basic_type_alias :: proc(t: ^testing.T) {
 			f{*}oo(bar)
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(i: int)")
 }
@@ -5050,11 +5050,11 @@ ast_hover_proc_overload_nil_pointer :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_package_proc_naming_conflicting_with_another_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 			foo :: proc() {}
@@ -5063,7 +5063,7 @@ ast_hover_package_proc_naming_conflicting_with_another_package :: proc(t: ^testi
 	)
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "foo",
 			source = `package foo
 		`,
@@ -5079,7 +5079,7 @@ ast_hover_package_proc_naming_conflicting_with_another_package :: proc(t: ^testi
 			f := my_package.fo{*}o
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc()")
@@ -5153,9 +5153,9 @@ ast_hover_generic_proc_with_inlining :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_using_import_statement_name_conflict :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 			Bar :: struct {
 				b: string,
 			}
@@ -5174,7 +5174,7 @@ ast_hover_using_import_statement_name_conflict :: proc(t: ^testing.T) {
 			bar := Ba{*}r{}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.Bar :: struct {\n\tb: string,\n}")
 }
@@ -5350,9 +5350,9 @@ ast_hover_quaternion_literal :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_parapoly_other_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 		// Docs!
 		bar :: proc(_: $T) {} // Comment!
 		`})
@@ -5364,7 +5364,7 @@ ast_hover_parapoly_other_package :: proc(t: ^testing.T) {
 			my_package.ba{*}r("test")
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.bar :: proc(_: $T)\n---\nDocs!\n---\nComment!")
 }
@@ -5807,9 +5807,9 @@ ast_hover_nested_proc_docs_spaces :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_propagate_docs_alias_in_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 		// Docs!
 		foo :: proc() {} // Comment!
 
@@ -5823,16 +5823,16 @@ ast_hover_propagate_docs_alias_in_package :: proc(t: ^testing.T) {
 			my_package.ba{*}r()
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.bar :: proc()\n---\nDocs!\n---\nComment!")
 }
 
 @(test)
 ast_hover_propagate_docs_alias_in_package_override :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 		// Docs!
 		foo :: proc() {} // Comment!
 
@@ -5847,7 +5847,7 @@ ast_hover_propagate_docs_alias_in_package_override :: proc(t: ^testing.T) {
 			my_package.ba{*}r()
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.bar :: proc()\n---\nOverridden\n---\nComment!")
 }
@@ -5878,9 +5878,9 @@ ast_hover_const_aliases :: proc(t: ^testing.T) {
 
 @(test)
 ast_hover_const_aliases_from_other_pkg :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 		Foo :: 3 + 4
 		`})
 	source := test.Source {
@@ -5889,7 +5889,7 @@ ast_hover_const_aliases_from_other_pkg :: proc(t: ^testing.T) {
 
 		B{*}ar :: my_package.Foo
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.Bar :: my_package.Foo")
 }

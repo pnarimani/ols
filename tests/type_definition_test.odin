@@ -587,11 +587,11 @@ ast_type_definition_predeclared_variable :: proc(t: ^testing.T) {
 
 @(test)
 ast_type_definition_external_package :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {
@@ -611,7 +611,7 @@ ast_type_definition_external_package :: proc(t: ^testing.T) {
 			cool{*}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	location := common.Location {
@@ -624,11 +624,11 @@ ast_type_definition_external_package :: proc(t: ^testing.T) {
 
 @(test)
 ast_type_definition_external_package_from_proc :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {
@@ -651,7 +651,7 @@ ast_type_definition_external_package_from_proc :: proc(t: ^testing.T) {
 			my_struct := ge{*}t_my_struct()
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	location := common.Location {
@@ -664,11 +664,11 @@ ast_type_definition_external_package_from_proc :: proc(t: ^testing.T) {
 
 @(test)
 ast_type_definition_external_package_from_proc_slice_return :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {
@@ -691,7 +691,7 @@ ast_type_definition_external_package_from_proc_slice_return :: proc(t: ^testing.
 			my_struct := ge{*}t_my_struct()
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	location := common.Location {
@@ -704,11 +704,11 @@ ast_type_definition_external_package_from_proc_slice_return :: proc(t: ^testing.
 
 @(test)
 ast_type_definition_external_package_from_external_proc :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {
@@ -731,7 +731,7 @@ ast_type_definition_external_package_from_external_proc :: proc(t: ^testing.T) {
 			my_struct := my_package.ge{*}t_my_struct()
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	location := common.Location {
@@ -942,11 +942,11 @@ ast_type_definition_polymorphic_type_with_specialization :: proc(t: ^testing.T) 
 
 @(test)
 ast_type_definition_package_proc :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		Foo :: struct {x, y: i32}
@@ -964,7 +964,7 @@ ast_type_definition_package_proc :: proc(t: ^testing.T) {
 			f{*}oo := my_package.get_foo()
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	locations := []common.Location {

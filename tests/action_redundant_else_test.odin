@@ -22,7 +22,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	expected := `if x > 0 {
@@ -50,7 +50,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	expected := `if x > 0 {
@@ -81,7 +81,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	expected := `if i > 5 {
@@ -110,7 +110,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	expected := `if i == 3 {
@@ -138,7 +138,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Should not offer Remove redundant else when cursor is on if (only on else)
@@ -154,7 +154,7 @@ main :: proc() {
 	x :={*} 5
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Should not have the action when not on an if statement
@@ -173,7 +173,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Should not have Remove redundant else action when there's no else clause
@@ -194,7 +194,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Should not have Remove redundant else action when if block doesn't end with return/break/continue
@@ -215,7 +215,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Break outside a loop is not valid, so we shouldn't offer Remove redundant else
@@ -236,7 +236,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Continue outside a loop is not valid for Remove redundant else
@@ -261,7 +261,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	expected := `if x > 0 {
@@ -291,7 +291,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	expected := `if x > 0 {
@@ -323,7 +323,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Should offer action for nested if with break in a loop
@@ -344,7 +344,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	expected := `if x := foo(); x > 0 {
@@ -373,7 +373,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Break in a switch case is valid, should offer action
@@ -394,7 +394,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Return is not the last statement, so no Remove redundant else
@@ -413,7 +413,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Empty if body - no terminating statement, so no Remove redundant else
@@ -433,7 +433,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	expected := `if x > 0 {
@@ -464,7 +464,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Labeled break still breaks out of a loop
@@ -489,7 +489,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Labeled continue still continues a loop
@@ -517,7 +517,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Fallthrough transfers control, so else is redundant

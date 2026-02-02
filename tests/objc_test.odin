@@ -7,11 +7,11 @@ import test "src:testing"
 
 @(test)
 objc_return_type_with_selector_expression :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
             @(objc_class="NSWindow")
@@ -35,7 +35,7 @@ objc_return_type_with_selector_expression :: proc(t: ^testing.T) {
             window := my_package.Window.alloc()->{*}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_completion_docs(
@@ -48,11 +48,11 @@ objc_return_type_with_selector_expression :: proc(t: ^testing.T) {
 
 @(test)
 objc_return_type_with_selector_expression_2 :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
             @(objc_class="NSWindow")
@@ -83,7 +83,7 @@ objc_return_type_with_selector_expression_2 :: proc(t: ^testing.T) {
 			window->{*}
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_completion_docs(
@@ -97,11 +97,11 @@ objc_return_type_with_selector_expression_2 :: proc(t: ^testing.T) {
 
 @(test)
 objc_hover_chained_selector :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
             @(objc_class="NSWindow")
@@ -134,7 +134,7 @@ objc_hover_chained_selector :: proc(t: ^testing.T) {
 			)	
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_hover(
@@ -146,11 +146,11 @@ objc_hover_chained_selector :: proc(t: ^testing.T) {
 
 @(test)
 objc_implicit_enum_completion :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 			My_Enum :: enum {
@@ -186,7 +186,7 @@ objc_implicit_enum_completion :: proc(t: ^testing.T) {
 			)	
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_completion_labels(t, &source, ".", {"Accessory"})

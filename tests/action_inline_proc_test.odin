@@ -364,7 +364,7 @@ main :: proc() {
 	x := {*}factorial(5)
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Recursive procedures have multiple returns - not supported
@@ -382,7 +382,7 @@ main :: proc() {
 	x := {*}foreign_proc(5)
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {INLINE_PROC_ACTION})
@@ -401,7 +401,7 @@ main :: proc() {
 	x := {*}123
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {INLINE_PROC_ACTION})
@@ -420,7 +420,7 @@ main :: proc() {
 	x := 10
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {INLINE_PROC_ACTION})

@@ -237,7 +237,7 @@ ast_reference_variable_declaration_with_selector_expr :: proc(t: ^testing.T) {
 			{:}b{*}ar{:}[1].foo = 6
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -258,7 +258,7 @@ ast_reference_variable_uses_from_declaration :: proc(t: ^testing.T) {
 			{:}bar{:}.foo = 6
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -279,7 +279,7 @@ ast_reference_variable_uses_from_declaration_with_selector_expr :: proc(t: ^test
 			{:}bar{:}[1].foo = 6
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -300,7 +300,7 @@ ast_reference_variable_declaration_field_with_selector_expr :: proc(t: ^testing.
 			bar[1].{:}f{*}oo{:} = 6
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_reference_locations(t, &source)

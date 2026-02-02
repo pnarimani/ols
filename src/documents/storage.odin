@@ -44,32 +44,24 @@ shutdown :: proc() {
 
 // Get a document by encoded path string. Returns pointer to stored document, or nil if not found.
 // Will attempt to load from disk if document is not in storage.
-get :: proc(encoded_path: string) -> ^DocumentData {
-	path, parsed_ok := common.make_path(encoded_path, context.temp_allocator)
-
-	if !parsed_ok {
-		return nil
-	}
-
-	if document, ok := &storage.documents[path]; ok {
+get :: proc(file_path: string) -> ^DocumentData {
+	if document, ok := &storage.documents[file_path]; ok {
 		return document
 	}
 
-	return load_from_disk(path)
+	return load_from_disk(file_path)
 }
 
 // Load a document from disk and store it in storage.
 // Returns pointer to the stored document, or nil on failure.
-load_from_disk :: proc(path: string) -> ^DocumentData {
-	fullpath := get_fullpath_from_path(path, context.temp_allocator)
-
-	data, read_ok := workspace.read_file_content(fullpath, context.temp_allocator)
+load_from_disk :: proc(file_path: string) -> ^DocumentData {
+	data, read_ok := workspace.read_file_content(file_path, context.temp_allocator)
 	if !read_ok {
-		log.errorf("Failed to read file from disk: %v", path)
+		log.errorf("Failed to read file from disk: %v", file_path)
 		return nil
 	}
 
-	doc, _ := open(path, string(data))
+	doc, _ := open(file_path, string(data))
 	return doc
 }
 
@@ -109,16 +101,10 @@ open :: proc(path_or_encoded: string, text: string) -> (^DocumentData, common.Er
 
 // Apply incremental changes to a document.
 apply_changes :: proc(
-	encoded_path: string,
+	path: string,
 	changes: []ContentChangeEvent,
 	version: Maybe(int) = nil,
 ) -> common.Error {
-	path, parsed_ok := common.make_path(encoded_path, context.temp_allocator)
-
-	if !parsed_ok {
-		return .ParseError
-	}
-
 	document := &storage.documents[path]
 
 	if document == nil {

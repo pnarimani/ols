@@ -80,7 +80,7 @@ main :: proc() {
 	x :={*} 5
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Should not have the invert action when not on an if statement
@@ -99,7 +99,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action(t, &source, {})
@@ -270,7 +270,7 @@ main :: proc() {
 	statement3()
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Should not have the invert action when on an else-if statement
@@ -291,7 +291,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	// Should not have the invert action when in the else block (not on an if)

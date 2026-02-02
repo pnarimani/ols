@@ -44,7 +44,7 @@ import "src:server"
 //   - Lines starting with "-": before only (contain selection markers {<} {>})
 //   - Lines starting with "+": after only (expected result)
 //   - Lines starting with " " or no prefix: common to both
-expect_code_action_diff :: proc(t: ^testing.T, diff_source: string, action_name: string, packages: []Package = {}) {
+expect_code_action_diff :: proc(t: ^testing.T, diff_source: string, action_name: string, packages: []FileInPackage = {}) {
 	before_code, expected_after, parse_ok := parse_diff_source(diff_source)
 	if !parse_ok {
 		testing.expect(t, false, "Failed to parse diff source")
@@ -54,7 +54,7 @@ expect_code_action_diff :: proc(t: ^testing.T, diff_source: string, action_name:
 	// Create source with the "before" code
 	src := Source {
 		main     = before_code,
-		packages = packages,
+		extra_files = packages,
 	}
 
 	setup(&src)
@@ -298,7 +298,7 @@ expect_code_action_diff_multi_file :: proc(
 	}
 
 	// Build packages for Source from package_diffs (using before code)
-	packages := make([]Package, len(package_diffs), context.temp_allocator)
+	packages := make([]FileInPackage, len(package_diffs), context.temp_allocator)
 	package_expected := make([]string, len(package_diffs), context.temp_allocator)
 
 	for pkg_diff, i in package_diffs {
@@ -307,7 +307,7 @@ expect_code_action_diff_multi_file :: proc(
 			testing.expectf(t, false, "Failed to parse diff for package '%s'", pkg_diff.pkg)
 			return
 		}
-		packages[i] = Package {
+		packages[i] = FileInPackage {
 			pkg      = pkg_diff.pkg,
 			filename = pkg_diff.filename,
 			source   = before,
@@ -317,7 +317,7 @@ expect_code_action_diff_multi_file :: proc(
 
 	src := Source {
 		main     = main_before,
-		packages = packages,
+		extra_files = packages,
 	}
 
 	setup(&src)

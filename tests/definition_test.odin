@@ -146,7 +146,7 @@ ast_goto_untyped_comp_lit_in_proc :: proc(t: ^testing.T) {
 				my_function({on{*}e = 2, two = 3})
 			}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -169,7 +169,7 @@ ast_goto_bit_field_definition :: proc(t: ^testing.T) {
 				it: My_B{*}it_Field
 			}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -193,7 +193,7 @@ ast_goto_bit_field_field_definition :: proc(t: ^testing.T) {
 				it.on{*}e
 			}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -220,7 +220,7 @@ ast_goto_bit_field_field_in_proc :: proc(t: ^testing.T) {
 				my_function({on{*}e = 2, two = 3})
 			}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -242,7 +242,7 @@ ast_goto_shadowed_value_decls :: proc(t: ^testing.T) {
 				}
 			}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 	test.expect_definition_locations(t, &source0, {{range = {{line = 5, character = 5}, {line = 5, character = 8}}}})
 
@@ -257,7 +257,7 @@ ast_goto_shadowed_value_decls :: proc(t: ^testing.T) {
 				}
 			}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 	test.expect_definition_locations(t, &source1, {{range = {{line = 5, character = 5}, {line = 5, character = 8}}}})
 
@@ -271,7 +271,7 @@ ast_goto_shadowed_value_decls :: proc(t: ^testing.T) {
 				}
 			}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 	test.expect_definition_locations(t, &source3, {{range = {{line = 2, character = 4}, {line = 2, character = 7}}}})
 }
@@ -297,7 +297,7 @@ ast_goto_implicit_super_enum_infer_from_assignment :: proc(t: ^testing.T) {
 			my_enum = .ON{*}E
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -323,7 +323,7 @@ ast_goto_implicit_enum_infer_from_assignment :: proc(t: ^testing.T) {
 			my_enum = .Fo{*}ur
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -348,7 +348,7 @@ ast_goto_implicit_enum_infer_from_return :: proc(t: ^testing.T) {
 			return .Fo{*}ur
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -377,7 +377,7 @@ ast_goto_implicit_enum_infer_from_function :: proc(t: ^testing.T) {
 			my_fn(.Fo{*}ur)
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -413,7 +413,7 @@ ast_goto_implicit_enum_infer_from_assignment_within_switch :: proc(t: ^testing.T
 			}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -437,7 +437,7 @@ ast_goto_variable_declaration_with_selector_expr :: proc(t: ^testing.T) {
 			b{*}ar[0].foo = 5
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -461,7 +461,7 @@ ast_goto_variable_field_definition_with_selector_expr :: proc(t: ^testing.T) {
 			bar[0].fo{*}o = 5
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	location := common.Location {
@@ -678,9 +678,9 @@ ast_goto_nested_using_struct_field :: proc(t: ^testing.T) {
 
 @(test)
 ast_goto_package_declaration :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 			Bar :: struct{}
 		`})
 	source := test.Source {
@@ -691,7 +691,7 @@ ast_goto_package_declaration :: proc(t: ^testing.T) {
 			bar: m{*}y_package.Bar
 		}
 	`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	locations := []common.Location {
 		{range = {start = {line = 1, character = 9}, end = {line = 1, character = 21}}},
@@ -702,9 +702,9 @@ ast_goto_package_declaration :: proc(t: ^testing.T) {
 
 @(test)
 ast_goto_package_declaration_with_alias :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 			Bar :: struct{}
 		`})
 	source := test.Source {
@@ -715,7 +715,7 @@ ast_goto_package_declaration_with_alias :: proc(t: ^testing.T) {
 			bar: m{*}p.Bar
 		}
 	`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 	locations := []common.Location {
 		{range = {start = {line = 1, character = 9}, end = {line = 1, character = 11}}},
@@ -725,9 +725,9 @@ ast_goto_package_declaration_with_alias :: proc(t: ^testing.T) {
 }
 @(test)
 ast_goto_proc_group_overload_with_selector :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
-	append(&packages, test.Package{pkg = "my_package", source = `package my_package
+	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 			push_back :: proc(arr: ^[dynamic]int, val: int) {}
 			push_back_elems :: proc(arr: ^[dynamic]int, vals: ..int) {}
 			append :: proc{push_back, push_back_elems}
@@ -741,7 +741,7 @@ ast_goto_proc_group_overload_with_selector :: proc(t: ^testing.T) {
 			mp.app{*}end(&arr, 1)
 		}
 	`,
-		packages = packages[:],
+		extra_files = packages[:],
 		config = {enable_overload_resolution = true},
 	}
 	// Should go to push_back (line 1, character 3) instead of append (line 3)

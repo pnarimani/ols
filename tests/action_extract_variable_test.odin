@@ -332,7 +332,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {EXTRACT_VARIABLE_ACTION})
@@ -711,7 +711,7 @@ main :: proc() {
 	y := {<}x{>}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {EXTRACT_VARIABLE_ACTION})
@@ -727,7 +727,7 @@ main :: proc() {
 	y := &{<}x{>}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {EXTRACT_VARIABLE_ACTION})
@@ -742,7 +742,7 @@ main :: proc() {
 	x := {<}42{>}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {EXTRACT_VARIABLE_ACTION})
@@ -757,7 +757,7 @@ main :: proc() {
 	x, y := {<}42, 43{>}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {EXTRACT_VARIABLE_ACTION})
@@ -772,7 +772,7 @@ main :: proc() {
 	x := {<}"hello"{>}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {EXTRACT_VARIABLE_ACTION})
@@ -787,7 +787,7 @@ main :: proc() {
 	x := 5{*}
 }
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {EXTRACT_VARIABLE_ACTION})
@@ -802,7 +802,7 @@ action_extract_variable_not_available_outside_proc :: proc(t: ^testing.T) {
 
 main :: proc() {}
 `,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_action_excludes(t, &source, {EXTRACT_VARIABLE_ACTION})

@@ -21,7 +21,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -45,7 +45,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -69,7 +69,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -89,7 +89,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -126,7 +126,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -153,7 +153,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -177,7 +177,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -211,7 +211,7 @@ with_return_value :: proc() -> int {
 	return 2
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -233,7 +233,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = false},
 	}
 
@@ -258,7 +258,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -286,7 +286,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -310,7 +310,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -333,7 +333,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -351,7 +351,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -374,7 +374,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -394,7 +394,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -415,7 +415,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -438,7 +438,7 @@ main :: proc() {
 	}
 }
 `,
-		packages = {},
+		extra_files = {},
 		config = {enable_invert_if_diagnostics = true},
 	}
 

@@ -11,7 +11,7 @@ ast_declare_proc_signature :: proc(t: ^testing.T) {
 		main     = `package test
 		main :: proc({*})
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(t, &source, {})
@@ -33,7 +33,7 @@ ast_naked_parens :: proc(t: ^testing.T) {
 			}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(t, &source, {})
@@ -50,7 +50,7 @@ ast_simple_proc_signature :: proc(t: ^testing.T) {
 			cool_function({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -71,7 +71,7 @@ ast_default_assignment_proc_signature :: proc(t: ^testing.T) {
 			cool_function({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -92,7 +92,7 @@ ast_proc_signature_argument_last_position :: proc(t: ^testing.T) {
 			cool_function(2,{*}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_parameter_position(t, &source, 1)
@@ -109,7 +109,7 @@ ast_proc_signature_argument_first_position :: proc(t: ^testing.T) {
 			cool_function(2{*},)
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_parameter_position(t, &source, 0)
@@ -127,7 +127,7 @@ ast_proc_signature_argument_move_position :: proc(t: ^testing.T) {
 			cool_function(2,3{*}, 3);
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_parameter_position(t, &source, 1)
@@ -144,7 +144,7 @@ ast_proc_signature_argument_complex :: proc(t: ^testing.T) {
 			cool_function(a(2,5,b(3,sdf[2],{})), {*});
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_parameter_position(t, &source, 1)
@@ -161,7 +161,7 @@ ast_proc_signature_argument_open_brace_position :: proc(t: ^testing.T) {
 			cool_function(2,3, 3{*}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_parameter_position(t, &source, 2)
@@ -178,7 +178,7 @@ ast_proc_signature_argument_any_ellipsis_position :: proc(t: ^testing.T) {
 			cool_function(3, 4, 5{*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_parameter_position(t, &source, 0)
@@ -203,7 +203,7 @@ ast_proc_group_signature_empty_call :: proc(t: ^testing.T) {
 			group_function({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -230,7 +230,7 @@ ast_proc_signature_generic :: proc(t: ^testing.T) {
 			clone_array({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -261,7 +261,7 @@ ast_proc_group_signature_basic_types :: proc(t: ^testing.T) {
 			group_function(2, true, {*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -297,7 +297,7 @@ ast_proc_group_signature_distinct_basic_types :: proc(t: ^testing.T) {
 			group_function(a, {*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -341,7 +341,7 @@ ast_proc_group_signature_struct :: proc(t: ^testing.T) {
 			group_function(a, b, {*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -353,11 +353,11 @@ ast_proc_group_signature_struct :: proc(t: ^testing.T) {
 
 @(test)
 index_simple_signature :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		my_function :: proc(a: int, b := context.allocator) {
@@ -376,7 +376,7 @@ index_simple_signature :: proc(t: ^testing.T) {
             my_package.my_function({*})
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_signature_labels(
@@ -394,7 +394,7 @@ ast_index_builtin_len_proc :: proc(t: ^testing.T) {
 			len({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -413,7 +413,7 @@ ast_signature_on_invalid_package :: proc(t: ^testing.T) {
 			a := totallyReal.read_cycle_counter({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(t, &source, {})
@@ -433,7 +433,7 @@ ast_signature_variable_pointer :: proc(t: ^testing.T) {
 			my_fun_ptr({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(t, &source, {"test.My_Fun :: proc(a: int)"})
@@ -455,7 +455,7 @@ ast_signature_global_variable_pointer :: proc(t: ^testing.T) {
 			my_fun_ptr({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(t, &source, {"test.My_Fun :: proc(a: int)"})
@@ -463,11 +463,11 @@ ast_signature_global_variable_pointer :: proc(t: ^testing.T) {
 
 @(test)
 index_variable_pointer_signature :: proc(t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Fun :: proc(a: int) {
@@ -486,7 +486,7 @@ index_variable_pointer_signature :: proc(t: ^testing.T) {
 			my_package.my_fun_ptr({*})
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	test.expect_signature_labels(
@@ -509,7 +509,7 @@ shared_value_decl_type_signature :: proc(t: ^testing.T) {
 			my_function({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -534,7 +534,7 @@ proc_with_struct_poly :: proc(t: ^testing.T) {
 			uf({*})
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(t, &source, {"test.uf :: proc(u: U($T, $E))"})
@@ -551,7 +551,7 @@ proc_signature_move_outside :: proc(t: ^testing.T) {
 			my_cool_function(){*}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 	}
 
 	test.expect_signature_labels(
@@ -576,7 +576,7 @@ signature_comp_lit_struct :: proc(t: ^testing.T) {
 			}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_comp_lit_signature_help = true,
 		}
@@ -605,7 +605,7 @@ signature_comp_lit_struct_pre_declared :: proc(t: ^testing.T) {
 			}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_comp_lit_signature_help = true,
 		}
@@ -636,7 +636,7 @@ signature_comp_lit_bit_set :: proc(t: ^testing.T) {
 			}
 		}
 		`,
-		packages = {},
+		extra_files = {},
 		config = {
 			enable_comp_lit_signature_help = true,
 		}

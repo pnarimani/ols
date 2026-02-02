@@ -122,11 +122,11 @@ ast_prepare_rename_struct_field_type :: proc (t: ^testing.T) {
 
 @(test)
 ast_prepare_rename_struct_field_type_package :: proc (t: ^testing.T) {
-	packages := make([dynamic]test.Package, context.temp_allocator)
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
 
 	append(
 		&packages,
-		test.Package {
+		test.FileInPackage {
 			pkg = "my_package",
 			source = `package my_package
 		My_Struct :: struct {}
@@ -141,7 +141,7 @@ ast_prepare_rename_struct_field_type_package :: proc (t: ^testing.T) {
 			bar: my_package.My_Stru{*}ct,
 		}
 		`,
-		packages = packages[:],
+		extra_files = packages[:],
 	}
 
 	range := common.Range{start = {line = 4, character = 19}, end = {line = 4, character = 28}}
