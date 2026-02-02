@@ -29,3 +29,15 @@ When presented with a bug or error, follow these steps strictly:
 4. **FIX & CLEANUP**
    - Only implement the fix once the root cause is proven by log data.
    - After the fix is verified, remove the temporary `[DEBUG_AGENT]` logs (unless instructed to keep them).
+
+## Comment Formatting Rules
+
+FORBIDDEN:
+- Banner comments with repeated characters (`====`, `----`, `////`, etc.)
+- Box-style comments or ASCII art decorations
+- Section dividers that span multiple lines for visual effect
+
+REQUIRED:
+- Use plain single-line comments: `// Comment text`
+- For section markers (if needed), use simple comments: `// Section name`
+- Prefer no comments over decorative comments

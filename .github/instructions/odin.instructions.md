@@ -12,27 +12,22 @@ CRITICAL: Before analyzing or modifying code that involves memory operations, yo
 
 ```odin
 main :: proc() {
-	c := context // copy the current scope's context
-
 	context.user_index = 456
 	{
-		context.allocator = my_custom_allocator()
+		context.allocator = my_custom_allocator() // allocator change
 		context.user_index = 123
 		supertramp() // the `context` for this scope is implicitly passed to `supertramp`
 	}
+	// restored to outer scope's context
 
-	// `context` value is local to the scope it is in
-	assert(context.user_index == 456)
+	assert(context.user_index == 456) 
 }
 
 supertramp :: proc() {
-	c := context // this `context` is the same as the parent procedure that it was called from
-	// From this example, context.user_index == 123
-	// A context.allocator is assigned to the return value of `my_custom_allocator()`
-
-	// The memory management procedure uses the `context.allocator` by default unless explicitly specified otherwise
-	ptr := new(int)
-	free(ptr)
+	assert(context.user_index == 123) 
+	assert(context.allocator == my_custom_allocator())
+	ptr := new(int) // allocated with my_custom_allocator
+	free(ptr) // deallocated with my_custom_allocator
 }
 ```
 
@@ -50,7 +45,29 @@ is equivalent to this:
 ptr := new(int, context.allocator)
 ```
 
-IMPORTANT: It is CRITICAL that every allocation is deallocated with the SAME allocator that was used to allocate it. Mixing allocators will lead to undefined behavior and likely crashes.
+When the prompt involves memory issues, bugs, leaks, crashes, or allocation/deallocation problems, you MUST follow this protocol BEFORE proposing any fix:
+
+1. **VERIFY ALLOCATOR UNDERSTANDING**
+   - Repeat back how `context.allocator` works in Odin (implicit passing, scope-local behavior, restoration on scope exit)
+   - Confirm that allocations and deallocations must use the SAME allocator
+
+2. **MAP ALLOCATORS PER SCOPE**
+   - Document which `context.allocator` is active in each scope of the code
+   - Trace the allocator through nested scopes and procedure calls
+   - Note any explicit allocator overrides (e.g., `context.allocator = context.temp_allocator`)
+
+3. **TRACE ALLOCATION-DEALLOCATION PAIRS**
+   - For EVERY allocation in the code (new, make, mem.alloc, etc.), identify:
+	 * Which allocator was used (implicitly via context or explicitly passed)
+	 * Where the corresponding deallocation occurs (free, delete, mem.free, etc.)
+	 * Which allocator is active at the deallocation site
+   - Create a table mapping each allocation to its deallocation with allocator info
+
+4. **VERIFY ALLOCATOR MATCHING**
+   - Confirm that each allocation/deallocation pair uses the same allocator
+   - Flag any mismatches as the root cause before proposing fixes
+
+This verification step is mandatory before proposing any fix or analysis.
 
 ## Extra Information
 If you cannot understand odin syntax, look up https://odin-lang.org/docs/overview/
