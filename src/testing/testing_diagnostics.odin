@@ -13,8 +13,7 @@ expect_diagnostic_at :: proc(t: ^testing.T, src: ^Source, code: string, message_
 	setup(src)
 	defer teardown(src)
 
-	path := src.document.path
-	encoded_path := common.make_encoded_path(path, context.temp_allocator)
+	encoded_path := common.make_encoded_path(src.document.filepath, context.temp_allocator)
 
 	expected_range := common.Range {
 		start = src.position,
@@ -71,8 +70,8 @@ expect_no_diagnostic :: proc(t: ^testing.T, src: ^Source, code: string) {
 	setup(src)
 	defer teardown(src)
 
-	path := src.document.path
-	encoded_path := common.make_encoded_path(path, context.temp_allocator)
+	path := src.document.filepath
+	encoded_path := common.make_encoded_path(src.document.filepath, context.temp_allocator)
 	
 	// Query the persistent diagnostic store for .Hint diagnostics
 	diag_arr := diagnostics.get_diagnostics_for_path(encoded_path, .Hint, context.temp_allocator)

@@ -53,7 +53,7 @@ check_invert_if_suggestions :: proc(doc_ctx: documents.Document, config: ^common
 	}
 
 	// Build encoded path with platform-specific path handling
-	path := doc_ctx.path
+	path := doc_ctx.filepath
 	when ODIN_OS == .Windows {
 		path = common.get_case_sensitive_path(path, context.temp_allocator)
 	}

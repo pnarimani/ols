@@ -22,11 +22,8 @@ append_symbol_to_locations :: proc(
 	}
 	location := common.Location{}
 	location.range = symbol.range
-	if symbol.filepath == "" {
-		location.uri = common.make_encoded_path(doc_ctx.path, context.temp_allocator)
-	} else {
-		location.uri = symbol.filepath
-	}
+	filepath := symbol.filepath if symbol.filepath != "" else doc_ctx.filepath
+	location.uri = common.make_encoded_path(filepath, context.temp_allocator)
 	append(locations, location)
 }
 

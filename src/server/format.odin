@@ -30,7 +30,7 @@ get_complete_format :: proc(doc_ctx: documents.Document, config: ^common.Config)
 		return {}, true
 	}
 
-	style := format.find_config_file_or_default(filepath.dir(doc_ctx.fullpath, context.temp_allocator))
+	style := format.find_config_file_or_default(filepath.dir(doc_ctx.filepath, context.temp_allocator))
 	prnt := printer.make_printer(style, context.temp_allocator)
 
 	// Copy the ast to take a pointer to it

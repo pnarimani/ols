@@ -70,7 +70,7 @@ expect_code_action_diff :: proc(t: ^testing.T, diff_source: string, action_name:
 	// Find the requested action
 	for action in actions {
 		if action.title != action_name do continue
-		encoded_path := common.make_encoded_path(src.doc_ctx.path, context.temp_allocator)
+		encoded_path := common.make_encoded_path(src.doc_ctx.filepath, context.temp_allocator)
 		edits, found := action.edit.changes[encoded_path]
 		if !found {
 			testing.expect(t, false, "Action found but has no edits")
@@ -336,7 +336,7 @@ expect_code_action_diff_multi_file :: proc(
 
 		// Check main file edits
 		all_match := true
-		main_encoded_path := common.make_encoded_path(src.doc_ctx.path, context.temp_allocator)
+		main_encoded_path := common.make_encoded_path(src.doc_ctx.filepath, context.temp_allocator)
 
 		edits, found := action.edit.changes[main_encoded_path]
 		if found {

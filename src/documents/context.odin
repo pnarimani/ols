@@ -30,11 +30,11 @@ create_context :: proc(document: ^DocumentData, config: ^common.Config, allocato
 		return {}, false
 	}
 
-	ctx.path = document.path
+	ctx.filepath = document.filepath
 	ctx.text = document.text
-	ctx.fullpath = get_fullpath_from_path(document.path, allocator)
-	ctx.package_name = get_package_name_from_path(document.path, allocator)
-	ctx.ast, ctx.errors, ok = parse_document_text(ctx.fullpath, document.text, allocator)
+	ctx.filepath = get_fullpath_from_path(document.filepath, allocator)
+	ctx.package_name = get_package_name_from_path(document.filepath, allocator)
+	ctx.ast, ctx.errors, ok = parse_document_text(ctx.filepath, document.text, allocator)
 	if !ok {
 		return {}, false
 	}

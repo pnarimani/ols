@@ -35,7 +35,7 @@ walk_directories :: proc(info: os.File_Info, in_err: os.Errno, user_data: rawptr
 
 	if strings.contains(info.name, ".odin") {
 		slash_path, _ := filepath.to_slash(info.fullpath, context.temp_allocator)
-		if slash_path != data.doc_ctx.fullpath {
+		if slash_path != data.doc_ctx.filepath {
 			append(data.fullpaths, strings.clone(info.fullpath))
 		}
 	}
@@ -181,9 +181,9 @@ prepare_references :: proc(
 			for field in position_context.bit_field_type.fields {
 				if position_in_node(field.name, position_context.position) {
 					symbol = analysis.Symbol {
-						range = common.get_token_range(field.name, ast_context.file.src),
-						pkg   = ast_context.current_package,
-						filepath   = common.make_encoded_path(doc_ctx.path, context.temp_allocator),
+						range    = common.get_token_range(field.name, ast_context.file.src),
+						pkg      = ast_context.current_package,
+						filepath = doc_ctx.filepath,
 					}
 					return symbol, .Field, true
 				}
@@ -201,9 +201,9 @@ prepare_references :: proc(
 				for name in field.names {
 					if position_in_node(name, position_context.position) {
 						symbol = analysis.Symbol {
-							range = common.get_token_range(name, ast_context.file.src),
-							pkg   = ast_context.current_package,
-							filepath   = common.make_encoded_path(doc_ctx.path, context.temp_allocator),
+							range    = common.get_token_range(name, ast_context.file.src),
+							pkg      = ast_context.current_package,
+							filepath = doc_ctx.filepath,
 						}
 						return symbol, .Field, true
 					}
@@ -231,7 +231,7 @@ prepare_references :: proc(
 		}
 	}
 	if symbol.filepath == "" {
-		symbol.filepath = common.make_encoded_path(doc_ctx.path, context.temp_allocator)
+		symbol.filepath = doc_ctx.filepath
 	}
 
 	return symbol, resolve_flag, true
@@ -344,10 +344,9 @@ resolve_references :: proc(
 
 		// Create a documents.Document directly for this file
 		inner_doc_ctx := documents.Document {
-			path         = fullpath,
+			filepath     = fullpath,
 			text         = data,
 			ast          = file,
-			fullpath     = fullpath,
 			package_name = forward_dir,
 		}
 
@@ -404,8 +403,8 @@ get_references :: proc(
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		common.make_encoded_path(doc_ctx.path, context.temp_allocator),
-		doc_ctx.fullpath,
+		common.make_encoded_path(doc_ctx.filepath, context.temp_allocator),
+		doc_ctx.filepath,
 	)
 
 	position_context, ok := get_document_position_context(doc_ctx, position, .Hover)

@@ -9,7 +9,6 @@ import "core:strings"
 import "src:common"
 
 FileInfo :: struct {
-	uri:      string,
 	fullpath: string,
 	text:     string,
 }
@@ -73,7 +72,6 @@ iterate_mock_files :: proc(allocator := context.allocator) -> []FileInfo {
 	result := make([dynamic]FileInfo, allocator)
 	for mock_file in mock_files {
 		info := FileInfo {
-			uri      = common.make_encoded_path(mock_file.fullpath, allocator),
 			fullpath = mock_file.fullpath,
 			text     = mock_file.text,
 		}
@@ -137,7 +135,6 @@ iterate_real_files :: #force_inline proc(config: ^common.Config, allocator := co
 		}
 
 		info := FileInfo {
-			uri      = common.make_encoded_path(fullpath, allocator),
 			fullpath = fullpath,
 			text     = string(data),
 		}

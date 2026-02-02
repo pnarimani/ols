@@ -789,7 +789,7 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File) -> common
 		symbol.name = get_interned_string(name)
 		symbol.type = token_type
 		symbol.doc = get_comment(expr.docs)
-		symbol.filepath = get_interned_string(common.make_encoded_path(forward, context.temp_allocator))
+		symbol.filepath = get_interned_string(forward)
 		symbol.type_expr = clone_type(expr.type_expr)
 		symbol.value_expr = clone_type(expr.value_expr)
 		comment, _ := get_file_comment(file, symbol.range.start.line + 1)

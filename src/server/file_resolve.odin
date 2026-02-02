@@ -36,8 +36,8 @@ resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range) ->
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		common.make_encoded_path(doc_ctx.path, context.temp_allocator),
-		doc_ctx.fullpath,
+		common.make_encoded_path(doc_ctx.filepath, context.temp_allocator),
+		doc_ctx.filepath,
 	)
 
 	position_context: DocumentPositionContext
@@ -80,8 +80,8 @@ resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFla
 		doc.ast,
 		doc.imports,
 		doc.package_name,
-		common.make_encoded_path(doc.path, context.temp_allocator),
-		doc.fullpath,
+		common.make_encoded_path(doc.filepath, context.temp_allocator),
+		doc.filepath,
 	)
 
 	position_context: DocumentPositionContext
@@ -530,7 +530,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 						node = name,
 						symbol = analysis.Symbol{
 							range = common.get_token_range(name, string(data.doc_ctx.text)),
-							filepath = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
+							filepath = field.pos.file,
 						},
 					}
 				}
@@ -552,7 +552,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 					node = field,
 					symbol = analysis.Symbol{
 						range = common.get_token_range(field, string(data.doc_ctx.text)),
-						filepath = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
+						filepath = field.pos.file,
 					},
 				}
 				// In the case of a Field_Value, we explicitly add them so we can find the LHS correctly for things like renaming
@@ -563,7 +563,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 							symbol = analysis.Symbol{
 								name = ident.name,
 								range = common.get_token_range(ident, string(data.doc_ctx.text)),
-								filepath = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
+								filepath = field.pos.file,
 							},
 						}
 					} else if binary, ok := field.field.derived.(^ast.Binary_Expr); ok {
@@ -572,7 +572,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 							symbol = analysis.Symbol{
 								name = "binary",
 								range = common.get_token_range(binary, string(data.doc_ctx.text)),
-								filepath = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
+								filepath = field.pos.file,
 							},
 						}
 					}
@@ -607,7 +607,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 				node = n.name,
 				symbol = analysis.Symbol{
 					range = common.get_token_range(n.name, string(data.doc_ctx.text)),
-					filepath = common.make_encoded_path(n.pos.file, data.ast_context.allocator),
+					filepath = n.pos.file,
 				},
 			}
 		}

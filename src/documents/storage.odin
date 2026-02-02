@@ -35,7 +35,7 @@ init :: proc() {
 shutdown :: proc() {
 	for k, v in storage.documents {
 		delete(v.text, storage.allocator)
-		delete(v.path, storage.allocator)
+		delete(v.filepath, storage.allocator)
 		delete(k, storage.allocator)
 	}
 
@@ -86,18 +86,18 @@ open :: proc(path_or_encoded: string, text: string) -> (^DocumentData, common.Er
 	if document, ok := &storage.documents[path]; ok {
 		// Document already exists, update it
 		// Free old data with persistent allocator
-		delete(document.path, storage.allocator)
+		delete(document.filepath, storage.allocator)
 		delete(document.text, storage.allocator)
 
 		// Clone new data to persistent storage
-		document.path = strings.clone(path, storage.allocator)
+		document.filepath = strings.clone(path, storage.allocator)
 		document.text = transmute([]u8)strings.clone(text, storage.allocator)
 		return document, .None
 	}
 
 	// New document - clone data to persistent storage
 	document := DocumentData {
-		path = strings.clone(path, storage.allocator),
+		filepath = strings.clone(path, storage.allocator),
 		text = transmute([]u8)strings.clone(text, storage.allocator),
 	}
 
@@ -185,7 +185,7 @@ close :: proc(encoded_path: string) -> common.Error {
 		return .InvalidRequest
 	}
 
-	delete(document.path, storage.allocator)
+	delete(document.filepath, storage.allocator)
 	delete(document.text, storage.allocator)
 
 	// The key in the map was cloned with persistent allocator, need to free it

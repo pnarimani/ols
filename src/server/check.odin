@@ -11,7 +11,7 @@ check_unused_imports :: proc(doc_ctx: documents.Document, config: ^common.Config
 		return
 	}
 
-	path := doc_ctx.path
+	path := doc_ctx.filepath
 
 	when ODIN_OS == .Windows {
 		path = common.get_case_sensitive_path(path, context.temp_allocator)

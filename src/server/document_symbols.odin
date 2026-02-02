@@ -15,8 +15,8 @@ get_document_symbols :: proc(doc_ctx: documents.Document) -> []DocumentSymbol {
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		common.make_encoded_path(doc_ctx.path, context.temp_allocator),
-		doc_ctx.fullpath,
+		common.make_encoded_path(doc_ctx.filepath, context.temp_allocator),
+		doc_ctx.filepath,
 	)
 
 	get_globals(doc_ctx.ast, &ast_context)
