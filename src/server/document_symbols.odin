@@ -8,7 +8,7 @@ import "src:common"
 
 get_document_symbols :: proc(doc_ctx: DocumentContext) -> []DocumentSymbol {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
+	request_symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

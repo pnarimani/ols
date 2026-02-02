@@ -108,7 +108,7 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 			return {}, false
 		}
 	} else if position_context.field_value != nil &&
-	   !is_expr_basic_lit(position_context.field_value.field) &&
+		!analysis.is_expr_basic_lit(position_context.field_value.field) &&
 	   position_in_node(position_context.field_value.field, position_context.position) {
 		if position_context.comp_lit != nil {
 			if resolved, ok := resolve_location_comp_lit_field(&ast_context, &position_context); ok {

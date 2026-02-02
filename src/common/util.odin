@@ -4,6 +4,7 @@ import "core:bytes"
 import "core:fmt"
 import "core:log"
 import "core:mem"
+import "core:odin/ast"
 import "core:os"
 import "core:os/os2"
 import "core:path/filepath"
@@ -136,3 +137,16 @@ get_executable_path :: proc(allocator := context.temp_allocator) -> string {
 	return exe_dir
 }
 
+get_enum_field_name_range_value :: proc(n: ^ast.Expr, document_text: string) -> (string, Range, ^ast.Expr) {
+	if ident, ok := n.derived.(^ast.Ident); ok {
+		return ident.name, get_token_range(ident, document_text), nil
+	}
+	if field, ok := n.derived.(^ast.Field_Value); ok {
+		if ident, ok := field.field.derived.(^ast.Ident); ok {
+			return ident.name, get_token_range(ident, document_text), field.value
+		} else if binary, ok := field.field.derived.(^ast.Binary_Expr); ok {
+			return binary.left.derived.(^ast.Ident).name, get_token_range(binary, document_text), binary.right
+		}
+	}
+	return "", {}, nil
+}

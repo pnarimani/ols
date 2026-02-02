@@ -1,3 +1,4 @@
+#+feature using-stmt
 package server
 
 import "core:mem"
@@ -15,6 +16,7 @@ write_struct_type :: proc(
 	attributes: []^ast.Attribute,
 	base_using_index: int,
 ) {
+	using analysis
 	b.poly = v.poly_params
 	// We clone this so we don't override docs and comments with temp allocated docs and comments
 	v := cast(^ast.Struct_Type)analysis.clone_node(v, nil)
@@ -343,54 +345,54 @@ free_symbol :: proc(symbol: analysis.Symbol, allocator: mem.Allocator) {
 
 	switch v in symbol.value {
 	case analysis.SymbolMatrixValue:
-		free_ast(v.expr, allocator)
-		free_ast(v.x, allocator)
-		free_ast(v.y, allocator)
+		analysis.free_ast(v.expr, allocator)
+		analysis.free_ast(v.x, allocator)
+		analysis.free_ast(v.y, allocator)
 	case analysis.SymbolMultiPointerValue:
-		free_ast(v.expr, allocator)
+		analysis.free_ast(v.expr, allocator)
 	case analysis.SymbolProcedureValue:
-		free_ast(v.return_types, allocator)
-		free_ast(v.arg_types, allocator)
+		analysis.free_ast(v.return_types, allocator)
+		analysis.free_ast(v.arg_types, allocator)
 	case analysis.SymbolStructValue:
 		delete(v.names, allocator)
 		delete(v.ranges, allocator)
-		free_ast(v.types, allocator)
+		analysis.free_ast(v.types, allocator)
 	case analysis.SymbolGenericValue:
-		free_ast(v.expr, allocator)
+		analysis.free_ast(v.expr, allocator)
 	case analysis.SymbolProcedureGroupValue:
-		free_ast(v.group, allocator)
+		analysis.free_ast(v.group, allocator)
 	case analysis.SymbolEnumValue:
 		delete(v.names, allocator)
 		delete(v.ranges, allocator)
 	case analysis.SymbolUnionValue:
-		free_ast(v.types, allocator)
+		analysis.free_ast(v.types, allocator)
 	case analysis.SymbolBitSetValue:
-		free_ast(v.expr, allocator)
+		analysis.free_ast(v.expr, allocator)
 	case analysis.SymbolDynamicArrayValue:
-		free_ast(v.expr, allocator)
+		analysis.free_ast(v.expr, allocator)
 	case analysis.SymbolFixedArrayValue:
-		free_ast(v.expr, allocator)
-		free_ast(v.len, allocator)
+		analysis.free_ast(v.expr, allocator)
+		analysis.free_ast(v.len, allocator)
 	case analysis.SymbolSliceValue:
-		free_ast(v.expr, allocator)
+		analysis.free_ast(v.expr, allocator)
 	case analysis.SymbolBasicValue:
-		free_ast(v.ident, allocator)
+		analysis.free_ast(v.ident, allocator)
 	case analysis.SymbolPolyTypeValue:
-		free_ast(v.ident, allocator)
+		analysis.free_ast(v.ident, allocator)
 	case analysis.SymbolAggregateValue:
 		for symbol in v.symbols {
 			free_symbol(symbol, allocator)
 		}
 	case analysis.SymbolMapValue:
-		free_ast(v.key, allocator)
-		free_ast(v.value, allocator)
+		analysis.free_ast(v.key, allocator)
+		analysis.free_ast(v.value, allocator)
 	case analysis.SymbolUntypedValue:
 		delete(v.tok.text)
 	case analysis.SymbolPackageValue:
 	case analysis.SymbolBitFieldValue:
 		delete(v.names, allocator)
 		delete(v.ranges, allocator)
-		free_ast(v.types, allocator)
+		analysis.free_ast(v.types, allocator)
 	}
 }
 
@@ -545,6 +547,7 @@ symbol_to_expr :: proc(symbol: analysis.Symbol, file: string) -> ^ast.Expr {
 
 // TODO: these will need ranges of the fields as well
 construct_struct_field_symbol :: proc(symbol: ^analysis.Symbol, parent_name: string, value: analysis.SymbolStructValue, index: int) {
+	using analysis
 	symbol.type_pkg = symbol.pkg
 	symbol.type_name = symbol.name
 	symbol.name = value.names[index]
@@ -561,6 +564,7 @@ construct_bit_field_field_symbol :: proc(
 	value: analysis.SymbolBitFieldValue,
 	index: int,
 ) {
+	using analysis
 	symbol.name = value.names[index]
 	symbol.parent_name = parent_name
 	symbol.type = .Field
@@ -571,6 +575,7 @@ construct_bit_field_field_symbol :: proc(
 }
 
 construct_enum_field_symbol :: proc(symbol: ^analysis.Symbol, value: analysis.SymbolEnumValue, index: int) {
+	using analysis
 	symbol.type = .Field
 	symbol.doc = get_comment(value.docs[index], context.temp_allocator)
 	symbol.comment = get_comment(value.comments[index], context.temp_allocator)

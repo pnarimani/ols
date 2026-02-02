@@ -1,5 +1,5 @@
 #+feature using-stmt
-package server
+package analysis
 
 import "core:mem"
 import "core:odin/ast"
@@ -7,11 +7,10 @@ import "core:path/filepath"
 import path "core:path/slashpath"
 import "core:strings"
 
-import "src:analysis"
 import "src:common"
 
 collect_procedure_fields :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	proc_type: ^ast.Proc_Type,
 	arg_list: ^ast.Field_List,
 	return_list: ^ast.Field_List,
@@ -19,14 +18,14 @@ collect_procedure_fields :: proc(
 	attributes: []^ast.Attribute,
 	inlining: ast.Proc_Inlining,
 	where_clauses: []^ast.Expr,
-) -> analysis.SymbolProcedureValue {
+) -> SymbolProcedureValue {
 	returns := make([dynamic]^ast.Field, 0)
 	args := make([dynamic]^ast.Field, 0)
 	attrs := make([dynamic]^ast.Attribute, 0)
 
 	if return_list != nil {
 		for ret in return_list.list {
-			cloned := cast(^ast.Field)analysis.clone_type(ret, &collection.unique_strings)
+			cloned := cast(^ast.Field)clone_type(ret, &collection.unique_strings)
 			replace_package_alias(cloned, package_map, collection)
 			append(&returns, cloned)
 		}
@@ -34,49 +33,49 @@ collect_procedure_fields :: proc(
 
 	if arg_list != nil {
 		for arg in arg_list.list {
-			cloned := cast(^ast.Field)analysis.clone_type(arg, &collection.unique_strings)
+			cloned := cast(^ast.Field)clone_type(arg, &collection.unique_strings)
 			replace_package_alias(cloned, package_map, collection)
 			append(&args, cloned)
 		}
 	}
 
 	for attr in attributes {
-		cloned := cast(^ast.Attribute)analysis.clone_type(attr, &collection.unique_strings)
+		cloned := cast(^ast.Attribute)clone_type(attr, &collection.unique_strings)
 		append(&attrs, cloned)
 	}
 
-	value := analysis.SymbolProcedureValue {
+	value := SymbolProcedureValue {
 		return_types       = returns[:],
 		orig_return_types  = returns[:],
 		arg_types          = args[:],
 		orig_arg_types     = args[:],
 		generic            = is_procedure_generic(proc_type),
 		diverging          = proc_type.diverging,
-		calling_convention = analysis.clone_calling_convention(proc_type.calling_convention, &collection.unique_strings),
+		calling_convention = clone_calling_convention(proc_type.calling_convention, &collection.unique_strings),
 		tags               = proc_type.tags,
 		attributes         = attrs[:],
 		inlining           = inlining,
-		where_clauses      = analysis.clone_array(where_clauses, &collection.unique_strings),
+		where_clauses      = clone_array(where_clauses, &collection.unique_strings),
 	}
 
 	return value
 }
 
 collect_struct_fields :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	struct_type: ^ast.Struct_Type,
 	package_map: map[string]string,
 	file: ast.File,
-) -> analysis.SymbolStructValue {
-	b := analysis.symbol_struct_value_builder_make()
+) -> SymbolStructValue {
+	b := symbol_struct_value_builder_make()
 	construct_struct_field_docs(file, struct_type)
 
 	for field in struct_type.fields.list {
 		for n in field.names {
 			if ident, ok := n.derived.(^ast.Ident); ok {
-				append(&b.names, analysis.get_index_unique_string(collection, ident.name))
+				append(&b.names, get_index_unique_string(collection, ident.name))
 
-				cloned := analysis.clone_type(field.type, &collection.unique_strings)
+				cloned := clone_type(field.type, &collection.unique_strings)
 				replace_package_alias(cloned, package_map, collection)
 				append(&b.types, cloned)
 
@@ -87,18 +86,18 @@ collect_struct_fields :: proc(
 
 				append(&b.ranges, common.get_token_range(n, file.src))
 
-				cloned_docs := analysis.clone_type(field.docs, &collection.unique_strings)
+				cloned_docs := clone_type(field.docs, &collection.unique_strings)
 				append(&b.docs, cloned_docs)
-				cloned_comment := analysis.clone_type(field.comment, &collection.unique_strings)
+				cloned_comment := clone_type(field.comment, &collection.unique_strings)
 				append(&b.comments, cloned_comment)
 				append(&b.from_usings, -1)
 			}
 		}
 	}
 
-	b.align = analysis.clone_expr(struct_type.align, &collection.unique_strings)
-	b.max_field_align = analysis.clone_expr(struct_type.max_field_align, &collection.unique_strings)
-	b.min_field_align = analysis.clone_expr(struct_type.min_field_align, &collection.unique_strings)
+	b.align = clone_expr(struct_type.align, &collection.unique_strings)
+	b.max_field_align = clone_expr(struct_type.max_field_align, &collection.unique_strings)
+	b.min_field_align = clone_expr(struct_type.min_field_align, &collection.unique_strings)
 	if struct_type.is_all_or_none {
 		b.tags |= {.Is_All_Or_None}
 	}
@@ -112,21 +111,21 @@ collect_struct_fields :: proc(
 		b.tags |= {.Is_Raw_Union}
 	}
 
-	b.poly = cast(^ast.Field_List)analysis.clone_type(struct_type.poly_params, &collection.unique_strings)
+	b.poly = cast(^ast.Field_List)clone_type(struct_type.poly_params, &collection.unique_strings)
 	for clause in struct_type.where_clauses {
-		append(&b.where_clauses, analysis.clone_expr(clause, &collection.unique_strings))
+		append(&b.where_clauses, clone_expr(clause, &collection.unique_strings))
 	}
-	value := analysis.to_symbol_struct_value(b)
+	value := to_symbol_struct_value(b)
 
 	return value
 }
 
 collect_bit_field_fields :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	bit_field_type: ^ast.Bit_Field_Type,
 	package_map: map[string]string,
 	file: ast.File,
-) -> analysis.SymbolBitFieldValue {
+) -> SymbolBitFieldValue {
 	construct_bit_field_field_docs(file, bit_field_type)
 	names := make([dynamic]string, 0, len(bit_field_type.fields))
 	types := make([dynamic]^ast.Expr, 0, len(bit_field_type.fields))
@@ -137,21 +136,21 @@ collect_bit_field_fields :: proc(
 
 	for field, i in bit_field_type.fields {
 		if ident, ok := field.name.derived.(^ast.Ident); ok {
-			append(&names, analysis.get_index_unique_string(collection, ident.name))
+			append(&names, get_index_unique_string(collection, ident.name))
 
-			cloned := analysis.clone_type(field.type, &collection.unique_strings)
+			cloned := clone_type(field.type, &collection.unique_strings)
 			replace_package_alias(cloned, package_map, collection)
 			append(&types, cloned)
 
 			append(&ranges, common.get_token_range(ident, file.src))
-			append(&docs, analysis.clone_comment_group(field.docs, &collection.unique_strings))
-			append(&comments, analysis.clone_comment_group(field.comments, &collection.unique_strings))
-			append(&bit_sizes, analysis.clone_type(field.bit_size, &collection.unique_strings))
+			append(&docs, clone_comment_group(field.docs, &collection.unique_strings))
+			append(&comments, clone_comment_group(field.comments, &collection.unique_strings))
+			append(&bit_sizes, clone_type(field.bit_size, &collection.unique_strings))
 		}
 	}
 
-	value := analysis.SymbolBitFieldValue {
-		backing_type = analysis.clone_type(bit_field_type.backing_type, &collection.unique_strings),
+	value := SymbolBitFieldValue {
+		backing_type = clone_type(bit_field_type.backing_type, &collection.unique_strings),
 		names        = names[:],
 		types        = types[:],
 		ranges       = ranges[:],
@@ -164,31 +163,31 @@ collect_bit_field_fields :: proc(
 }
 
 collect_enum_fields :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	enum_type: ast.Enum_Type,
 	package_map: map[string]string,
 	file: ast.File,
-) -> analysis.SymbolEnumValue {
+) -> SymbolEnumValue {
 	names := make([dynamic]string, 0)
 	ranges := make([dynamic]common.Range, 0)
 	values := make([dynamic]^ast.Expr, 0)
 
 	for n in enum_type.fields {
-		name, range, value := get_enum_field_name_range_value(n, file.src)
+		name, range, value := common.get_enum_field_name_range_value(n, file.src)
 		append(&names, strings.clone(name))
 		append(&ranges, range)
-		append(&values, analysis.clone_type(value, &collection.unique_strings))
+		append(&values, clone_type(value, &collection.unique_strings))
 	}
 
 	temp_docs, temp_comments := get_field_docs_and_comments(file, enum_type.fields)
-	docs := analysis.clone_dynamic_array(temp_docs, &collection.unique_strings)
-	comments := analysis.clone_dynamic_array(temp_comments, &collection.unique_strings)
+	docs := clone_dynamic_array(temp_docs, &collection.unique_strings)
+	comments := clone_dynamic_array(temp_comments, &collection.unique_strings)
 
-	value := analysis.SymbolEnumValue {
+	value := SymbolEnumValue {
 		names     = names[:],
 		ranges    = ranges[:],
 		values    = values[:],
-		base_type = analysis.clone_type(enum_type.base_type, &collection.unique_strings),
+		base_type = clone_type(enum_type.base_type, &collection.unique_strings),
 		comments  = comments[:],
 		docs      = docs[:],
 	}
@@ -197,140 +196,140 @@ collect_enum_fields :: proc(
 }
 
 collect_union_fields :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	union_type: ast.Union_Type,
 	package_map: map[string]string,
 	file: ast.File,
-) -> analysis.SymbolUnionValue {
+) -> SymbolUnionValue {
 	types := make([dynamic]^ast.Expr, 0)
 
 	for variant in union_type.variants {
-		cloned := analysis.clone_type(variant, &collection.unique_strings)
+		cloned := clone_type(variant, &collection.unique_strings)
 		replace_package_alias(cloned, package_map, collection)
 		append(&types, cloned)
 	}
 
 	temp_docs, temp_comments := get_field_docs_and_comments(file, union_type.variants)
-	docs := analysis.clone_dynamic_array(temp_docs, &collection.unique_strings)
-	comments := analysis.clone_dynamic_array(temp_comments, &collection.unique_strings)
+	docs := clone_dynamic_array(temp_docs, &collection.unique_strings)
+	comments := clone_dynamic_array(temp_comments, &collection.unique_strings)
 
-	value := analysis.SymbolUnionValue {
+	value := SymbolUnionValue {
 		types         = types[:],
-		poly          = cast(^ast.Field_List)analysis.clone_type(union_type.poly_params, &collection.unique_strings),
+		poly          = cast(^ast.Field_List)clone_type(union_type.poly_params, &collection.unique_strings),
 		comments      = comments[:],
 		docs          = docs[:],
 		kind          = union_type.kind,
-		align         = analysis.clone_type(union_type.align, &collection.unique_strings),
-		where_clauses = analysis.clone_array(union_type.where_clauses, &collection.unique_strings),
+		align         = clone_type(union_type.align, &collection.unique_strings),
+		where_clauses = clone_array(union_type.where_clauses, &collection.unique_strings),
 	}
 
 	return value
 }
 
 collect_bitset_field :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	bitset_type: ast.Bit_Set_Type,
 	package_map: map[string]string,
-) -> analysis.SymbolBitSetValue {
-	cloned := analysis.clone_type(bitset_type.elem, &collection.unique_strings)
+) -> SymbolBitSetValue {
+	cloned := clone_type(bitset_type.elem, &collection.unique_strings)
 	replace_package_alias(cloned, package_map, collection)
 
-	return analysis.SymbolBitSetValue{expr = cloned}
+	return SymbolBitSetValue{expr = cloned}
 }
 
 collect_slice :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	array: ast.Array_Type,
 	package_map: map[string]string,
-) -> analysis.SymbolSliceValue {
-	elem := analysis.clone_type(array.elem, &collection.unique_strings)
+) -> SymbolSliceValue {
+	elem := clone_type(array.elem, &collection.unique_strings)
 
 	replace_package_alias(elem, package_map, collection)
 
-	return analysis.SymbolSliceValue{expr = elem}
+	return SymbolSliceValue{expr = elem}
 }
 
 collect_array :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	array: ast.Array_Type,
 	package_map: map[string]string,
-) -> analysis.SymbolFixedArrayValue {
-	elem := analysis.clone_type(array.elem, &collection.unique_strings)
-	len := analysis.clone_type(array.len, &collection.unique_strings)
+) -> SymbolFixedArrayValue {
+	elem := clone_type(array.elem, &collection.unique_strings)
+	len := clone_type(array.len, &collection.unique_strings)
 
 	replace_package_alias(elem, package_map, collection)
 	replace_package_alias(len, package_map, collection)
 
-	return analysis.SymbolFixedArrayValue{expr = elem, len = len}
+	return SymbolFixedArrayValue{expr = elem, len = len}
 }
 
-collect_map :: proc(collection: ^analysis.SymbolCollection, m: ast.Map_Type, package_map: map[string]string) -> analysis.SymbolMapValue {
-	key := analysis.clone_type(m.key, &collection.unique_strings)
-	value := analysis.clone_type(m.value, &collection.unique_strings)
+collect_map :: proc(collection: ^SymbolCollection, m: ast.Map_Type, package_map: map[string]string) -> SymbolMapValue {
+	key := clone_type(m.key, &collection.unique_strings)
+	value := clone_type(m.value, &collection.unique_strings)
 
 	replace_package_alias(key, package_map, collection)
 	replace_package_alias(value, package_map, collection)
 
-	return analysis.SymbolMapValue{key = key, value = value}
+	return SymbolMapValue{key = key, value = value}
 }
 
 collect_dynamic_array :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	array: ast.Dynamic_Array_Type,
 	package_map: map[string]string,
-) -> analysis.SymbolDynamicArrayValue {
-	elem := analysis.clone_type(array.elem, &collection.unique_strings)
+) -> SymbolDynamicArrayValue {
+	elem := clone_type(array.elem, &collection.unique_strings)
 
 	replace_package_alias(elem, package_map, collection)
 
-	return analysis.SymbolDynamicArrayValue{expr = elem}
+	return SymbolDynamicArrayValue{expr = elem}
 }
 
 collect_matrix :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	mat: ast.Matrix_Type,
 	package_map: map[string]string,
-) -> analysis.SymbolMatrixValue {
-	elem := analysis.clone_type(mat.elem, &collection.unique_strings)
+) -> SymbolMatrixValue {
+	elem := clone_type(mat.elem, &collection.unique_strings)
 
-	y := analysis.clone_type(mat.column_count, &collection.unique_strings)
+	y := clone_type(mat.column_count, &collection.unique_strings)
 
-	x := analysis.clone_type(mat.row_count, &collection.unique_strings)
+	x := clone_type(mat.row_count, &collection.unique_strings)
 
 	replace_package_alias(elem, package_map, collection)
 	replace_package_alias(x, package_map, collection)
 	replace_package_alias(y, package_map, collection)
 
-	return analysis.SymbolMatrixValue{expr = elem, x = x, y = y}
+	return SymbolMatrixValue{expr = elem, x = x, y = y}
 }
 
 collect_multi_pointer :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	array: ast.Multi_Pointer_Type,
 	package_map: map[string]string,
-) -> analysis.SymbolMultiPointerValue {
-	elem := analysis.clone_type(array.elem, &collection.unique_strings)
+) -> SymbolMultiPointerValue {
+	elem := clone_type(array.elem, &collection.unique_strings)
 
 	replace_package_alias(elem, package_map, collection)
 
-	return analysis.SymbolMultiPointerValue{expr = elem}
+	return SymbolMultiPointerValue{expr = elem}
 }
 
 
 collect_generic :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	expr: ^ast.Expr,
 	package_map: map[string]string,
 	uri: string,
-) -> analysis.SymbolGenericValue {
+) -> SymbolGenericValue {
 	//Bit hacky right now, but it's hopefully a temporary solution.
 	//In the c package code it uses a documentation package(builtin).
 	if selector, ok := expr.derived.(^ast.Selector_Expr); ok {
 		if ident, ok := selector.expr.derived.(^ast.Ident); ok {
 			if ident.name == "builtin" && strings.contains(uri, "/core/c/c.odin") {
-				cloned := analysis.clone_type(selector.field, &collection.unique_strings)
+				cloned := clone_type(selector.field, &collection.unique_strings)
 				replace_package_alias(cloned, package_map, collection)
-				value := analysis.SymbolGenericValue {
+				value := SymbolGenericValue {
 					expr = cloned,
 				}
 				return value
@@ -338,10 +337,10 @@ collect_generic :: proc(
 		}
 	}
 
-	cloned := analysis.clone_type(expr, &collection.unique_strings)
+	cloned := clone_type(expr, &collection.unique_strings)
 	replace_package_alias(cloned, package_map, collection)
 
-	value := analysis.SymbolGenericValue {
+	value := SymbolGenericValue {
 		expr = cloned,
 	}
 
@@ -349,8 +348,8 @@ collect_generic :: proc(
 }
 
 add_comp_lit_fields :: proc(
-	collection: ^analysis.SymbolCollection,
-	generic: ^analysis.SymbolGenericValue,
+	collection: ^SymbolCollection,
+	generic: ^SymbolGenericValue,
 	comp_lit_type: ^ast.Comp_Lit,
 	package_map: map[string]string,
 	file: ast.File,
@@ -360,7 +359,7 @@ add_comp_lit_fields :: proc(
 	for elem in comp_lit_type.elems {
 		if field_value, ok := elem.derived.(^ast.Field_Value); ok {
 			if ident, ok := field_value.field.derived.(^ast.Ident); ok {
-				name := analysis.get_index_unique_string(collection, ident.name)
+				name := get_index_unique_string(collection, ident.name)
 				append(&names, name)
 				append(&ranges, common.get_token_range(field_value, file.src))
 			}
@@ -375,12 +374,12 @@ add_comp_lit_fields :: proc(
 	This is used by the fake methods feature to hide individual procs
 	when the proc group should be shown instead.
 */
-record_proc_group_members :: proc(collection: ^analysis.SymbolCollection, group: ^ast.Proc_Group, pkg_name: string) {
-	pkg := analysis.get_or_create_package(collection, pkg_name)
+record_proc_group_members :: proc(collection: ^SymbolCollection, group: ^ast.Proc_Group, pkg_name: string) {
+	pkg := get_or_create_package(collection, pkg_name)
 
 	for arg in group.args {
 		name := get_proc_group_member_name(arg) or_continue
-		pkg.proc_group_members[analysis.get_index_unique_string(collection, name)] = true
+		pkg.proc_group_members[get_index_unique_string(collection, name)] = true
 	}
 }
 
@@ -401,14 +400,14 @@ get_proc_group_member_name :: proc(expr: ^ast.Expr) -> (name: string, ok: bool) 
 /*
 	Collects a procedure as a fake method if it's not part of a proc group.
 */
-collect_method :: proc(collection: ^analysis.SymbolCollection, symbol: analysis.Symbol) {
+collect_method :: proc(collection: ^SymbolCollection, symbol: Symbol) {
 	pkg := &collection.packages[symbol.pkg]
 
 	if symbol.name in pkg.proc_group_members {
 		return
 	}
 
-	value, ok := symbol.value.(analysis.SymbolProcedureValue)
+	value, ok := symbol.value.(SymbolProcedureValue)
 	if !ok {
 		return
 	}
@@ -428,10 +427,10 @@ collect_method :: proc(collection: ^analysis.SymbolCollection, symbol: analysis.
 	The proc group is registered as a method for each distinct first-argument type
 	across all its members.
 */
-collect_proc_group_method :: proc(collection: ^analysis.SymbolCollection, symbol: analysis.Symbol) {
+collect_proc_group_method :: proc(collection: ^SymbolCollection, symbol: Symbol) {
 	pkg := &collection.packages[symbol.pkg]
 
-	group_value, ok := symbol.value.(analysis.SymbolProcedureGroupValue)
+	group_value, ok := symbol.value.(SymbolProcedureGroupValue)
 	if !ok {
 		return
 	}
@@ -442,7 +441,7 @@ collect_proc_group_method :: proc(collection: ^analysis.SymbolCollection, symbol
 	}
 
 	// Track which method keys we've already registered to avoid duplicates
-	registered_methods := make(map[analysis.Method]bool, len(proc_group.args), context.temp_allocator)
+	registered_methods := make(map[Method]bool, len(proc_group.args), context.temp_allocator)
 
 	// Register the proc group as a method for each distinct first-argument type
 	for member_expr in proc_group.args {
@@ -456,7 +455,7 @@ collect_proc_group_method :: proc(collection: ^analysis.SymbolCollection, symbol
 			continue
 		}
 
-		member_proc, is_proc := member_symbol.value.(analysis.SymbolProcedureValue)
+		member_proc, is_proc := member_symbol.value.(SymbolProcedureValue)
 		if !is_proc || len(member_proc.arg_types) == 0 {
 			continue
 		}
@@ -475,11 +474,11 @@ collect_proc_group_method :: proc(collection: ^analysis.SymbolCollection, symbol
 
 @(private = "file")
 get_method_from_first_arg :: proc(
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 	first_arg_type: ^ast.Expr,
 	default_pkg: string,
 ) -> (
-	method: analysis.Method,
+	method: Method,
 	ok: bool,
 ) {
 	expr, _, unwrap_ok := unwrap_pointer_ident(first_arg_type)
@@ -493,21 +492,36 @@ get_method_from_first_arg :: proc(
 		if !is_ident {
 			return {}, false
 		}
-		method.pkg = analysis.get_index_unique_string(collection, ident.name)
-		method.name = analysis.get_index_unique_string(collection, v.field.name)
+		method.pkg = get_index_unique_string(collection, ident.name)
+		method.name = get_index_unique_string(collection, v.field.name)
 	case ^ast.Ident:
 		if is_builtin_type_name(v.name) {
 			method.pkg = "$builtin"
 		} else {
 			method.pkg = default_pkg
 		}
-		method.name = analysis.get_index_unique_string(collection, v.name)
+		method.name = get_index_unique_string(collection, v.name)
 	case:
 		return {}, false
 	}
 
 	return method, true
 }
+
+// odinfmt: disable
+untyped_map: [SymbolUntypedValueType][]string = {
+	.Integer    = {
+		"int", "uint", "u8", "i8", "u16", "i16", "u32", "i32", "u64", "i64", "u128", "i128", "byte",
+		"i16le", "i16be", "i32le", "i32be", "i64le", "i64be", "i128le", "i128be",
+		"u16le", "u16be", "u32le", "u32be", "u64le", "u64be", "u128le", "u128be",
+	},
+	.Bool       = {"bool", "b8", "b16", "b32", "b64"},
+	.Float      = {"f16", "f32", "f64", "f16le", "f16be", "f32le", "f32be", "f64le", "f64be"},
+	.String     = {"string", "cstring"},
+	.Complex    = {"complex32", "complex64", "complex128"},
+	.Quaternion = {"quaternion64", "quaternion128", "quaternion256"},
+}
+// odinfmt: enable
 
 is_builtin_type_name :: proc(name: string) -> bool {
 	for names in untyped_map {
@@ -526,32 +540,32 @@ is_builtin_type_name :: proc(name: string) -> bool {
 }
 
 @(private = "file")
-add_symbol_to_method :: proc(collection: ^analysis.SymbolCollection, pkg: ^analysis.SymbolPackage, method: analysis.Method, symbol: analysis.Symbol) {
+add_symbol_to_method :: proc(collection: ^SymbolCollection, pkg: ^SymbolPackage, method: Method, symbol: Symbol) {
 	symbols := &pkg.methods[method]
 	if symbols == nil {
-		pkg.methods[method] = make([dynamic]analysis.Symbol)
+		pkg.methods[method] = make([dynamic]Symbol)
 		symbols = &pkg.methods[method]
 	}
 	append(symbols, symbol)
 }
 
-collect_objc :: proc(collection: ^analysis.SymbolCollection, attributes: []^ast.Attribute, symbol: analysis.Symbol) {
+collect_objc :: proc(collection: ^SymbolCollection, attributes: []^ast.Attribute, symbol: Symbol) {
 	pkg := &collection.packages[symbol.pkg]
 
-	if value, ok := symbol.value.(analysis.SymbolProcedureValue); ok {
+	if value, ok := symbol.value.(SymbolProcedureValue); ok {
 		objc_name, found_objc_name := get_attribute_objc_name(attributes)
 
 		if objc_type := get_attribute_objc_type(attributes); objc_type != nil && found_objc_name {
 
 			if struct_ident, ok := objc_type.derived.(^ast.Ident); ok {
-				struct_name := analysis.get_index_unique_string_collection(collection, struct_ident.name)
+				struct_name := get_index_unique_string_collection(collection, struct_ident.name)
 
 				objc_struct := &pkg.objc_structs[struct_name]
 
 				if objc_struct == nil {
 					pkg.objc_structs[struct_name] = {}
 					objc_struct = &pkg.objc_structs[struct_name]
-					objc_struct.functions = make([dynamic]analysis.ObjcFunction, 0, 10)
+					objc_struct.functions = make([dynamic]ObjcFunction, 0, 10)
 					objc_struct.ranges = make([dynamic]common.Range, 0, 10)
 					objc_struct.pkg = symbol.pkg
 				}
@@ -560,8 +574,8 @@ collect_objc :: proc(collection: ^analysis.SymbolCollection, attributes: []^ast.
 
 				append(
 					&objc_struct.functions,
-					analysis.ObjcFunction {
-						logical_name = analysis.get_index_unique_string_collection(collection, objc_name),
+					ObjcFunction {
+						logical_name = get_index_unique_string_collection(collection, objc_name),
 						physical_name = symbol.name,
 					},
 				)
@@ -570,8 +584,8 @@ collect_objc :: proc(collection: ^analysis.SymbolCollection, attributes: []^ast.
 	}
 }
 
-collect_imports :: proc(collection: ^analysis.SymbolCollection, file: ast.File, directory: string) {
-	_pkg := analysis.get_index_unique_string(collection, directory)
+collect_imports :: proc(collection: ^SymbolCollection, file: ast.File, directory: string) {
+	_pkg := get_index_unique_string(collection, directory)
 
 	if _pkg, ok := collection.packages[_pkg]; ok {
 
@@ -580,17 +594,17 @@ collect_imports :: proc(collection: ^analysis.SymbolCollection, file: ast.File, 
 }
 
 
-collect_symbols :: proc(collection: ^analysis.SymbolCollection, file: ast.File, uri: string) -> common.Error {
+collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: string) -> common.Error {
 	forward, _ := filepath.to_slash(file.fullpath, context.temp_allocator)
 	directory := path.dir(forward, context.temp_allocator)
 	package_map := get_package_mapping(file, collection.config, directory)
 	exprs := collect_globals(file)
 
 	for expr in exprs {
-		symbol: analysis.Symbol
+		symbol: Symbol
 
 		token: ast.Node
-		token_type: analysis.SymbolType
+		token_type: SymbolType
 
 		name := expr.name
 
@@ -619,9 +633,9 @@ collect_symbols :: proc(collection: ^analysis.SymbolCollection, file: ast.File, 
 				allocator = context.temp_allocator,
 			)
 			intrinsics_path, _ = filepath.to_slash(intrinsics_path, context.temp_allocator)
-			symbol.pkg = analysis.get_index_unique_string(collection, intrinsics_path)
+			symbol.pkg = get_index_unique_string(collection, intrinsics_path)
 		} else {
-			symbol.pkg = analysis.get_index_unique_string(collection, directory)
+			symbol.pkg = get_index_unique_string(collection, directory)
 		}
 
 		#partial switch v in col_expr.derived {
@@ -668,8 +682,8 @@ collect_symbols :: proc(collection: ^analysis.SymbolCollection, file: ast.File, 
 		case ^ast.Proc_Group:
 			token = v^
 			token_type = .Function
-			symbol.value = analysis.SymbolProcedureGroupValue {
-				group = analysis.clone_type(col_expr, &collection.unique_strings),
+			symbol.value = SymbolProcedureGroupValue {
+				group = clone_type(col_expr, &collection.unique_strings),
 			}
 			// Record proc group members for fake methods feature
 			if collection.config != nil && collection.config.enable_fake_method {
@@ -732,7 +746,7 @@ collect_symbols :: proc(collection: ^analysis.SymbolCollection, file: ast.File, 
 				continue
 			}
 
-			ident := analysis.new_type(ast.Ident, v.pos, v.end)
+			ident := new_type(ast.Ident, v.pos, v.end)
 			ident.name = "typeid"
 
 			symbol.value = collect_generic(collection, ident, package_map, uri)
@@ -777,12 +791,12 @@ collect_symbols :: proc(collection: ^analysis.SymbolCollection, file: ast.File, 
 
 
 		symbol.range = common.get_token_range(expr.name_expr, file.src)
-		symbol.name = analysis.get_index_unique_string(collection, name)
+		symbol.name = get_index_unique_string(collection, name)
 		symbol.type = token_type
 		symbol.doc = get_comment(expr.docs)
-		symbol.uri = analysis.get_index_unique_string(collection, uri)
-		symbol.type_expr = analysis.clone_type(expr.type_expr, &collection.unique_strings)
-		symbol.value_expr = analysis.clone_type(expr.value_expr, &collection.unique_strings)
+		symbol.uri = get_index_unique_string(collection, uri)
+		symbol.type_expr = clone_type(expr.type_expr, &collection.unique_strings)
+		symbol.value_expr = clone_type(expr.value_expr, &collection.unique_strings)
 		comment, _ := get_file_comment(file, symbol.range.start.line + 1)
 		symbol.comment = get_comment(comment)
 
@@ -816,15 +830,15 @@ collect_symbols :: proc(collection: ^analysis.SymbolCollection, file: ast.File, 
 			symbol.flags |= {.Mutable}
 		}
 
-		pkg: ^analysis.SymbolPackage
+		pkg: ^SymbolPackage
 		ok: bool
 
 		if pkg, ok = &collection.packages[symbol.pkg]; !ok {
 			collection.packages[symbol.pkg] = {}
 			pkg = &collection.packages[symbol.pkg]
-			pkg.symbols = make(map[string]analysis.Symbol, 100)
-			pkg.methods = make(map[analysis.Method][dynamic]analysis.Symbol, 100)
-			pkg.objc_structs = make(map[string]analysis.ObjcStruct, 5)
+			pkg.symbols = make(map[string]Symbol, 100)
+			pkg.methods = make(map[Method][dynamic]Symbol, 100)
+			pkg.objc_structs = make(map[string]ObjcStruct, 5)
 			pkg.proc_group_members = make(map[string]bool, 10)
 		}
 
@@ -854,7 +868,7 @@ collect_symbols :: proc(collection: ^analysis.SymbolCollection, file: ast.File, 
 	so that we know which procedures are part of proc groups.
 */
 @(private = "file")
-collect_fake_methods :: proc(collection: ^analysis.SymbolCollection, exprs: []GlobalExpr, directory: string, uri: string) {
+collect_fake_methods :: proc(collection: ^SymbolCollection, exprs: []GlobalExpr, directory: string, uri: string) {
 	for expr in exprs {
 		// Determine the package name (same logic as in collect_symbols)
 		pkg_name: string
@@ -866,9 +880,9 @@ collect_fake_methods :: proc(collection: ^analysis.SymbolCollection, exprs: []Gl
 				allocator = context.temp_allocator,
 			)
 			intrinsics_path, _ = filepath.to_slash(intrinsics_path, context.temp_allocator)
-			pkg_name = analysis.get_index_unique_string(collection, intrinsics_path)
+			pkg_name = get_index_unique_string(collection, intrinsics_path)
 		} else {
-			pkg_name = analysis.get_index_unique_string(collection, directory)
+			pkg_name = get_index_unique_string(collection, directory)
 		}
 
 		pkg, ok := &collection.packages[pkg_name]
@@ -882,9 +896,9 @@ collect_fake_methods :: proc(collection: ^analysis.SymbolCollection, exprs: []Gl
 		}
 
 		#partial switch _ in symbol.value {
-		case analysis.SymbolProcedureValue:
+		case SymbolProcedureValue:
 			collect_method(collection, symbol)
-		case analysis.SymbolProcedureGroupValue:
+		case SymbolProcedureGroupValue:
 			collect_proc_group_method(collection, symbol)
 		}
 	}
@@ -962,7 +976,7 @@ replace_package_alias :: proc {
 	replace_package_alias_dynamic_array,
 }
 
-replace_package_alias_array :: proc(array: $A/[]^$T, package_map: map[string]string, collection: ^analysis.SymbolCollection) {
+replace_package_alias_array :: proc(array: $A/[]^$T, package_map: map[string]string, collection: ^SymbolCollection) {
 	for elem, i in array {
 		replace_package_alias(elem, package_map, collection)
 	}
@@ -971,18 +985,18 @@ replace_package_alias_array :: proc(array: $A/[]^$T, package_map: map[string]str
 replace_package_alias_dynamic_array :: proc(
 	array: $A/[dynamic]^$T,
 	package_map: map[string]string,
-	collection: ^analysis.SymbolCollection,
+	collection: ^SymbolCollection,
 ) {
 	for elem, i in array {
 		replace_package_alias(elem, package_map, collection)
 	}
 }
 
-replace_package_alias_expr :: proc(node: ^ast.Expr, package_map: map[string]string, collection: ^analysis.SymbolCollection) {
+replace_package_alias_expr :: proc(node: ^ast.Expr, package_map: map[string]string, collection: ^SymbolCollection) {
 	replace_package_alias_node(node, package_map, collection)
 }
 
-replace_package_alias_node :: proc(node: ^ast.Node, package_map: map[string]string, collection: ^analysis.SymbolCollection) {
+replace_package_alias_node :: proc(node: ^ast.Node, package_map: map[string]string, collection: ^SymbolCollection) {
 	using ast
 
 	if node == nil {
@@ -1012,7 +1026,7 @@ replace_package_alias_node :: proc(node: ^ast.Node, package_map: map[string]stri
 			ident := n.expr.derived.(^Ident)
 
 			if package_name, ok := package_map[ident.name]; ok {
-				ident.name = analysis.get_index_unique_string(collection, package_name)
+				ident.name = get_index_unique_string(collection, package_name)
 			}
 		} else {
 			replace_package_alias(n.expr, package_map, collection)

@@ -5,6 +5,7 @@ package server
 import "src:analysis"
 import "core:log"
 import "core:odin/ast"
+import "src:codeprint"
 
 LocalFlag :: enum {
 	Mutable, // or constant
@@ -170,7 +171,7 @@ get_generic_assignment :: proc(
 		if len(v.args) == 1 {
 			if ident, ok := v.expr.derived.(^ast.Ident); ok {
 				//Handle the old way of type casting
-				if v, ok := keyword_map[ident.name]; ok {
+				if v, ok := analysis.keyword_map[ident.name]; ok {
 					//keywords
 					type_ident := analysis.new_type(Ident, ident.pos, ident.end)
 					type_ident.name = ident.name
@@ -308,6 +309,7 @@ get_generic_assignment :: proc(
 
 get_locals_value_decl :: proc(file: ast.File, value_decl: ast.Value_Decl, ast_context: ^AstContext) {
 	using ast
+	using codeprint
 
 	if len(value_decl.names) <= 0 {
 		return
@@ -337,7 +339,7 @@ get_locals_value_decl :: proc(file: ast.File, value_decl: ast.Value_Decl, ast_co
 			}
 			value_expr: ^ast.Expr
 			if len(value_decl.values) > i {
-				if is_variable_declaration(value_decl.values[i]) {
+				if analysis.is_variable_declaration(value_decl.values[i]) {
 					flags |= {.Variable}
 					value_expr = value_decl.values[i]
 				}
@@ -386,7 +388,7 @@ get_locals_value_decl :: proc(file: ast.File, value_decl: ast.Value_Decl, ast_co
 
 		expr := results[result_i]
 		value_expr: ^ast.Expr
-		if is_variable_declaration(expr) {
+		if analysis.is_variable_declaration(expr) {
 			flags |= {.Variable}
 			if len(value_decl.values) > i {
 				value_expr = value_decl.values[i]
@@ -462,7 +464,7 @@ get_locals_stmt :: proc(
 	case ^Using_Stmt:
 		get_locals_using_stmt(v^, ast_context)
 	case ^When_Stmt:
-		if stmt, ok := get_when_block_stmt(v); ok {
+		if stmt, ok := analysis.get_when_block_stmt(v); ok {
 			get_locals_block_stmt(file, stmt^, ast_context, document_position, true)
 		}
 	case ^Case_Clause:
@@ -1061,6 +1063,7 @@ get_locals_proc_param_and_results :: proc(
 	ast_context: ^AstContext,
 	document_position: ^DocumentPositionContext,
 ) {
+	using codeprint
 	proc_lit, ok := function.derived.(^ast.Proc_Lit)
 
 	if !ok || proc_lit.body == nil {

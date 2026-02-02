@@ -1,6 +1,8 @@
+#+feature using-stmt
 package server
 
 import "src:analysis"
+import "src:codeprint"
 import "core:odin/ast"
 import "core:odin/tokenizer"
 import "core:reflect"
@@ -23,7 +25,7 @@ resolve_poly :: proc(
 	type: ^ast.Expr
 
 	poly_node := poly_node
-	poly_node, _, _ = unwrap_pointer_expr(poly_node)
+	poly_node, _, _ = analysis.unwrap_pointer_expr(poly_node)
 
 	#partial switch v in poly_node.derived {
 	case ^ast.Typeid_Type:
@@ -130,7 +132,7 @@ resolve_poly :: proc(
 		}
 	case ^ast.Dynamic_Array_Type:
 		if call_array, ok := call_node.derived.(^ast.Dynamic_Array_Type); ok {
-			if dynamic_array_is_soa(p^) != dynamic_array_is_soa(call_array^) {
+			if analysis.dynamic_array_is_soa(p^) != analysis.dynamic_array_is_soa(call_array^) {
 				return false
 			}
 
@@ -159,7 +161,7 @@ resolve_poly :: proc(
 		if call_array, ok := call_node.derived.(^ast.Array_Type); ok {
 			found := false
 
-			if array_is_soa(p^) != array_is_soa(call_array^) {
+			if analysis.array_is_soa(p^) != analysis.array_is_soa(call_array^) {
 				return false
 			}
 
@@ -202,7 +204,7 @@ resolve_poly :: proc(
 		if call_array, ok := call_node.derived.(^ast.Array_Type); ok {
 			found := false
 
-			if array_is_soa(call_array^) {
+			if analysis.array_is_soa(call_array^) {
 				return false
 			}
 
@@ -675,23 +677,6 @@ resolve_generic_function_symbol :: proc(
 	return symbol, true
 }
 
-is_procedure_generic :: proc(proc_type: ^ast.Proc_Type) -> bool {
-	if proc_type.generic {
-		return true
-	}
-
-	for param in proc_type.params.list {
-		if param.type == nil {
-			continue
-		}
-
-		if expr_contains_poly(param.type) {
-			return true
-		}
-	}
-
-	return false
-}
 
 resolve_poly_struct :: proc(ast_context: ^AstContext, b: ^analysis.SymbolStructValueBuilder, poly_params: ^ast.Field_List) {
 	if ast_context.call == nil {
@@ -705,7 +690,7 @@ resolve_poly_struct :: proc(ast_context: ^AstContext, b: ^analysis.SymbolStructV
 
 	for param in poly_params.list {
 		for name in param.names {
-			append(&b.poly_names, node_to_string(name))
+			append(&b.poly_names, codeprint.node_to_string(name))
 			if len(ast_context.call.args) <= i {
 				break
 			}
@@ -716,14 +701,14 @@ resolve_poly_struct :: proc(ast_context: ^AstContext, b: ^analysis.SymbolStructV
 
 			if ident, ok := param.type.derived.(^ast.Ident); ok {
 				poly_map[ident.name] = ast_context.call.args[i]
-				b.poly_names[i] = node_to_string(ast_context.call.args[i])
+			b.poly_names[i] = codeprint.node_to_string(ast_context.call.args[i])
 			} else if poly, ok := param.type.derived.(^ast.Typeid_Type); ok {
 				if ident, ok := name.derived.(^ast.Ident); ok {
 					poly_map[ident.name] = ast_context.call.args[i]
-					b.poly_names[i] = node_to_string(ast_context.call.args[i])
+				b.poly_names[i] = codeprint.node_to_string(ast_context.call.args[i])
 				} else if poly, ok := name.derived.(^ast.Poly_Type); ok {
 					if poly.type != nil {
-						b.poly_names[i] = node_to_string(ast_context.call.args[i])
+					b.poly_names[i] = codeprint.node_to_string(ast_context.call.args[i])
 						poly_map[poly.type.name] = ast_context.call.args[i]
 					}
 				}
@@ -836,6 +821,7 @@ resolve_poly_struct :: proc(ast_context: ^AstContext, b: ^analysis.SymbolStructV
 
 
 resolve_poly_union :: proc(ast_context: ^AstContext, poly_params: ^ast.Field_List, symbol: ^analysis.Symbol) {
+	using codeprint
 	if ast_context.call == nil {
 		return
 	}

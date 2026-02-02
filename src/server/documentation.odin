@@ -1,4 +1,5 @@
 #+feature dynamic-literals
+#+feature using-stmt
 package server
 
 import "core:fmt"
@@ -7,6 +8,7 @@ import path "core:path/slashpath"
 import "core:strings"
 
 import "src:analysis"
+import "src:codeprint"
 
 DOC_SECTION_DELIMITER :: "\n---\n"                                   // The string separating each section of documentation
 DOC_FMT_ODIN          :: "```odin\n%v\n```"                          // The format for wrapping odin code in a markdown codeblock
@@ -50,7 +52,8 @@ get_signature :: proc(ast_context: ^AstContext, symbol: analysis.Symbol, depth :
 }
 
 write_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: analysis.Symbol, depth := 0) {
-	pointer_prefix := repeat("^", symbol.pointers, ast_context.allocator)
+	using codeprint
+	pointer_prefix := codeprint.repeat("^", symbol.pointers, ast_context.allocator)
 
 	#partial switch v in symbol.value {
 	case analysis.SymbolEnumValue:
@@ -74,7 +77,7 @@ write_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: 
 		}
 		strings.write_string(sb, "enum ")
 		if v.base_type != nil {
-			build_string_node(v.base_type, sb, false)
+			codeprint.build_string_node(v.base_type, sb, false)
 			strings.write_string(sb, " ")
 		}
 		strings.write_string(sb, "{\n")
@@ -200,6 +203,7 @@ get_short_signature :: proc(ast_context: ^AstContext, symbol: analysis.Symbol) -
 }
 
 write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: analysis.Symbol) {
+	using codeprint
 	pointer_prefix := repeat("^", symbol.pointers, ast_context.allocator)
 	if .Distinct in symbol.flags {
 		strings.write_string(sb, "distinct ")
@@ -364,6 +368,7 @@ write_indent :: proc(sb: ^strings.Builder, level: int) {
 }
 
 get_enum_field_signature :: proc(value: analysis.SymbolEnumValue, index: int, allocator := context.temp_allocator) -> string {
+	using codeprint
 	sb := strings.builder_make(allocator)
 	fmt.sbprintf(&sb, ".%s", value.names[index])
 	if index < len(value.values) && value.values[index] != nil {
@@ -378,6 +383,7 @@ get_bit_field_field_signature :: proc(
 	index: int,
 	allocator := context.temp_allocator,
 ) -> string {
+	using codeprint
 	sb := strings.builder_make(allocator)
 	build_string_node(value.types[index], &sb, false)
 	strings.write_string(&sb, " | ")
@@ -387,6 +393,7 @@ get_bit_field_field_signature :: proc(
 
 
 write_proc_param_list_and_return :: proc(sb: ^strings.Builder, value: analysis.SymbolProcedureValue) {
+	using codeprint
 	strings.write_string(sb, "(")
 	for arg, i in value.orig_arg_types {
 		if .Any_Int in arg.flags {
@@ -446,13 +453,14 @@ write_procedure_symbol_signature :: proc(sb: ^strings.Builder, value: analysis.S
 			strings.write_string(sb, "#force_no_inline ")
 		}
 	}
+	using codeprint
 	strings.write_string(sb, "proc")
 	if s, ok := value.calling_convention.(string); ok && detailed_signature {
 		fmt.sbprintf(sb, " %s ", s)
 	} else if len(value.attributes) > 0 {
 		for attr in value.attributes {
 			for elem in attr.elems {
-				if ident, value, ok := unwrap_attr_elem(elem); ok {
+				if ident, value, ok := analysis.unwrap_attr_elem(elem); ok {
 					if ident.name == "default_calling_convention" {
 						strings.write_string(sb, " ")
 						build_string_node(value, sb, false)
@@ -484,6 +492,7 @@ write_procedure_symbol_signature :: proc(sb: ^strings.Builder, value: analysis.S
 }
 
 write_where_clauses :: proc(sb: ^strings.Builder, where_clauses: []^ast.Expr) {
+	using codeprint
 	if len(where_clauses) > 0 {
 		strings.write_string(sb, " where ")
 		for clause, i in where_clauses {
@@ -496,6 +505,7 @@ write_where_clauses :: proc(sb: ^strings.Builder, where_clauses: []^ast.Expr) {
 }
 
 write_struct_hover :: proc(sb: ^strings.Builder, ast_context: ^AstContext, v: analysis.SymbolStructValue, depth: int) {
+	using codeprint
 	strings.write_string(sb, "struct")
 	write_poly_list(sb, v.poly, v.poly_names)
 
@@ -612,6 +622,7 @@ write_struct_hover :: proc(sb: ^strings.Builder, ast_context: ^AstContext, v: an
 }
 
 write_poly_list :: proc(sb: ^strings.Builder, poly: ^ast.Field_List, poly_names: []string) {
+	using codeprint
 	if poly != nil {
 		poly_name_index := 0
 		strings.write_string(sb, "(")
@@ -663,6 +674,7 @@ write_node :: proc(
 	depth := 0,
 	short_signature := false,
 ) {
+	using codeprint
 	if node == nil {
 		return
 	}
@@ -756,6 +768,7 @@ write_comments :: proc(sb: ^strings.Builder, comments: []^ast.Comment_Group, ind
 }
 
 construct_symbol_information :: proc(ast_context: ^AstContext, symbol: analysis.Symbol) -> string {
+	using codeprint
 	if symbol.name in keywords_docs {
 		return symbol.name
 	}
@@ -796,6 +809,8 @@ construct_symbol_information :: proc(ast_context: ^AstContext, symbol: analysis.
 }
 
 write_symbol_attributes :: proc(sb: ^strings.Builder, symbol: analysis.Symbol) {
+	using codeprint
+	using analysis
 	// Currently only attributes for procedures are supported
 	if v, ok := symbol.value.(analysis.SymbolProcedureValue); ok {
 		pkg := path.base(symbol.pkg, false, context.temp_allocator)
@@ -881,6 +896,7 @@ write_symbol_type_information :: proc(sb: ^strings.Builder, ast_context: ^AstCon
 		return false
 	}
 
+	using codeprint
 	pointer_prefix := repeat("^", symbol.pointers, ast_context.allocator)
 
 	append_type_pkg := false

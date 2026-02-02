@@ -1,6 +1,8 @@
 #+feature dynamic-literals
+#+feature using-stmt
 package server
 
+import "src:codeprint"
 import "base:runtime"
 import "core:fmt"
 import "core:log"
@@ -412,6 +414,9 @@ handle_matching :: proc(
 	item: ^CompletionItem,
 	completion_type: Completion_Type,
 ) {
+	using analysis
+	using codeprint
+
 	should_skip :: proc(arg_symbol, result_symbol: analysis.Symbol) -> bool {
 		if v, ok := arg_symbol.value.(analysis.SymbolBasicValue); ok {
 			if v.ident.name == "any" {
@@ -703,6 +708,8 @@ get_selector_completion :: proc(
 	results: ^[dynamic]CompletionResult,
 	config: ^common.Config,
 ) -> bool {
+	using codeprint
+	using analysis
 	ast_context.current_package = ast_context.document_package
 
 	selector: analysis.Symbol
@@ -1000,6 +1007,9 @@ add_fixed_array_selector_completions :: proc(
 	field: string,
 	results: ^[dynamic]CompletionResult,
 ) {
+	using codeprint
+	using analysis
+
 	containsColor := 1
 	containsCoord := 1
 
@@ -1943,6 +1953,9 @@ get_type_switch_completion :: proc(
 ) -> bool {
 	is_incomplete := false
 
+	using codeprint
+	using analysis
+
 	used_unions := make(map[string]struct{}, 5, context.temp_allocator)
 
 	if block, ok := position_context.switch_type_stmt.body.derived.(^ast.Block_Stmt); ok {
@@ -1980,7 +1993,7 @@ get_type_switch_completion :: proc(
 					} else {
 						item.label = fmt.aprintf(
 							"%v%v.%v",
-							repeat("^", symbol.pointers, context.temp_allocator),
+							codeprint.repeat("^", symbol.pointers, context.temp_allocator),
 							get_symbol_pkg_name(ast_context, &symbol),
 							name,
 						)
@@ -2125,6 +2138,9 @@ append_magic_map_completion :: proc(
 
 	additionalTextEdits := make([]TextEdit, 1, context.temp_allocator)
 	additionalTextEdits[0] = remove_edit
+
+	using codeprint
+	using analysis
 
 	symbol_str := get_expression_string_from_position_context(position_context)
 	deref_suffix := ""
@@ -2281,7 +2297,7 @@ append_magic_array_like_completion :: proc(
 	symbol_str := get_expression_string_from_position_context(position_context)
 	deref_suffix := ""
 	if symbol.pointers > 1 {
-		deref_suffix = repeat("^", symbol.pointers - 1, context.temp_allocator)
+		deref_suffix = codeprint.repeat("^", symbol.pointers - 1, context.temp_allocator)
 	}
 	dereferenced_symbol_str := fmt.tprint(symbol_str, deref_suffix, sep = "")
 
@@ -2347,6 +2363,9 @@ append_magic_array_like_completion :: proc(
 		}
 		append(results, CompletionResult{completion_item = item})
 	}
+
+	using codeprint
+	using analysis
 
 	prefix := "&"
 	suffix := ""

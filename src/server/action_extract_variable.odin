@@ -6,6 +6,7 @@ package server
 import "core:odin/ast"
 import "core:strings"
 
+import "src:codeprint"
 import "src:common"
 
 EXTRACT_VARIABLE_ACTION_TITLE :: "Extract Variable"
@@ -623,7 +624,7 @@ get_auto_cast_type_annotation :: proc(ctx: ^ExtractVariableContext) -> string {
 	case ^ast.Value_Decl:
 		// For value declarations like `y: i32 = auto_cast x`, get the type annotation
 		if s.type != nil {
-			return node_to_string(s.type)
+			return codeprint.node_to_string(s.type)
 		}
 
 	case ^ast.Assign_Stmt:
@@ -649,7 +650,7 @@ resolve_lhs_type :: proc(ctx: ^ExtractVariableContext, lhs: ^ast.Expr) -> string
 	if ident, ok := lhs.derived.(^ast.Ident); ok {
 		if local, found := get_local(ctx.ast_context^, ident^); found {
 			if local.type_expr != nil {
-				return node_to_string(local.type_expr)
+				return codeprint.node_to_string(local.type_expr)
 			}
 		}
 	}
@@ -660,5 +661,5 @@ resolve_lhs_type :: proc(ctx: ^ExtractVariableContext, lhs: ^ast.Expr) -> string
 		return ""
 	}
 
-	return node_to_string(symbol.type_expr)
+	return codeprint.node_to_string(symbol.type_expr)
 }

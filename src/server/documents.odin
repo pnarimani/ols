@@ -33,7 +33,7 @@ make_request_context :: proc(d: ^Document, pos: common.Position, config: ^common
 		return {}, false
 	}
 
-	symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name, config)
+	symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name, config)
 
 	return RequestContext{doc_ctx = doc_ctx, config = config, position = pos, symbols = symbols}, true
 }

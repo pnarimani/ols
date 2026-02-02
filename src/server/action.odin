@@ -6,6 +6,7 @@ import "core:odin/ast"
 import path "core:path/slashpath"
 import "core:strings"
 
+import "src:analysis"
 import "src:common"
 
 CodeActionKind :: string
@@ -44,7 +45,7 @@ get_code_actions :: proc(
 	bool,
 ) {
 	// Build fresh symbols for this request
-	symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name, config)
+	symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name, config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

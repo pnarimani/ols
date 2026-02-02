@@ -60,7 +60,7 @@ setup :: proc(src: ^Source) {
 	// This includes builtins from the filesystem for builtin function testing
 	// Pass the test config so that enable_fake_method etc. are respected
 	// Pass empty string for current_package since test files don't have a real package directory
-	src.symbols = server.build_request_symbols({}, "", &src.config)
+	src.symbols = analysis.build_request_symbols({}, "", &src.config)
 
 	// Create DocumentContext for the test document
 	src.doc_ctx, _ = server.create_document_context(src.document, &src.config)
@@ -72,7 +72,7 @@ setup :: proc(src: ^Source) {
 	server.run_hint_diagnostics(src.doc_ctx, &src.config, &src.diagnostics)
 
 	// Collect symbols from the main document
-	if ret := server.collect_symbols(&src.symbols, src.doc_ctx.ast, src.document.uri.uri); ret != .None {
+	if ret := analysis.collect_symbols(&src.symbols, src.doc_ctx.ast, src.document.uri.uri); ret != .None {
 		return
 	}
 
@@ -111,7 +111,7 @@ setup :: proc(src: ^Source) {
 			panic("Parser error in test package source")
 		}
 
-		if ret := server.collect_symbols(&src.symbols, file, uri.uri); ret != .None {
+		if ret := analysis.collect_symbols(&src.symbols, file, uri.uri); ret != .None {
 			return
 		}
 	}

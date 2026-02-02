@@ -16,6 +16,7 @@ import "core:odin/tokenizer"
 import "core:unicode/utf8"
 
 import "src:analysis"
+import "src:codeprint"
 import "src:common"
 
 SemanticTokenTypes :: enum u32 {
@@ -135,7 +136,7 @@ get_semantic_tokens :: proc(
 	symbols: map[uintptr]analysis.SymbolAndNode,
 ) -> []SemanticToken {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
+	request_symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -197,7 +198,7 @@ write_semantic_node :: proc(
 		return
 	}
 
-	name := get_ast_node_string(node, builder.src)
+	name := codeprint.get_ast_node_string(node, builder.src)
 
 	write_semantic_at_pos(builder, node.pos.offset, len(name), type, modifiers)
 }

@@ -106,7 +106,7 @@ prepare_references :: proc(
 		found := false
 		for variant in position_context.union_type.variants {
 			if position_in_node(variant, position_context.position) {
-				if ident, _, ok := unwrap_pointer_ident(variant); ok {
+				if ident, _, ok := analysis.unwrap_pointer_ident(variant); ok {
 					symbol, ok = resolve_location_identifier(ast_context, ident)
 					resolve_flag = .Identifier
 
@@ -127,7 +127,7 @@ prepare_references :: proc(
 		}
 
 	} else if position_context.field_value != nil &&
-	   !is_expr_basic_lit(position_context.field_value.field) &&
+		!analysis.is_expr_basic_lit(position_context.field_value.field) &&
 	   position_in_node(position_context.field_value.field, position_context.position) {
 		if position_context.comp_lit != nil {
 			symbol, ok = resolve_location_comp_lit_field(ast_context, position_context)
@@ -309,8 +309,8 @@ resolve_references :: proc(
 		}
 
 		p := parser.Parser {
-			err   = log_error_handler,
-			warn  = log_warning_handler,
+		err   = analysis.log_error_handler,
+		warn  = analysis.log_warning_handler,
 			flags = {.Optional_Semicolons},
 		}
 
@@ -394,7 +394,7 @@ get_references :: proc(
 	bool,
 ) {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name, &common.config)
+	request_symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name, &common.config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

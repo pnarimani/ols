@@ -82,14 +82,14 @@ get_workspace_symbols :: proc(query: string) -> (workspace_symbols: []WorkspaceS
 	loaded_pkgs := make(map[string]bool, 16)
 
 	// Load builtins
-	builtin_path := get_builtin_path()
+	builtin_path := analysis.get_builtin_path()
 	if os.exists(builtin_path) {
-		build_package_symbols(&symbols, builtin_path, &loaded_pkgs)
+		analysis.build_package_symbols(&symbols, builtin_path, &loaded_pkgs)
 	}
 
 	// Load all workspace packages
 	for pkg in workspace_pkgs {
-		build_package_symbols(&symbols, pkg, &loaded_pkgs)
+		analysis.build_package_symbols(&symbols, pkg, &loaded_pkgs)
 	}
 
 	limit :: 100

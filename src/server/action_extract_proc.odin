@@ -8,6 +8,7 @@ import "core:odin/tokenizer"
 import "core:slice"
 import "core:strings"
 
+import "src:analysis"
 import "src:common"
 
 EXTRACT_PROC_ACTION_TITLE :: "Extract Proc"
@@ -1309,7 +1310,7 @@ check_expr_uses_variables :: proc(expr: ^ast.Expr, ctx: ^ExtractProcContext) {
 
 
 is_builtin_identifier :: proc(name: string) -> bool {
-	if name in keyword_map {
+	if name in analysis.keyword_map {
 		return true
 	}
 

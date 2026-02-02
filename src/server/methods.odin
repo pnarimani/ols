@@ -70,7 +70,7 @@ append_method_completion :: proc(
 	}
 
 	if value, ok := selector_symbol.value.(analysis.SymbolUntypedValue); ok {
-		cases := untyped_map[value.type]
+		cases := analysis.untyped_map[value.type]
 		for c in cases {
 			method := analysis.Method{
 				name = c,
@@ -89,7 +89,7 @@ append_method_completion :: proc(
 	} else {
 		// For typed values, check if it's a builtin type
 		method_pkg := selector_symbol.pkg
-		if is_builtin_type_name(selector_symbol.name) {
+		if analysis.is_builtin_type_name(selector_symbol.name) {
 			method_pkg = "$builtin"
 		}
 		method := analysis.Method{

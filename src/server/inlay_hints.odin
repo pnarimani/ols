@@ -6,6 +6,7 @@ import "core:log"
 import "core:odin/ast"
 
 import "src:analysis"
+import "src:codeprint"
 import "src:common"
 
 get_inlay_hints :: proc(
@@ -265,7 +266,7 @@ get_inlay_hints :: proc(
 					}
 
 					// Add default param hint
-					value := node_to_string(param.default_value)
+					value := codeprint.node_to_string(param.default_value)
 					hint_text := fmt.tprintf("%s%v = %v", needs_leading_comma ? ", " : "", label_name, value)
 					append(&data.hints, InlayHint{end_pos, .Parameter, hint_text})
 

@@ -21,6 +21,7 @@ import "core:sync"
 import "core:thread"
 import "core:time"
 
+import "src:analysis"
 import "src:common"
 
 Header :: struct {
@@ -442,7 +443,7 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 	}
 
 	if config.profile.os == "" {
-		config.profile.os = os_enum_to_string[ODIN_OS]
+		config.profile.os = analysis.os_enum_to_string[ODIN_OS]
 	}
 
 	if config.profile.arch == "" {

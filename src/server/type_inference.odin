@@ -2,6 +2,7 @@ package server
 
 
 import "src:analysis"
+import "src:codeprint"
 import "core:odin/ast"
 import "core:strings"
 
@@ -182,7 +183,7 @@ infer_call_type :: proc(ctx: ^InferenceContext, call: ^ast.Call_Expr) -> string 
 		}
 
 		// Check if it's a basic type cast (e.g., f32(x), int(y))
-		if is_builtin_type_name(name) {
+		if analysis.is_builtin_type_name(name) {
 			return name
 		}
 
@@ -323,7 +324,7 @@ expr_to_string :: proc(expr: ^ast.Expr) -> string {
 	if expr == nil {
 		return ""
 	}
-	return node_to_string(expr)
+	return codeprint.node_to_string(expr)
 }
 
 // Note: is_builtin_type_name is already defined in collector.odin
@@ -604,7 +605,7 @@ get_type_string :: proc(type_expr: ^ast.Expr) -> string {
 	if type_expr == nil {
 		return ""
 	}
-	return node_to_string(type_expr)
+	return codeprint.node_to_string(type_expr)
 }
 
 // Infer variable types from a value declaration

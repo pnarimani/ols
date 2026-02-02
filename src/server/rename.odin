@@ -13,7 +13,7 @@ import "src:common"
 
 get_rename :: proc(doc_ctx: DocumentContext, new_text: string, position: common.Position) -> (WorkspaceEdit, bool) {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name, &common.config)
+	request_symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name, &common.config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -72,7 +72,7 @@ get_rename :: proc(doc_ctx: DocumentContext, new_text: string, position: common.
 
 get_prepare_rename :: proc(doc_ctx: DocumentContext, position: common.Position) -> (common.Range, bool) {
 	// Build fresh symbols for this request
-	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
+	request_symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -229,7 +229,7 @@ prepare_rename :: proc(
 		}
 	} else if position_context.field_value != nil &&
 	   position_context.comp_lit != nil &&
-	   !is_expr_basic_lit(position_context.field_value.field) &&
+		!analysis.is_expr_basic_lit(position_context.field_value.field) &&
 	   position_in_node(position_context.field_value.field, position_context.position) {
 		symbol = analysis.Symbol{
 			range = common.get_token_range(position_context.field_value.field, ast_context.file.src),

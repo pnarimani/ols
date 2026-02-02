@@ -2,6 +2,7 @@
 #+feature using-stmt
 package server
 
+import "src:codeprint"
 import "core:fmt"
 import "core:log"
 import "core:mem"
@@ -25,7 +26,7 @@ UsingStatement :: struct {
 
 AstContext :: struct {
 	locals:                    [dynamic]LocalGroup, //locals all the way to the document position
-	globals:                   map[string]GlobalExpr,
+	globals:                   map[string]analysis.GlobalExpr,
 	recursion_map:             map[rawptr]struct{},
 	usings:                    [dynamic]UsingStatement,
 	file:                      ast.File,
@@ -86,7 +87,7 @@ make_ast_context_from_doc_ctx :: proc(
 ) -> AstContext {
 	ast_context := AstContext {
 		locals                    = make([dynamic]map[string][dynamic]DocumentLocal, 0, allocator),
-		globals                   = make(map[string]GlobalExpr, 0, allocator),
+		globals                   = make(map[string]analysis.GlobalExpr, 0, allocator),
 		usings                    = make([dynamic]UsingStatement, allocator),
 		recursion_map             = make(map[rawptr]struct{}, 0, allocator),
 		call_expr_recursion_cache = make(map[rawptr]SymbolResult, 0, allocator),
@@ -121,7 +122,7 @@ make_ast_context_from_doc :: proc(
 ) -> AstContext {
 	ast_context := AstContext {
 		locals                    = make([dynamic]map[string][dynamic]DocumentLocal, 0, allocator),
-		globals                   = make(map[string]GlobalExpr, 0, allocator),
+		globals                   = make(map[string]analysis.GlobalExpr, 0, allocator),
 		usings                    = make([dynamic]UsingStatement, allocator),
 		recursion_map             = make(map[rawptr]struct{}, 0, allocator),
 		call_expr_recursion_cache = make(map[rawptr]SymbolResult, 0, allocator),
@@ -277,7 +278,7 @@ resolve_type_comp_literal :: proc(
 		}
 
 		if field_value, ok := elem.derived.(^ast.Field_Value); ok { 	//named
-			if comp_lit, ref_n, ok := unwrap_comp_literal(field_value.value); ok {
+			if comp_lit, ref_n, ok := analysis.unwrap_comp_literal(field_value.value); ok {
 				if s, ok := current_symbol.value.(analysis.SymbolStructValue); ok {
 					for name, i in s.names {
 						// TODO: may need to handle the other cases
@@ -362,26 +363,11 @@ resolve_type_comp_literal :: proc(
 	return current_symbol, current_comp_lit, true
 }
 
-// odinfmt: disable
-untyped_map: [analysis.SymbolUntypedValueType][]string = {
-	.Integer    = {
-		"int", "uint", "u8", "i8", "u16", "i16", "u32", "i32", "u64", "i64", "u128", "i128", "byte",
-		"i16le", "i16be", "i32le", "i32be", "i64le", "i64be", "i128le", "i128be",
-		"u16le", "u16be", "u32le", "u32be", "u64le", "u64be", "u128le", "u128be",
-	},
-	.Bool       = {"bool", "b8", "b16", "b32", "b64"},
-	.Float      = {"f16", "f32", "f64", "f16le", "f16be", "f32le", "f32be", "f64le", "f64be"},
-	.String     = {"string", "cstring"},
-	.Complex    = {"complex32", "complex64", "complex128"},
-	.Quaternion = {"quaternion64", "quaternion128", "quaternion256"},
-}
-// odinfmt: enable
-
 // NOTE: This function is not commutative
 are_symbol_untyped_basic_same_typed :: proc(a, b: analysis.Symbol) -> (bool, bool) {
 	if untyped, ok := a.value.(analysis.SymbolUntypedValue); ok {
 		if basic, ok := b.value.(analysis.SymbolBasicValue); ok {
-			names := untyped_map[untyped.type]
+			names := analysis.untyped_map[untyped.type]
 			for name in names {
 				if basic.ident.name == name {
 					return true, true
@@ -389,7 +375,7 @@ are_symbol_untyped_basic_same_typed :: proc(a, b: analysis.Symbol) -> (bool, boo
 			}
 			// Untyped ints are allowed to map to floats
 			if untyped.type == .Integer {
-				names := untyped_map[.Float]
+				names := analysis.untyped_map[.Float]
 				for name in names {
 					if basic.ident.name == name {
 						return true, true
@@ -405,7 +391,7 @@ are_symbol_untyped_basic_same_typed :: proc(a, b: analysis.Symbol) -> (bool, boo
 }
 
 are_symbol_basic_same_keywords :: proc(a, b: analysis.Symbol) -> bool {
-	if are_keyword_aliases(a.name, b.name) {
+	if analysis.are_keyword_aliases(a.name, b.name) {
 		return true
 	}
 	a_value, a_ok := a.value.(analysis.SymbolBasicValue)
@@ -420,10 +406,10 @@ are_symbol_basic_same_keywords :: proc(a, b: analysis.Symbol) -> bool {
 	if a_value.ident.name != b_value.ident.name {
 		return false
 	}
-	if _, ok := keyword_map[a_value.ident.name]; !ok {
+	if _, ok := analysis.keyword_map[a_value.ident.name]; !ok {
 		return false
 	}
-	if _, ok := keyword_map[b_value.ident.name]; !ok {
+	if _, ok := analysis.keyword_map[b_value.ident.name]; !ok {
 		return false
 	}
 
@@ -475,7 +461,7 @@ is_symbol_same_typed :: proc(ast_context: ^AstContext, a, b: analysis.Symbol, fl
 	#partial switch b_value in b.value {
 	case analysis.SymbolBasicValue:
 		if .Any_Int in flags {
-			names := untyped_map[.Integer]
+			names := analysis.untyped_map[.Integer]
 			for name in names {
 				if a.name == name {
 					return true
@@ -1158,7 +1144,7 @@ resolve_location_type_expression :: proc(ast_context: ^AstContext, node: ^ast.Ex
 	// TODO: there is likely more of these that will need to be added
 	#partial switch n in node.derived {
 	case ^ast.Ident:
-		if _, ok := keyword_map[n.name]; ok {
+		if _, ok := analysis.keyword_map[n.name]; ok {
 			return {}, true
 		}
 		return resolve_location_type_identifier(ast_context, n^)
@@ -1345,7 +1331,7 @@ internal_resolve_type_expression :: proc(ast_context: ^AstContext, node: ^ast.Ex
 	case ^Pointer_Type:
 		ok := internal_resolve_type_expression(ast_context, v.elem, out)
 		out.pointers += 1
-		if pointer_is_soa(v^) {
+		if analysis.pointer_is_soa(v^) {
 			out.flags += {.SoaPointer}
 		}
 		return ok
@@ -1453,7 +1439,7 @@ resolve_call_directive :: proc(ast_context: ^AstContext, call: ^ast.Call_Expr) -
 			return resolve_type_expression(ast_context, call.args[1])
 		}
 	case "location":
-		runtime_path := get_runtime_path()
+		runtime_path := analysis.get_runtime_path()
 		return lookup(ast_context.symbols, "Source_Code_Location", runtime_path, call.pos.file)
 	case "hash", "load_hash":
 		ident := analysis.new_type(ast.Ident, call.pos, call.end)
@@ -1801,7 +1787,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 
 	set_ast_package_scoped(ast_context)
 
-	if v, ok := keyword_map[node.name]; ok {
+	if v, ok := analysis.keyword_map[node.name]; ok {
 		//keywords
 		ident := analysis.new_type(Ident, node.pos, node.end)
 		ident.name = node.name
@@ -1867,7 +1853,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 
 	//This could also be the runtime package, which is not required to be imported, but itself is used with selector expression in runtime functions: `my_runtime_proc :proc(a: runtime.*)`
 	if node.name == "runtime" {
-		runtime_path := get_runtime_path()
+		runtime_path := analysis.get_runtime_path()
 		symbol := analysis.Symbol{
 			type  = .Package,
 			pkg   = runtime_path,
@@ -1890,7 +1876,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 			return symbol, ok
 		}
 		// Also try the runtime package
-		runtime_path := get_runtime_path()
+		runtime_path := analysis.get_runtime_path()
 		if runtime_path != "" {
 			if symbol, ok := lookup(ast_context.symbols, "Context", runtime_path, ""); ok {
 				symbol.type = .Variable
@@ -1931,7 +1917,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 	}
 
 	// Try the runtime package as a last resort
-	runtime_path := get_runtime_path()
+	runtime_path := analysis.get_runtime_path()
 	if runtime_path != "" {
 		if symbol, ok := lookup(ast_context.symbols, node.name, runtime_path, node.pos.file); ok {
 			return resolve_symbol_return(ast_context, symbol)
@@ -2042,13 +2028,13 @@ resolve_local_identifier :: proc(ast_context: ^AstContext, node: ast.Ident, loca
 	return_symbol.flags |= {.Local}
 	return_symbol.value_expr = local.value_expr
 	return_symbol.type_expr = local.type_expr
-	return_symbol.doc = get_comment(local.docs, ast_context.allocator)
-	return_symbol.comment = get_comment(local.comment, ast_context.allocator)
+	return_symbol.doc = analysis.get_comment(local.docs, ast_context.allocator)
+	return_symbol.comment = analysis.get_comment(local.comment, ast_context.allocator)
 
 	return return_symbol, ok
 }
 
-resolve_global_identifier :: proc(ast_context: ^AstContext, node: ast.Ident, global: ^GlobalExpr) -> (analysis.Symbol, bool) {
+resolve_global_identifier :: proc(ast_context: ^AstContext, node: ast.Ident, global: ^analysis.GlobalExpr) -> (analysis.Symbol, bool) {
 	is_distinct := false
 	ast_context.use_locals = false
 
@@ -2132,11 +2118,11 @@ resolve_global_identifier :: proc(ast_context: ^AstContext, node: ast.Ident, glo
 	}
 
 	if global.docs != nil {
-		return_symbol.doc = get_comment(global.docs, ast_context.allocator)
+		return_symbol.doc = analysis.get_comment(global.docs, ast_context.allocator)
 	}
 
 	if global.comment != nil {
-		return_symbol.comment = get_comment(global.comment, ast_context.allocator)
+		return_symbol.comment = analysis.get_comment(global.comment, ast_context.allocator)
 	}
 
 	return_symbol.type_expr = global.type_expr
@@ -2167,7 +2153,7 @@ resolve_proc_lit :: proc(
 		proc_lit.where_clauses,
 	)
 
-	if is_procedure_generic(proc_lit.type) {
+	if analysis.is_procedure_generic(proc_lit.type) {
 		if generic_symbol, ok := resolve_generic_function(ast_context, proc_lit^, symbol); ok {
 			return generic_symbol, ok
 		} else if ast_context.overloading {
@@ -3079,6 +3065,7 @@ resolve_location_implicit_selector :: proc(
 }
 
 resolve_container_allocator :: proc(ast_context: ^AstContext, container_name: string) -> (analysis.Symbol, bool) {
+	using analysis
 	// Try $builtin first
 	if symbol, ok := lookup(ast_context.symbols, container_name, "$builtin", ast_context.fullpath); ok {
 		if v, ok := symbol.value.(analysis.SymbolStructValue); ok {
@@ -3130,7 +3117,7 @@ resolve_container_allocator_location :: proc(ast_context: ^AstContext, container
 	}
 
 	// Try runtime package
-	runtime_path := get_runtime_path()
+	runtime_path := analysis.get_runtime_path()
 	if runtime_path != "" {
 		if symbol, ok := lookup(ast_context.symbols, container_name, runtime_path, ast_context.fullpath); ok {
 			if v, ok := symbol.value.(analysis.SymbolStructValue); ok {
@@ -3606,9 +3593,9 @@ make_symbol_procedure_from_ast :: proc(
 		where_clauses      = where_clauses,
 	}
 
-	if _, ok := get_attribute_objc_name(attributes); ok {
+	if _, ok := analysis.get_attribute_objc_name(attributes); ok {
 		symbol.flags |= {.ObjC}
-		if get_attribute_objc_is_class_method(attributes) {
+		if analysis.get_attribute_objc_is_class_method(attributes) {
 			symbol.flags |= {.ObjCIsClassMethod}
 		}
 	}
@@ -3636,10 +3623,10 @@ make_symbol_array_from_ast :: proc(ast_context: ^AstContext, v: ast.Array_Type, 
 		}
 	}
 
-	if array_is_soa(v) {
+	if analysis.array_is_soa(v) {
 		symbol.flags |= {.Soa}
 	}
-	if array_is_simd(v) {
+	if analysis.array_is_simd(v) {
 		symbol.flags |= {.Simd}
 	}
 
@@ -3664,7 +3651,7 @@ make_symbol_dynamic_array_from_ast :: proc(
 	}
 
 
-	if dynamic_array_is_soa(v) {
+	if analysis.dynamic_array_is_soa(v) {
 		symbol.flags |= {.Soa}
 	}
 
@@ -3785,7 +3772,7 @@ make_symbol_union_from_ast :: proc(
 		}
 	}
 
-	docs, comments := get_field_docs_and_comments(ast_context.file, v.variants)
+	docs, comments := analysis.get_field_docs_and_comments(ast_context.file, v.variants)
 
 	symbol.value = analysis.SymbolUnionValue {
 		types         = types[:],
@@ -3835,7 +3822,7 @@ make_symbol_enum_from_ast :: proc(
 		append(&values, value)
 	}
 
-	docs, comments := get_field_docs_and_comments(ast_context.file, v.fields)
+	docs, comments := analysis.get_field_docs_and_comments(ast_context.file, v.fields)
 
 	symbol.value = analysis.SymbolEnumValue {
 		names     = names[:],
@@ -3924,7 +3911,7 @@ make_symbol_bit_field_from_ast :: proc(
 ) -> analysis.Symbol {
 	// We clone this so we don't override docs and comments with temp allocated docs and comments
 	v := cast(^ast.Bit_Field_Type)analysis.clone_node(v, nil)
-	construct_bit_field_field_docs(ast_context.file, v)
+	analysis.construct_bit_field_field_docs(ast_context.file, v)
 	symbol := analysis.Symbol{
 		range = common.get_token_range(v, ast_context.file.src),
 		type  = .Struct,
@@ -3970,7 +3957,7 @@ make_symbol_bit_field_from_ast :: proc(
 }
 
 get_globals :: proc(file: ast.File, ast_context: ^AstContext) {
-	exprs := collect_globals(file)
+	exprs := analysis.collect_globals(file)
 
 	for expr in exprs {
 		ast_context.globals[expr.name] = expr
@@ -4266,5 +4253,5 @@ type_to_string :: proc(ast_context: ^AstContext, expr: ^ast.Expr) -> string {
 		}
 	}
 
-	return node_to_string(expr)
+	return codeprint.node_to_string(expr)
 }

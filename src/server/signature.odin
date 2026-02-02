@@ -2,6 +2,7 @@ package server
 
 
 import "src:analysis"
+import "src:codeprint"
 import "core:fmt"
 import "core:log"
 import "core:odin/ast"
@@ -164,7 +165,7 @@ add_proc_signature :: proc(
 				}
 			}
 
-			parameters[i].label = node_to_string(arg)
+			parameters[i].label = codeprint.node_to_string(arg)
 		}
 
 		sb := strings.builder_make(context.temp_allocator)
@@ -192,7 +193,7 @@ add_proc_signature :: proc(
 						}
 					}
 
-					parameters[i].label = node_to_string(arg)
+					parameters[i].label = codeprint.node_to_string(arg)
 				}
 
 				sb := strings.builder_make(context.temp_allocator)

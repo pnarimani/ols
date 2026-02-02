@@ -1,5 +1,5 @@
 #+feature dynamic-literals
-package server
+package analysis
 
 import "base:runtime"
 import "core:fmt"
