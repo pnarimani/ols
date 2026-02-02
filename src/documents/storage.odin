@@ -1,5 +1,6 @@
 package documents
 
+import "src:workspace"
 import "core:log"
 import "core:mem"
 import "core:os"
@@ -62,7 +63,7 @@ get :: proc(uri_string: string) -> ^DocumentData {
 load_from_disk :: proc(uri: common.Uri) -> ^DocumentData {
 	fullpath := get_fullpath_from_uri(uri.path, context.temp_allocator)
 
-	data, read_ok := os.read_entire_file(fullpath, context.temp_allocator)
+	data, read_ok := workspace.read_file_content(fullpath, context.temp_allocator)
 	if !read_ok {
 		log.errorf("Failed to read file from disk: %v", uri.path)
 		return nil

@@ -148,7 +148,7 @@ parse_diff_source :: proc(diff_source: string) -> (before: string, after: string
 	// Remove selection markers from after_code (they shouldn't be there but just in case)
 	after_code, _ = strings.replace_all(after_code, "{<}", "", context.temp_allocator)
 	after_code, _ = strings.replace_all(after_code, "{>}", "", context.temp_allocator)
-	after_code, _ = strings.replace_all(after_code, "{*}", "", context.temp_allocator)
+	after_code, _ = strings.replace_all(after_code, "{*}", "")
 
 	return before_code, after_code, true
 }

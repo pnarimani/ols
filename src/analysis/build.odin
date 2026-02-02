@@ -45,13 +45,12 @@ init_symbol_cache :: proc(config: ^common.Config) {
 // Reset the symbol cache (for testing purposes).
 shutdown_symbol_cache :: proc() {
 	// Clear package data
-	for name, &pkg in g_symbol_cache.packages {
+	for _, &pkg in g_symbol_cache.packages {
 		delete(pkg.symbols)
 		delete(pkg.objc_structs)
 		delete(pkg.methods)
 		delete(pkg.imports)
 		delete(pkg.proc_group_members)
-		delete(pkg.file_sources)
 	}
 	clear(&g_symbol_cache.packages)
 	clear(&g_symbol_cache.unique_strings)
@@ -241,11 +240,11 @@ load_package :: proc(pkg_name: string) {
 			continue
 		}
 
-		load_file(fullpath, string(data))
+		analyze_file(fullpath, string(data))
 	}
 }
 
-load_file :: proc(fullpath, text: string) {
+analyze_file :: proc(fullpath, text: string) {
 	p := parser.Parser {
 		err   = log_error_handler,
 		warn  = log_warning_handler,
@@ -281,16 +280,6 @@ load_file :: proc(fullpath, text: string) {
 	uri := common.create_uri(fullpath, context.temp_allocator)
 
 	collect_symbols(&g_symbol_cache, file, uri.uri)
-	
-	// Store file source for cross-file refactoring
-	forward_dir, _ := filepath.to_slash(filepath.dir(fullpath, context.temp_allocator), context.temp_allocator)
-	if sym_pkg, ok := &g_symbol_cache.packages[forward_dir]; ok {
-		sym_pkg.file_sources[uri.uri] = FileSource{
-			uri      = strings.clone(uri.uri, g_symbol_cache.allocator),
-			fullpath = strings.clone(fullpath, g_symbol_cache.allocator),
-			text     = strings.clone(text, g_symbol_cache.allocator),
-		}
-	}
 }
 
 // Get the builtin package path

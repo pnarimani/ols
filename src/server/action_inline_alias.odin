@@ -3,6 +3,7 @@
 
 package server
 
+import "src:workspace"
 import "core:fmt"
 import "core:log"
 import "core:odin/ast"
@@ -261,8 +262,7 @@ extract_package_info_from_type :: proc(ctx: ^InlineAliasContext) {
 
 // Find cross-file usages of the alias (in other packages that import this one, or same package)
 find_cross_file_usages :: proc(ctx: ^InlineAliasContext) {
-	// Get all file sources from the analysis cache
-	file_sources := analysis.get_all_file_sources(context.temp_allocator)
+	file_sources := workspace.get_files(context.temp_allocator)
 	
 	// The package name of the current file (where the alias is defined)
 	current_pkg_name := filepath.base(ctx.doc_ctx.package_name)

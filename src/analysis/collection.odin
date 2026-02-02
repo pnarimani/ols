@@ -56,7 +56,6 @@ get_or_create_package :: proc(collection: ^SymbolCollection, pkg_name: string) -
 		pkg.methods = make(map[Method][dynamic]Symbol, 100)
 		pkg.objc_structs = make(map[string]ObjcStruct, 5)
 		pkg.proc_group_members = make(map[string]bool, 10)
-		pkg.file_sources = make(map[string]FileSource, 10)
 	}
 	return pkg
 }
@@ -180,18 +179,6 @@ get_package_imports :: proc(pkg: string, allocator := context.allocator) -> []st
 		return result
 	}
 	return {}
-}
-
-// Get all file sources across all packages
-// Returns an iterator-friendly slice of file sources
-get_all_file_sources :: proc(allocator := context.allocator) -> []FileSource {
-	result := make([dynamic]FileSource, 0, allocator)
-	for _, pkg in g_symbol_cache.packages {
-		for _, source in pkg.file_sources {
-			append(&result, source)
-		}
-	}
-	return result[:]
 }
 
 // Collect symbols from a parsed file into the global cache.

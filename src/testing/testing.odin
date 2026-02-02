@@ -12,6 +12,7 @@ import "src:analysis"
 import "src:common"
 import "src:documents"
 import "src:server"
+import "src:workspace"
 
 Package :: struct {
 	pkg:      string,
@@ -61,6 +62,8 @@ setup :: proc(src: ^Source) {
 	// Parse position markers: {*} for cursor, {<} for range start, {>} for range end
 	parse_position_markers(src)
 
+	workspace.register_mock_file(src.document.uri.path, src.main)
+
 	// Reset and initialize the symbol cache for this test
 	// This ensures each test starts with a fresh cache
 	analysis.init_symbol_cache(&src.config)
@@ -70,6 +73,7 @@ setup :: proc(src: ^Source) {
 
 	// Create documents.Document for the test document
 	src.doc_ctx, _ = server.create_document_context(src.document, &src.config)
+
 
 	// Run diagnostics checks if enabled in config
 	server.run_hint_diagnostics(src.doc_ctx, &src.config)
@@ -83,8 +87,9 @@ setup :: proc(src: ^Source) {
 		filename := src_pkg.filename if src_pkg.filename != "" else "package"
 		uri := common.create_uri(fmt.aprintf("test/%v/%v.odin", src_pkg.pkg, filename))
 		fullpath := uri.path
+		workspace.register_mock_file(fullpath, src_pkg.source)
 		documents.open(uri, src_pkg.source)
-		analysis.load_file(fullpath, src_pkg.source)
+		analysis.analyze_file(fullpath, src_pkg.source)
 	}
 }
 
@@ -93,6 +98,7 @@ teardown :: proc(src: ^Source) {
 	analysis.shutdown_symbol_cache()
 	server.shutdown_diagnostic_store()
 	documents.shutdown()
+	workspace.clear_mock_files()
 	free_all(context.temp_allocator)
 }
 
