@@ -48,11 +48,13 @@ get_code_actions :: proc(
 	// Build symbol cache for this request's packages
 	load_document_packages(doc_ctx)
 
+	encoded_path := common.make_encoded_path(doc_ctx.path, context.temp_allocator)
+
 	ast_context := make_ast_context(
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		doc_ctx.uri.uri,
+		encoded_path,
 		doc_ctx.fullpath,
 		context.temp_allocator,
 	)
@@ -80,53 +82,53 @@ get_code_actions :: proc(
 			add_missing_imports(
 				&ast_context,
 				selector,
-				strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+				strings.clone(encoded_path, context.temp_allocator),
 				config,
 				&actions,
 			)
 		}
 	} else if position_context.import_stmt != nil {
-		remove_unused_imports(doc_ctx, strings.clone(doc_ctx.uri.uri, context.temp_allocator), config, &actions)
+		remove_unused_imports(doc_ctx, strings.clone(encoded_path, context.temp_allocator), config, &actions)
 	}
 
 	add_invert_if_action(
 		doc_ctx,
 		position_context.position,
-		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		strings.clone(encoded_path, context.temp_allocator),
 		&actions,
 	)
 	add_redundant_else_action(
 		doc_ctx,
 		position_context.position,
-		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		strings.clone(encoded_path, context.temp_allocator),
 		&actions,
 	)
 	add_extract_proc_action(
 		doc_ctx,
 		&ast_context,
 		range,
-		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		strings.clone(encoded_path, context.temp_allocator),
 		&actions,
 	)
 	add_extract_variable_action(
 		doc_ctx,
 		&ast_context,
 		range,
-		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		strings.clone(encoded_path, context.temp_allocator),
 		&actions,
 	)
 	add_inline_proc_action(
 		doc_ctx,
 		&ast_context,
 		range,
-		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		strings.clone(encoded_path, context.temp_allocator),
 		&actions,
 	)
 	add_inline_variable_action(
 		doc_ctx,
 		&ast_context,
 		range,
-		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		strings.clone(encoded_path, context.temp_allocator),
 		&actions,
 	)
 	add_inline_alias_action(
@@ -134,7 +136,7 @@ get_code_actions :: proc(
 		&ast_context,
 		config,
 		range,
-		strings.clone(doc_ctx.uri.uri, context.temp_allocator),
+		strings.clone(encoded_path, context.temp_allocator),
 		&actions,
 	)
 

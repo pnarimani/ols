@@ -364,7 +364,7 @@ call :: proc(value: json.Value, id: RequestId, writer: ^Writer, config: ^common.
 	//log.errorf("time duration %v for %v", time.duration_milliseconds(diff), method)
 }
 
-read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfig, uri: common.Uri) {
+read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfig, project_path: string) {
 	config.disable_parser_errors = ols_config.disable_parser_errors.(bool) or_else config.disable_parser_errors
 	config.thread_count = ols_config.thread_pool_count.(int) or_else config.thread_count
 	config.enable_document_symbols = ols_config.enable_document_symbols.(bool) or_else config.enable_document_symbols
@@ -426,10 +426,10 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 			config.profile.exclude_path = make([dynamic]string, len(profile.exclude_path))
 
 			for checker_path, i in profile.checker_path {
-				config.profile.checker_path[i] = path.join(elems = {uri.path, checker_path})
+				config.profile.checker_path[i] = path.join(elems = {project_path, checker_path})
 			}
 			for exclude_path, i in profile.exclude_path {
-				config.profile.exclude_path[i] = path.join(elems = {uri.path, exclude_path})
+				config.profile.exclude_path[i] = path.join(elems = {project_path, exclude_path})
 			}
 
 			config.profile.os = strings.clone(profile.os)
@@ -499,7 +499,7 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 			} else {
 				final_path, _ = filepath.to_slash(
 					common.get_case_sensitive_path(
-						path.join(elems = {uri.path, forward_path}, allocator = context.temp_allocator),
+						path.join(elems = {project_path, forward_path}, allocator = context.temp_allocator),
 						context.temp_allocator,
 					),
 					context.temp_allocator,
@@ -511,7 +511,7 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 			if filepath.is_abs(it.path) {
 				final_path = strings.clone(forward_path, context.temp_allocator)
 			} else {
-				final_path = path.join({uri.path, forward_path}, context.temp_allocator)
+				final_path = path.join({project_path, forward_path}, context.temp_allocator)
 			}
 		}
 
@@ -544,7 +544,7 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 		// If we don't have an absolute path
 		if !filepath.is_abs(odin_bin) {
 			// Join with the project path
-			tmp_path := path.join(elems = {uri.path, odin_bin})
+			tmp_path := path.join(elems = {project_path, odin_bin})
 			if os.exists(tmp_path) {
 				odin_bin = tmp_path
 			}
@@ -579,7 +579,7 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 	}
 
 	log.infof("resolved odin root to: %q", odin_core_env)
-	log.infof("uri path: %q", uri.path)
+	log.infof("project path: %q", project_path)
 
 	// Insert the default collections if they are not specified in the config.
 	if odin_core_env != "" {
@@ -696,13 +696,13 @@ request_initialize :: proc(
 	config.enable_auto_import = true
 	config.enable_invert_if_diagnostics = true
 
-	read_ols_config :: proc(file: string, config: ^common.Config, uri: common.Uri) {
+	read_ols_config :: proc(file: string, config: ^common.Config, path: string) {
 		if data, ok := os.read_entire_file(file, context.temp_allocator); ok {
 			ols_config: OlsConfig
 
 			err := json.unmarshal(data, &ols_config, allocator = context.temp_allocator)
 			if err == nil {
-				read_ols_initialize_options(config, ols_config, uri)
+				read_ols_initialize_options(config, ols_config, path)
 			} else {
 				log.errorf("Failed to unmarshal %v: %v", file, err)
 			}
@@ -711,30 +711,30 @@ request_initialize :: proc(
 		}
 	}
 
-	project_uri := ""
+	encoded_project_path := ""
 
 	if len(config.workspace_folders) > 0 {
-		project_uri = config.workspace_folders[0].uri
+		encoded_project_path = config.workspace_folders[0].uri
 	} else if initialize_params.rootUri != "" {
-		project_uri = initialize_params.rootUri
+		encoded_project_path = initialize_params.rootUri
 	}
 
-	if uri, ok := common.parse_uri(project_uri, context.temp_allocator); ok {
+	if project_path, ok := common.make_path(encoded_project_path, context.temp_allocator); ok {
 		// Apply the global ols config.
 		global_ols_config_path := path.join(
 			elems = {filepath.dir(os.args[0], context.temp_allocator), "ols.json"},
 			allocator = context.temp_allocator,
 		)
-		read_ols_config(global_ols_config_path, config, uri)
+		read_ols_config(global_ols_config_path, config, project_path)
 
 		// Apply the requested ols config.
-		read_ols_initialize_options(config, initialize_params.initializationOptions, uri)
+		read_ols_initialize_options(config, initialize_params.initializationOptions, project_path)
 
 		// Apply ols.json config.
-		ols_config_path := path.join(elems = {uri.path, "ols.json"}, allocator = context.temp_allocator)
-		read_ols_config(ols_config_path, config, uri)
+		ols_config_path := path.join(elems = {project_path, "ols.json"}, allocator = context.temp_allocator)
+		read_ols_config(ols_config_path, config, project_path)
 	} else {
-		read_ols_initialize_options(config, initialize_params.initializationOptions, {})
+		read_ols_initialize_options(config, initialize_params.initializationOptions, "")
 	}
 
 	for format in initialize_params.capabilities.textDocument.hover.contentFormat {
@@ -1109,7 +1109,8 @@ notification_did_open :: proc(
 
 	if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
 		// Update the symbol cache with the document's symbols
-		analysis.update_doc(doc_ctx.uri.uri, doc_ctx.ast)
+		encoded_path := common.make_encoded_path(doc_ctx.path, context.temp_allocator)
+		analysis.update_doc(encoded_path, doc_ctx.ast)
 
 		// Run lightweight diagnostics
 		check_unused_imports(doc_ctx, config)
@@ -1152,7 +1153,8 @@ notification_did_change :: proc(
 	document := document_get(change_params.textDocument.uri)
 	if document != nil {
 		if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
-			analysis.update_doc(doc_ctx.uri.uri, doc_ctx.ast)
+			encoded_path := common.make_encoded_path(doc_ctx.path, context.temp_allocator)
+			analysis.update_doc(encoded_path, doc_ctx.ast)
 
 			// Run lightweight AST-based diagnostics on edit for immediate feedback
 			// (full odin check only runs on save as it's too expensive for every keystroke)
@@ -1210,23 +1212,23 @@ notification_did_save :: proc(
 		return .ParseError
 	}
 
-	uri: common.Uri
+	path: string
 
-	if uri, ok = common.parse_uri(save_params.textDocument.uri, context.temp_allocator); !ok {
+	if path, ok = common.make_path(save_params.textDocument.uri, context.temp_allocator); !ok {
 		return .ParseError
 	}
 
-	fullpath := uri.path
+	fullpath := path
 
 	when ODIN_OS == .Windows {
 		correct := common.get_case_sensitive_path(fullpath, context.temp_allocator)
 		fullpath, _ = filepath.to_slash(correct, context.temp_allocator)
 	}
 
-	corrected_uri := common.create_uri(fullpath, context.temp_allocator)
+	corrected_encoded_path := common.make_encoded_path(fullpath, context.temp_allocator)
 
 	// Run odin check - this clears old .Check diagnostics and adds new ones
-	check(config.profile.checker_path[:], corrected_uri, config)
+	check(config.profile.checker_path[:], corrected_encoded_path, config)
 
 	document := document_get(save_params.textDocument.uri)
 	if document != nil {
@@ -1755,8 +1757,8 @@ notification_workspace_did_change_configuration :: proc(
 
 	ols_config := workspace_config_params.settings
 
-	if uri, ok := common.parse_uri(config.workspace_folders[0].uri, context.temp_allocator); ok {
-		read_ols_initialize_options(config, ols_config, uri)
+	if project_path, ok := common.make_path(config.workspace_folders[0].uri, context.temp_allocator); ok {
+		read_ols_initialize_options(config, ols_config, project_path)
 	}
 
 	return .None

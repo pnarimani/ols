@@ -23,7 +23,7 @@ append_symbol_to_locations :: proc(
 	location := common.Location{}
 	location.range = symbol.range
 	if symbol.uri == "" {
-		location.uri = doc_ctx.uri.uri
+		location.uri = common.make_encoded_path(doc_ctx.path, context.temp_allocator)
 	} else {
 		location.uri = symbol.uri
 	}

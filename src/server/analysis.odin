@@ -96,7 +96,7 @@ make_ast_context_from_doc_ctx :: proc(
 		use_usings                = true,
 		document_package          = doc_ctx.package_name,
 		current_package           = doc_ctx.package_name,
-		uri                       = doc_ctx.uri.uri,
+		uri                       = common.make_encoded_path(doc_ctx.path, allocator),
 		fullpath                  = doc_ctx.fullpath,
 		allocator                 = allocator,
 		doc_ctx                   = doc_ctx,
@@ -1305,7 +1305,7 @@ internal_resolve_type_expression :: proc(ast_context: ^AstContext, node: ^ast.Ex
 		out.type = .Type
 		out.pkg = get_package_from_node(v.node)
 		out.name = ast_context.field_name.name
-		out.uri = common.create_uri(v.pos.file, ast_context.allocator).uri
+		out.uri = common.make_encoded_path(v.pos.file, ast_context.allocator)
 		out.value = analysis.SymbolSliceValue {
 			expr = v.expr,
 		}
@@ -1809,7 +1809,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 					name = ident.name,
 					pkg = ast_context.current_package,
 					value = analysis.SymbolBasicValue{ident = ident},
-					uri = common.create_uri(ident.pos.file, ast_context.allocator).uri,
+					uri = common.make_encoded_path(ident.pos.file, ast_context.allocator),
 				},
 				true
 		}
@@ -2833,9 +2833,8 @@ resolve_location_identifier :: proc(ast_context: ^AstContext, node: ast.Ident) -
 
 	if local, ok := get_local(ast_context^, node); ok {
 		symbol.range = common.get_token_range(local.lhs, ast_context.file.src)
-		uri := common.create_uri(local.lhs.pos.file, ast_context.allocator)
 		symbol.pkg = ast_context.document_package
-		symbol.uri = uri.uri
+		symbol.uri = common.make_encoded_path(local.lhs.pos.file, ast_context.allocator)
 		symbol.flags |= {.Local}
 		return symbol, true
 	}
@@ -2852,9 +2851,8 @@ resolve_location_identifier :: proc(ast_context: ^AstContext, node: ast.Ident) -
 
 	if global, ok := ast_context.globals[node.name]; ok {
 		symbol.range = common.get_token_range(global.name_expr, ast_context.file.src)
-		uri := common.create_uri(global.expr.pos.file, ast_context.allocator)
 		symbol.pkg = ast_context.document_package
-		symbol.uri = uri.uri
+		symbol.uri = common.make_encoded_path(global.expr.pos.file, ast_context.allocator)
 		return symbol, true
 	}
 
@@ -3551,7 +3549,7 @@ make_symbol_procedure_from_ast :: proc(
 		type  = .Function if !type else .Type_Function,
 		pkg   = pkg,
 		name  = name,
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	return_types := make([dynamic]^ast.Field, ast_context.allocator)
@@ -3605,7 +3603,7 @@ make_symbol_array_from_ast :: proc(ast_context: ^AstContext, v: ast.Array_Type, 
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if v.len != nil {
@@ -3639,7 +3637,7 @@ make_symbol_dynamic_array_from_ast :: proc(
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	symbol.value = analysis.SymbolDynamicArrayValue {
@@ -3661,7 +3659,7 @@ make_symbol_matrix_from_ast :: proc(ast_context: ^AstContext, v: ast.Matrix_Type
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	symbol.value = analysis.SymbolMatrixValue {
@@ -3684,7 +3682,7 @@ make_symbol_multi_pointer_from_ast :: proc(
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	symbol.value = analysis.SymbolMultiPointerValue {
@@ -3700,7 +3698,7 @@ make_symbol_map_from_ast :: proc(ast_context: ^AstContext, v: ast.Map_Type, name
 		type  = .Type,
 		pkg   = get_package_from_node(v.node),
 		name  = name.name,
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	symbol.value = analysis.SymbolMapValue {
@@ -3750,7 +3748,7 @@ make_symbol_union_from_ast :: proc(
 		type  = .Union,
 		pkg   = get_package_from_node(v.node),
 		name  = name,
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if inlined {
@@ -3798,7 +3796,7 @@ make_symbol_enum_from_ast :: proc(
 		type  = .Enum,
 		name  = name,
 		pkg   = get_package_from_node(v.node),
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if inlined {
@@ -3857,7 +3855,7 @@ make_symbol_bitset_from_ast :: proc(
 		type  = .Enum,
 		name  = ident.name,
 		pkg   = get_package_from_node(v.node),
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if inlined {
@@ -3885,7 +3883,7 @@ make_symbol_struct_from_ast :: proc(
 		type  = .Struct,
 		pkg   = get_package_from_node(v.node),
 		name  = name,
-		uri   = common.create_uri(v.pos.file, ast_context.allocator).uri,
+		uri   = common.make_encoded_path(v.pos.file, ast_context.allocator),
 	}
 
 	if inlined {
@@ -3913,7 +3911,7 @@ make_symbol_bit_field_from_ast :: proc(
 		type  = .Struct,
 		pkg   = get_package_from_node(v.node),
 		name  = name,
-		uri   = common.create_uri(v.pos.file).uri,
+		uri   = common.make_encoded_path(v.pos.file),
 	}
 
 	if inlined {

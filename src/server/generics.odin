@@ -502,7 +502,7 @@ resolve_generic_function_ast :: proc(
 	}
 
 	range := common.get_token_range(proc_lit, ast_context.file.src)
-	uri := common.create_uri(proc_lit.pos.file, ast_context.allocator).uri
+	encoded_path := common.make_encoded_path(proc_lit.pos.file, ast_context.allocator)
 	return resolve_generic_function_symbol(ast_context, params, results, proc_lit.inlining, proc_symbol)
 }
 

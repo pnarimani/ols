@@ -36,7 +36,7 @@ resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range) ->
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		doc_ctx.uri.uri,
+		common.make_encoded_path(doc_ctx.path, context.temp_allocator),
 		doc_ctx.fullpath,
 	)
 
@@ -80,7 +80,7 @@ resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFla
 		doc.ast,
 		doc.imports,
 		doc.package_name,
-		doc.uri.uri,
+		common.make_encoded_path(doc.path, context.temp_allocator),
 		doc.fullpath,
 	)
 
@@ -530,10 +530,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 						node = name,
 						symbol = analysis.Symbol{
 							range = common.get_token_range(name, string(data.doc_ctx.text)),
-							uri = strings.clone(
-								common.create_uri(field.pos.file, data.ast_context.allocator).uri,
-								data.ast_context.allocator,
-							),
+							uri = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
 						},
 					}
 				}
@@ -555,10 +552,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 					node = field,
 					symbol = analysis.Symbol{
 						range = common.get_token_range(field, string(data.doc_ctx.text)),
-						uri = strings.clone(
-							common.create_uri(field.pos.file, data.ast_context.allocator).uri,
-							data.ast_context.allocator,
-						),
+						uri = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
 					},
 				}
 				// In the case of a Field_Value, we explicitly add them so we can find the LHS correctly for things like renaming
@@ -569,10 +563,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 							symbol = analysis.Symbol{
 								name = ident.name,
 								range = common.get_token_range(ident, string(data.doc_ctx.text)),
-								uri = strings.clone(
-									common.create_uri(field.pos.file, data.ast_context.allocator).uri,
-									data.ast_context.allocator,
-								),
+								uri = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
 							},
 						}
 					} else if binary, ok := field.field.derived.(^ast.Binary_Expr); ok {
@@ -581,10 +572,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 							symbol = analysis.Symbol{
 								name = "binary",
 								range = common.get_token_range(binary, string(data.doc_ctx.text)),
-								uri = strings.clone(
-									common.create_uri(field.pos.file, data.ast_context.allocator).uri,
-									data.ast_context.allocator,
-								),
+								uri = common.make_encoded_path(field.pos.file, data.ast_context.allocator),
 							},
 						}
 					}
@@ -619,10 +607,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 				node = n.name,
 				symbol = analysis.Symbol{
 					range = common.get_token_range(n.name, string(data.doc_ctx.text)),
-					uri = strings.clone(
-						common.create_uri(n.pos.file, data.ast_context.allocator).uri,
-						data.ast_context.allocator,
-					),
+					uri = common.make_encoded_path(n.pos.file, data.ast_context.allocator),
 				},
 			}
 		}

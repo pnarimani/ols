@@ -35,83 +35,73 @@ init :: proc() {
 shutdown :: proc() {
 	for k, v in storage.documents {
 		delete(v.text, storage.allocator)
-		common.delete_uri(v.uri, storage.allocator)
+		delete(v.path, storage.allocator)
 		delete(k, storage.allocator)
 	}
 
 	delete(storage.documents)
 }
 
-// Get a document by URI string. Returns pointer to stored document, or nil if not found.
+// Get a document by encoded path string. Returns pointer to stored document, or nil if not found.
 // Will attempt to load from disk if document is not in storage.
-get :: proc(uri_string: string) -> ^DocumentData {
-	uri, parsed_ok := common.parse_uri(uri_string, context.temp_allocator)
+get :: proc(encoded_path: string) -> ^DocumentData {
+	path, parsed_ok := common.make_path(encoded_path, context.temp_allocator)
 
 	if !parsed_ok {
 		return nil
 	}
 
-	if document, ok := &storage.documents[uri.path]; ok {
+	if document, ok := &storage.documents[path]; ok {
 		return document
 	}
 
-	return load_from_disk(uri)
+	return load_from_disk(path)
 }
 
 // Load a document from disk and store it in storage.
 // Returns pointer to the stored document, or nil on failure.
-load_from_disk :: proc(uri: common.Uri) -> ^DocumentData {
-	fullpath := get_fullpath_from_uri(uri.path, context.temp_allocator)
+load_from_disk :: proc(path: string) -> ^DocumentData {
+	fullpath := get_fullpath_from_path(path, context.temp_allocator)
 
 	data, read_ok := workspace.read_file_content(fullpath, context.temp_allocator)
 	if !read_ok {
-		log.errorf("Failed to read file from disk: %v", uri.path)
+		log.errorf("Failed to read file from disk: %v", path)
 		return nil
 	}
 
-	doc, _ := open(uri, string(data))
+	doc, _ := open(path, string(data))
 	return doc
 }
 
 // Open a document with transferred text from the client.
 // Returns pointer to the stored document and error status.
-open :: proc {
-	open_from_uri_string,
-	open_from_uri,
-}
-
-open_from_uri_string :: proc(uri_string: string, text: string) -> (^DocumentData, common.Error) {
-	// Parse URI with temp allocator first, then clone to persistent storage
-	uri, parsed_ok := common.parse_uri(uri_string, context.temp_allocator)
-
+open :: proc(path_or_encoded: string, text: string) -> (^DocumentData, common.Error) {
+	// Try to parse as encoded path first
+	path, parsed_ok := common.make_path(path_or_encoded, context.temp_allocator)
 	if !parsed_ok {
-		log.error("Failed to parse uri")
-		return nil, .ParseError
+		// If parsing fails, assume it's already a plain path
+		path = path_or_encoded
 	}
 
-	return open_from_uri(uri, text)
-}
-
-open_from_uri :: proc(uri: common.Uri, text: string) -> (^DocumentData, common.Error) {
-	if document, ok := &storage.documents[uri.path]; ok {
+	if document, ok := &storage.documents[path]; ok {
 		// Document already exists, update it
 		// Free old data with persistent allocator
-		common.delete_uri(document.uri, storage.allocator)
+		delete(document.path, storage.allocator)
 		delete(document.text, storage.allocator)
 
 		// Clone new data to persistent storage
-		document.uri = common.clone_uri(uri, storage.allocator)
+		document.path = strings.clone(path, storage.allocator)
 		document.text = transmute([]u8)strings.clone(text, storage.allocator)
 		return document, .None
 	}
 
 	// New document - clone data to persistent storage
 	document := DocumentData {
-		uri  = common.clone_uri(uri, storage.allocator),
+		path = strings.clone(path, storage.allocator),
 		text = transmute([]u8)strings.clone(text, storage.allocator),
 	}
 
-	key := strings.clone(uri.path, storage.allocator)
+	key := strings.clone(path, storage.allocator)
 	storage.documents[key] = document
 
 	return &storage.documents[key], .None
@@ -119,20 +109,20 @@ open_from_uri :: proc(uri: common.Uri, text: string) -> (^DocumentData, common.E
 
 // Apply incremental changes to a document.
 apply_changes :: proc(
-	uri_string: string,
+	encoded_path: string,
 	changes: []ContentChangeEvent,
 	version: Maybe(int) = nil,
 ) -> common.Error {
-	uri, parsed_ok := common.parse_uri(uri_string, context.temp_allocator)
+	path, parsed_ok := common.make_path(encoded_path, context.temp_allocator)
 
 	if !parsed_ok {
 		return .ParseError
 	}
 
-	document := &storage.documents[uri.path]
+	document := &storage.documents[path]
 
 	if document == nil {
-		log.errorf("Client called change on an document not opened: %v ", uri.path)
+		log.errorf("Client called change on an document not opened: %v ", path)
 		return .InvalidRequest
 	}
 
@@ -179,33 +169,33 @@ apply_changes :: proc(
 }
 
 // Close a document and free its resources.
-close :: proc(uri_string: string) -> common.Error {
-	log.infof("document close: %v", uri_string)
+close :: proc(encoded_path: string) -> common.Error {
+	log.infof("document close: %v", encoded_path)
 
-	uri, parsed_ok := common.parse_uri(uri_string, context.temp_allocator)
+	path, parsed_ok := common.make_path(encoded_path, context.temp_allocator)
 
 	if !parsed_ok {
 		return .ParseError
 	}
 
-	document := &storage.documents[uri.path]
+	document := &storage.documents[path]
 
 	if document == nil {
-		log.errorf("Client called close on a document that was never opened: %v ", uri.path)
+		log.errorf("Client called close on a document that was never opened: %v ", path)
 		return .InvalidRequest
 	}
 
-	common.delete_uri(document.uri, storage.allocator)
+	delete(document.path, storage.allocator)
 	delete(document.text, storage.allocator)
 
 	// The key in the map was cloned with persistent allocator, need to free it
 	for k, _ in storage.documents {
-		if k == uri.path {
+		if k == path {
 			delete(k, storage.allocator)
 			break
 		}
 	}
-	delete_key(&storage.documents, uri.path)
+	delete_key(&storage.documents, path)
 
 	return .None
 }

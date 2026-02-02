@@ -179,22 +179,22 @@ get_and_clear_dirty_uris :: proc(allocator := context.temp_allocator) -> []strin
 	return result[:]
 }
 
-// Get diagnostics of a specific type for a URI (for testing)
-get_diagnostics_for_uri :: proc(uri: string, type: DiagnosticType, allocator := context.temp_allocator) -> []Diagnostic {
+// Get diagnostics of a specific type for an encoded path (for testing)
+get_diagnostics_for_path :: proc(encoded_path: string, type: DiagnosticType, allocator := context.temp_allocator) -> []Diagnostic {
 	ensure_initialized()
 
-	if uri not_in g_persistent_diagnostics {
+	if encoded_path not_in g_persistent_diagnostics {
 		return {}
 	}
 
-	uri_diagnostics := g_persistent_diagnostics[uri]
+	path_diagnostics := g_persistent_diagnostics[encoded_path]
 
-	if uri_diagnostics[type] == nil || len(uri_diagnostics[type]) == 0 {
+	if path_diagnostics[type] == nil || len(path_diagnostics[type]) == 0 {
 		return {}
 	}
 
-	result := make([dynamic]Diagnostic, 0, len(uri_diagnostics[type]), allocator)
-	append(&result, ..uri_diagnostics[type][:])
+	result := make([dynamic]Diagnostic, 0, len(path_diagnostics[type]), allocator)
+	append(&result, ..path_diagnostics[type][:])
 
 	return result[:]
 }

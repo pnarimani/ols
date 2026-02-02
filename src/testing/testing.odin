@@ -52,7 +52,7 @@ setup :: proc(src: ^Source) {
 
 	src.main = strings.clone(src.main, context.temp_allocator)
 	src.document = new(documents.DocumentData, context.temp_allocator)
-	src.document.uri = common.create_uri("test/test.odin", context.temp_allocator)
+	src.document.path = "test/test.odin"
 	src.document.text = transmute([]u8)src.main
 
 	// Initialize the config.collections map before calling initialize_default_collections
@@ -62,7 +62,7 @@ setup :: proc(src: ^Source) {
 	// Parse position markers: {*} for cursor, {<} for range start, {>} for range end
 	parse_position_markers(src)
 
-	workspace.register_mock_file(src.document.uri.path, src.main)
+	workspace.register_mock_file(src.document.path, src.main)
 
 	// Reset and initialize the symbol cache for this test
 	// This ensures each test starts with a fresh cache
@@ -79,16 +79,16 @@ setup :: proc(src: ^Source) {
 	server.run_hint_diagnostics(src.doc_ctx, &src.config)
 
 	// Collect symbols from the main document into the cache
-	if ret := analysis.collect_symbols_to_cache(src.doc_ctx.ast, src.document.uri.uri); ret != .None {
+	encoded_path := common.make_encoded_path(src.document.path, context.temp_allocator)
+	if ret := analysis.collect_symbols_to_cache(src.doc_ctx.ast, encoded_path); ret != .None {
 		return
 	}
 
 	for src_pkg in src.packages {
 		filename := src_pkg.filename if src_pkg.filename != "" else "package"
-		uri := common.create_uri(fmt.aprintf("test/%v/%v.odin", src_pkg.pkg, filename))
-		fullpath := uri.path
+		fullpath := fmt.aprintf("test/%v/%v.odin", src_pkg.pkg, filename)
 		workspace.register_mock_file(fullpath, src_pkg.source)
-		documents.open(uri, src_pkg.source)
+		documents.open(fullpath, src_pkg.source)
 		analysis.analyze_file(fullpath, src_pkg.source)
 	}
 }
@@ -677,7 +677,8 @@ expect_action_with_edit :: proc(t: ^testing.T, src: ^Source, action_name: string
 	for action in actions {
 		if action.title == action_name {
 			// Get the text edits for the document
-			if edits, found := action.edit.changes[src.doc_ctx.uri.uri]; found {
+			encoded_path := common.make_encoded_path(src.doc_ctx.path, context.temp_allocator)
+			if edits, found := action.edit.changes[encoded_path]; found {
 				if len(edits) != len(expected_texts) {
 					log.errorf("Expected %d edits but got %d", len(expected_texts), len(edits))
 					return
@@ -727,7 +728,8 @@ expect_action_with_edit_at_line :: proc(
 	for action in actions {
 		if action.title == action_name {
 			// Get the text edits for the document
-			if edits, found := action.edit.changes[src.doc_ctx.uri.uri]; found {
+			encoded_path := common.make_encoded_path(src.doc_ctx.path, context.temp_allocator)
+			if edits, found := action.edit.changes[encoded_path]; found {
 				if len(edits) != len(expected_texts) {
 					testing.expectf(t, false, "Expected %d edits but got %d", len(expected_texts), len(edits))
 					return

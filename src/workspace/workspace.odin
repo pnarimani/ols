@@ -73,7 +73,7 @@ iterate_mock_files :: proc(allocator := context.allocator) -> []FileInfo {
 	result := make([dynamic]FileInfo, allocator)
 	for mock_file in mock_files {
 		info := FileInfo {
-			uri      = common.create_uri(mock_file.fullpath, allocator).uri,
+			uri      = common.make_encoded_path(mock_file.fullpath, allocator),
 			fullpath = mock_file.fullpath,
 			text     = mock_file.text,
 		}
@@ -122,8 +122,8 @@ iterate_real_files :: #force_inline proc(config: ^common.Config, allocator := co
 		fullpaths = &fullpaths,
 	}
 	for workspace in common.config.workspace_folders {
-		uri, _ := common.parse_uri(workspace.uri, context.temp_allocator)
-		filepath.walk(uri.path, walk_directories, &walk_data)
+		path, _ := common.make_path(workspace.uri, context.temp_allocator)
+		filepath.walk(path, walk_directories, &walk_data)
 	}
 
 	unique_fullpaths := slice.unique(fullpaths[:])
@@ -137,7 +137,7 @@ iterate_real_files :: #force_inline proc(config: ^common.Config, allocator := co
 		}
 
 		info := FileInfo {
-			uri      = common.create_uri(fullpath, allocator).uri,
+			uri      = common.make_encoded_path(fullpath, allocator),
 			fullpath = fullpath,
 			text     = string(data),
 		}

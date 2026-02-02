@@ -13,8 +13,8 @@ expect_diagnostic_at :: proc(t: ^testing.T, src: ^Source, code: string, message_
 	setup(src)
 	defer teardown(src)
 
-	path := src.document.uri.path
-	uri := common.create_uri(path, context.temp_allocator)
+	path := src.document.path
+	encoded_path := common.make_encoded_path(path, context.temp_allocator)
 
 	expected_range := common.Range {
 		start = src.position,
@@ -26,7 +26,7 @@ expect_diagnostic_at :: proc(t: ^testing.T, src: ^Source, code: string, message_
 	found_diagnostics := make([dynamic]server.Diagnostic, context.temp_allocator)
 
 	// Query the persistent diagnostic store for .Hint diagnostics
-	diag_arr := diagnostics.get_diagnostics_for_uri(uri.uri, .Hint, context.temp_allocator)
+	diag_arr := diagnostics.get_diagnostics_for_path(encoded_path, .Hint, context.temp_allocator)
 	for diag in diag_arr {
 		if diag.code == code {
 			append(&found_diagnostics, diag)
@@ -71,11 +71,11 @@ expect_no_diagnostic :: proc(t: ^testing.T, src: ^Source, code: string) {
 	setup(src)
 	defer teardown(src)
 
-	path := src.document.uri.path
-	uri := common.create_uri(path, context.temp_allocator)
+	path := src.document.path
+	encoded_path := common.make_encoded_path(path, context.temp_allocator)
 	
 	// Query the persistent diagnostic store for .Hint diagnostics
-	diag_arr := diagnostics.get_diagnostics_for_uri(uri.uri, .Hint, context.temp_allocator)
+	diag_arr := diagnostics.get_diagnostics_for_path(encoded_path, .Hint, context.temp_allocator)
 	for diag in diag_arr {
 		if diag.code == code {
 			log.errorf("Expected no diagnostic with code '%s', but found one: %s", code, diag.message)

@@ -72,6 +72,6 @@ document_apply_changes :: proc(
 }
 
 document_close :: documents.close
-get_fullpath_from_uri :: documents.get_fullpath_from_uri
-get_package_name_from_uri :: documents.get_package_name_from_uri
+get_fullpath_from_path :: documents.get_fullpath_from_path
+get_package_name_from_path :: documents.get_package_name_from_path
 parse_imports_from_ast :: documents.parse_imports_from_ast

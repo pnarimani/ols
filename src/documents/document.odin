@@ -22,15 +22,15 @@ ParserError :: struct {
 }
 
 // Document represents an open document in the editor.
-// Stores URI and raw text bytes in persistent memory.
+// Stores path and raw text bytes in persistent memory.
 DocumentData :: struct {
-	uri:  common.Uri,
+	path: string,
 	text: []u8,
 }
 
 // documents.Document holds parsed data for a document.
 Document :: struct {
-	uri:          common.Uri,
+	path:         string,
 	text:         []u8,
 	ast:          ast.File,
 	imports:      []Package,

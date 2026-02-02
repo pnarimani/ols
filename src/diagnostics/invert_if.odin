@@ -38,8 +38,8 @@ Diagnostic_Reason :: enum {
 }
 
 Invert_If_Visitor_Data :: struct {
-	doc_ctx:    documents.Document,
-	uri:        string,
+	doc_ctx:      documents.Document,
+	encoded_path: string,
 }
 
 // Check document for if statements that could benefit from inversion
@@ -52,19 +52,19 @@ check_invert_if_suggestions :: proc(doc_ctx: documents.Document, config: ^common
 		return
 	}
 
-	// Build URI with platform-specific path handling
-	path := doc_ctx.uri.path
+	// Build encoded path with platform-specific path handling
+	path := doc_ctx.path
 	when ODIN_OS == .Windows {
 		path = common.get_case_sensitive_path(path, context.temp_allocator)
 	}
-	uri := common.create_uri(path, context.temp_allocator)
+	encoded_path := common.make_encoded_path(path, context.temp_allocator)
 
-	// Clear existing .Hint diagnostics for this URI before adding new ones
-	begin_diagnostic_update(uri.uri, .Hint)
+	// Clear existing .Hint diagnostics for this path before adding new ones
+	begin_diagnostic_update(encoded_path, .Hint)
 
 	visitor_data := Invert_If_Visitor_Data {
-		doc_ctx    = doc_ctx,
-		uri        = uri.uri,
+		doc_ctx      = doc_ctx,
+		encoded_path = encoded_path,
 	}
 
 	visit_ast_nodes(doc_ctx.ast.decls[:], invert_if_visitor, &visitor_data)
@@ -90,7 +90,7 @@ invert_if_visitor :: proc(node: ^ast.Node, ctx: ^AST_Visitor_Context, user_data:
 	}
 
 	// Add the diagnostic
-	add_invert_if_diagnostic(if_stmt, data.doc_ctx, data.uri, reason)
+	add_invert_if_diagnostic(if_stmt, data.doc_ctx, data.encoded_path, reason)
 
 	return false // Continue to find more
 }
@@ -233,7 +233,7 @@ is_early_exit :: proc(stmt: ^ast.Stmt) -> bool {
 }
 
 // Add a diagnostic for an if statement that should be inverted
-add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Document, uri: string, reason: Diagnostic_Reason) {
+add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Document, encoded_path: string, reason: Diagnostic_Reason) {
 	if if_stmt == nil {
 		return
 	}
@@ -250,7 +250,7 @@ add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Docum
 
 	add_diagnostic(
 		.Hint,
-		uri,
+		encoded_path,
 		Diagnostic {
 			range = common.get_token_range(if_stmt.cond^, doc_ctx.ast.src),
 			severity = DiagnosticSeverity.Hint,

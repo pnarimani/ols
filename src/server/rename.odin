@@ -20,7 +20,7 @@ get_rename :: proc(doc_ctx: documents.Document, new_text: string, position: comm
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		doc_ctx.uri.uri,
+		common.make_encoded_path(doc_ctx.path, context.temp_allocator),
 		doc_ctx.fullpath,
 		context.temp_allocator,
 	)
@@ -78,7 +78,7 @@ get_prepare_rename :: proc(doc_ctx: documents.Document, position: common.Positio
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		doc_ctx.uri.uri,
+		common.make_encoded_path(doc_ctx.path, context.temp_allocator),
 		doc_ctx.fullpath,
 		context.temp_allocator,
 	)

@@ -49,20 +49,21 @@ fallback_find_odin_directories :: proc(config: ^common.Config) -> []string {
 	data := make([dynamic]string, context.temp_allocator)
 
 	if len(config.workspace_folders) > 0 {
-		if uri, ok := common.parse_uri(config.workspace_folders[0].uri, context.temp_allocator); ok {
-			filepath.walk(uri.path, walk_proc, &data)
+		if path, ok := common.make_path(config.workspace_folders[0].uri, context.temp_allocator); ok {
+			filepath.walk(path, walk_proc, &data)
 		}
 	}
 
 	return data[:]
 }
 
-check :: proc(paths: []string, uri: common.Uri, config: ^common.Config) {
+check :: proc(paths: []string, encoded_path: string, config: ^common.Config) {
 	paths := paths
 
 	if len(paths) == 0 {
 		if config.enable_checker_only_saved {
-			paths = {path.dir(uri.path, context.temp_allocator)}
+			file_path, _ := common.make_path(encoded_path, context.temp_allocator)
+			paths = {path.dir(file_path, context.temp_allocator)}
 		} else {
 			paths = fallback_find_odin_directories(config)
 		}
@@ -151,28 +152,28 @@ check :: proc(paths: []string, uri: common.Uri, config: ^common.Config) {
 				error_path = common.get_case_sensitive_path(error_path, context.temp_allocator)
 			}
 
-			error_uri := common.create_uri(error_path, context.temp_allocator)
+			error_encoded_path := common.make_encoded_path(error_path, context.temp_allocator)
 
-			// If this URI wasn't in the previous list and we haven't seen it yet,
+			// If this path wasn't in the previous list and we haven't seen it yet,
 			// begin an update for it (to ensure clean slate)
-			if error_uri.uri not_in checked_uris {
-				checked_uris[error_uri.uri] = true
+			if error_encoded_path not_in checked_uris {
+				checked_uris[error_encoded_path] = true
 				// Only call begin_diagnostic_update if not already cleared above
 				has_previous := false
-				for prev_uri in previous_check_uris {
-					if prev_uri == error_uri.uri {
+				for prev_path in previous_check_uris {
+					if prev_path == error_encoded_path {
 						has_previous = true
 						break
 					}
 				}
 				if !has_previous {
-					begin_diagnostic_update(error_uri.uri, .Check)
+					begin_diagnostic_update(error_encoded_path, .Check)
 				}
 			}
 
 			add_diagnostic(
 				.Check,
-				error_uri.uri,
+				error_encoded_path,
 				Diagnostic {
 					code = "checker",
 					severity = .Error,

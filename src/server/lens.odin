@@ -29,7 +29,7 @@ get_code_lenses :: proc(doc_ctx: documents.Document, position: common.Position) 
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		doc_ctx.uri.uri,
+		common.make_encoded_path(doc_ctx.path, context.temp_allocator),
 		doc_ctx.fullpath,
 	)
 

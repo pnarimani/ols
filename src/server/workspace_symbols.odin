@@ -36,10 +36,10 @@ find_workspace_packages :: proc(allocator := context.temp_allocator) -> []string
 	workspace_pkgs := make([dynamic]string, 0, allocator)
 
 	for workspace in common.config.workspace_folders {
-		uri := common.parse_uri(workspace.uri, context.temp_allocator) or_continue
+		path := common.make_path(workspace.uri, context.temp_allocator) or_continue
 		pkgs := make([dynamic]string, 0, context.temp_allocator)
 
-		filepath.walk(uri.path, walk_dir, &pkgs)
+		filepath.walk(path, walk_dir, &pkgs)
 
 		_pkg: for pkg in pkgs {
 			matches, err := filepath.glob(fmt.tprintf("%v/*.odin", pkg), context.temp_allocator)

@@ -277,9 +277,9 @@ analyze_file :: proc(fullpath, text: string) {
 		return
 	}
 
-	uri := common.create_uri(fullpath, context.temp_allocator)
+	encoded_path := common.make_encoded_path(fullpath, context.temp_allocator)
 
-	collect_symbols(&g_symbol_cache, file, uri.uri)
+	collect_symbols(&g_symbol_cache, file, encoded_path)
 }
 
 // Get the builtin package path

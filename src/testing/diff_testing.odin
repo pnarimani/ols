@@ -70,7 +70,8 @@ expect_code_action_diff :: proc(t: ^testing.T, diff_source: string, action_name:
 	// Find the requested action
 	for action in actions {
 		if action.title != action_name do continue
-		edits, found := action.edit.changes[src.doc_ctx.uri.uri]
+		encoded_path := common.make_encoded_path(src.doc_ctx.path, context.temp_allocator)
+		edits, found := action.edit.changes[encoded_path]
 		if !found {
 			testing.expect(t, false, "Action found but has no edits")
 			return
@@ -335,9 +336,9 @@ expect_code_action_diff_multi_file :: proc(
 
 		// Check main file edits
 		all_match := true
-		main_uri := src.doc_ctx.uri.uri
+		main_encoded_path := common.make_encoded_path(src.doc_ctx.path, context.temp_allocator)
 
-		edits, found := action.edit.changes[main_uri]
+		edits, found := action.edit.changes[main_encoded_path]
 		if found {
 			actual_after := apply_text_edits(main_before, edits)
 			normalized_expected := normalize_source(main_expected)
@@ -374,14 +375,14 @@ expect_code_action_diff_multi_file :: proc(
 			pkg := packages[i]
 			expected := package_expected[i]
 
-			// Build expected URI for this file
+			// Build expected path for this file
 			filename := pkg.filename if pkg.filename != "" else "package"
-			uri := common.create_uri(
+			encoded_path := common.make_encoded_path(
 				fmt.tprintf("test/%s/%s.odin", pkg.pkg, filename),
 				context.temp_allocator,
-			).uri
+			)
 
-			pkg_edits, pkg_found := action.edit.changes[uri]
+			pkg_edits, pkg_found := action.edit.changes[encoded_path]
 			if pkg_found {
 				actual_after := apply_text_edits(pkg.source, pkg_edits)
 				normalized_expected := normalize_source(expected)

@@ -183,7 +183,7 @@ prepare_references :: proc(
 					symbol = analysis.Symbol {
 						range = common.get_token_range(field.name, ast_context.file.src),
 						pkg   = ast_context.current_package,
-						uri   = doc_ctx.uri.uri,
+						uri   = common.make_encoded_path(doc_ctx.path, context.temp_allocator),
 					}
 					return symbol, .Field, true
 				}
@@ -203,7 +203,7 @@ prepare_references :: proc(
 						symbol = analysis.Symbol {
 							range = common.get_token_range(name, ast_context.file.src),
 							pkg   = ast_context.current_package,
-							uri   = doc_ctx.uri.uri,
+							uri   = common.make_encoded_path(doc_ctx.path, context.temp_allocator),
 						}
 						return symbol, .Field, true
 					}
@@ -231,7 +231,7 @@ prepare_references :: proc(
 		}
 	}
 	if symbol.uri == "" {
-		symbol.uri = doc_ctx.uri.uri
+		symbol.uri = common.make_encoded_path(doc_ctx.path, context.temp_allocator)
 	}
 
 	return symbol, resolve_flag, true
@@ -258,7 +258,7 @@ resolve_references :: proc(
 
 	for k, v in symbols_and_nodes {
 		if strings.equal_fold(v.symbol.uri, symbol.uri) && v.symbol.range == symbol.range {
-			node_uri := common.create_uri(v.node.pos.file)
+			node_encoded_path := common.make_encoded_path(v.node.pos.file, context.temp_allocator)
 
 			range := common.get_token_range(v.node^, ast_context.file.src)
 
@@ -269,7 +269,7 @@ resolve_references :: proc(
 
 			location := common.Location {
 				range = range,
-				uri   = strings.clone(node_uri.uri),
+				uri   = strings.clone(node_encoded_path),
 			}
 
 			append(&locations, location)
@@ -288,8 +288,8 @@ resolve_references :: proc(
 			fullpaths = &fullpaths,
 		}
 		for workspace in common.config.workspace_folders {
-			uri, _ := common.parse_uri(workspace.uri, context.temp_allocator)
-			filepath.walk(uri.path, walk_directories, &walk_data)
+			path, _ := common.make_path(workspace.uri, context.temp_allocator)
+			filepath.walk(path, walk_directories, &walk_data)
 		}
 	}
 
@@ -340,11 +340,11 @@ resolve_references :: proc(
 			continue
 		}
 
-		uri := common.create_uri(fullpath)
+		encoded_path := common.make_encoded_path(fullpath, context.temp_allocator)
 
 		// Create a documents.Document directly for this file
 		inner_doc_ctx := documents.Document {
-			uri          = uri,
+			path         = fullpath,
 			text         = data,
 			ast          = file,
 			fullpath     = fullpath,
@@ -367,7 +367,7 @@ resolve_references :: proc(
 			symbols_and_nodes := resolve_entire_file(inner_doc_ctx, resolve_flag)
 			for k, v in symbols_and_nodes {
 				if strings.equal_fold(v.symbol.uri, symbol.uri) && v.symbol.range == symbol.range {
-					node_uri := common.create_uri(v.node.pos.file)
+					node_encoded_path := common.make_encoded_path(v.node.pos.file, context.temp_allocator)
 					range := common.get_token_range(v.node^, string(inner_doc_ctx.text))
 					//We don't have to have the `.` with, otherwise it renames the dot.
 					if _, ok := v.node.derived.(^ast.Implicit_Selector_Expr); ok {
@@ -375,7 +375,7 @@ resolve_references :: proc(
 					}
 					location := common.Location {
 						range = range,
-						uri   = strings.clone(node_uri.uri),
+						uri   = strings.clone(node_encoded_path),
 					}
 					append(&locations, location)
 				}
@@ -404,7 +404,7 @@ get_references :: proc(
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		doc_ctx.uri.uri,
+		common.make_encoded_path(doc_ctx.path, context.temp_allocator),
 		doc_ctx.fullpath,
 	)
 

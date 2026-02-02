@@ -269,7 +269,8 @@ find_cross_file_usages :: proc(ctx: ^InlineAliasContext) {
 	
 	for source in file_sources {
 		// Skip the current file
-		if source.uri == ctx.doc_ctx.uri.uri {
+		encoded_path := common.make_encoded_path(ctx.doc_ctx.path, context.temp_allocator)
+		if source.uri == encoded_path {
 			continue
 		}
 		

@@ -30,10 +30,10 @@ create_context :: proc(document: ^DocumentData, config: ^common.Config, allocato
 		return {}, false
 	}
 
-	ctx.uri = document.uri
+	ctx.path = document.path
 	ctx.text = document.text
-	ctx.fullpath = get_fullpath_from_uri(document.uri.path, allocator)
-	ctx.package_name = get_package_name_from_uri(document.uri.path, allocator)
+	ctx.fullpath = get_fullpath_from_path(document.path, allocator)
+	ctx.package_name = get_package_name_from_path(document.path, allocator)
 	ctx.ast, ctx.errors, ok = parse_document_text(ctx.fullpath, document.text, allocator)
 	if !ok {
 		return {}, false
@@ -62,7 +62,7 @@ parser_error_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {
 // Parse document text into AST. Returns AST and errors. All allocations use provided allocator.
 // Caller is responsible for freeing allocator when done.
 parse_document_text :: proc(
-	uri_path: string,
+	path: string,
 	text: []u8,
 	allocator := context.temp_allocator,
 ) -> (
@@ -80,7 +80,7 @@ parse_document_text :: proc(
 
 	current_errors = make([dynamic]ParserError, allocator)
 
-	fullpath := get_fullpath_from_uri(uri_path, allocator)
+	fullpath := get_fullpath_from_path(path, allocator)
 
 	pkg := new(ast.Package, allocator)
 	pkg.kind = .Normal
@@ -101,27 +101,27 @@ parse_document_text :: proc(
 	return parsed_file, current_errors[:], true
 }
 
-// Get fullpath from URI path, handling Windows case sensitivity
-get_fullpath_from_uri :: proc(uri_path: string, allocator := context.temp_allocator) -> string {
+// Get fullpath from path, handling Windows case sensitivity
+get_fullpath_from_path :: proc(path: string, allocator := context.temp_allocator) -> string {
 	when ODIN_OS == .Windows {
-		correct := common.get_case_sensitive_path(uri_path, allocator)
+		correct := common.get_case_sensitive_path(path, allocator)
 		if correct == "" {
 			// Handle tests where physical file doesn't exist
-			result, _ := filepath.to_slash(uri_path, allocator)
+			result, _ := filepath.to_slash(path, allocator)
 			return result
 		} else {
 			result, _ := filepath.to_slash(correct, allocator)
 			return result
 		}
 	} else {
-		return uri_path
+		return path
 	}
 }
 
-// Get package name from URI path
-get_package_name_from_uri :: proc(uri_path: string, allocator := context.temp_allocator) -> string {
+// Get package name from path
+get_package_name_from_path :: proc(file_path: string, allocator := context.temp_allocator) -> string {
 	when ODIN_OS == .Windows {
-		package_name := path.dir(uri_path, allocator)
+		package_name := path.dir(file_path, allocator)
 		forward, _ := filepath.to_slash(common.get_case_sensitive_path(package_name, allocator), allocator)
 		if forward == "" {
 			return package_name
@@ -129,7 +129,7 @@ get_package_name_from_uri :: proc(uri_path: string, allocator := context.temp_al
 			return forward
 		}
 	} else {
-		return path.dir(uri_path, allocator)
+		return path.dir(file_path, allocator)
 	}
 }
 
