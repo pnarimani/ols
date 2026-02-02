@@ -135,8 +135,8 @@ get_semantic_tokens :: proc(
 	range: common.Range,
 	symbols: map[uintptr]analysis.SymbolAndNode,
 ) -> []SemanticToken {
-	// Build fresh symbols for this request
-	request_symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
+	// Build symbol cache for this request's packages
+	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -144,7 +144,6 @@ get_semantic_tokens :: proc(
 		doc_ctx.package_name,
 		doc_ctx.uri.uri,
 		doc_ctx.fullpath,
-		&request_symbols,
 	)
 	ast_context.current_package = ast_context.document_package
 

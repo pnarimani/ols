@@ -17,25 +17,27 @@ Document :: doc.DocumentData
 DocumentContext :: doc.Document
 
 // RequestContext bundles together all data needed for handling a request.
-// Created fresh per-request with data from DocumentContext and symbols.
+// Created fresh per-request with data from DocumentContext.
+// Symbol access is through the analysis package's cache helpers.
 RequestContext :: struct {
 	doc_ctx:  DocumentContext,
 	config:   ^common.Config,
 	position: common.Position,
-	symbols:  analysis.SymbolCollection,
 }
 
 // Creates a RequestContext for a document at a given position.
 // All data is allocated using context.temp_allocator.
+// Builds the symbol cache for the request's imports.
 make_request_context :: proc(d: ^Document, pos: common.Position, config: ^common.Config) -> (RequestContext, bool) {
 	doc_ctx, ok := create_document_context(d, config)
 	if !ok {
 		return {}, false
 	}
 
-	symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name, config)
+	// Build symbol cache for this request's packages
+	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name, config)
 
-	return RequestContext{doc_ctx = doc_ctx, config = config, position = pos, symbols = symbols}, true
+	return RequestContext{doc_ctx = doc_ctx, config = config, position = pos}, true
 }
 
 // Delegate to doc package

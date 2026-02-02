@@ -1091,6 +1091,9 @@ notification_did_open :: proc(
 	diagnostics := make_diagnostic_collection()
 
 	if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
+		// Update the symbol cache with the document's symbols
+		analysis.update_doc(doc_ctx.uri.uri, doc_ctx.ast)
+
 		check_unused_imports(doc_ctx, config, &diagnostics)
 		check_invert_if_suggestions(doc_ctx, config, &diagnostics)
 	}
@@ -1125,6 +1128,14 @@ notification_did_change :: proc(
 		config,
 		writer,
 	)
+
+	// Update the symbol cache with the changed document's symbols
+	document := document_get(change_params.textDocument.uri)
+	if document != nil {
+		if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
+			analysis.update_doc(doc_ctx.uri.uri, doc_ctx.ast)
+		}
+	}
 
 	return .None
 }

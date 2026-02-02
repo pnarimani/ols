@@ -21,8 +21,8 @@ CodeLens :: struct {
 }
 
 get_code_lenses :: proc(doc_ctx: DocumentContext, position: common.Position) -> ([]CodeLens, bool) {
-	// Build fresh symbols for this request
-	request_symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
+	// Build symbol cache for this request's packages
+	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -30,7 +30,6 @@ get_code_lenses :: proc(doc_ctx: DocumentContext, position: common.Position) -> 
 		doc_ctx.package_name,
 		doc_ctx.uri.uri,
 		doc_ctx.fullpath,
-		&request_symbols,
 	)
 
 	get_globals(doc_ctx.ast, &ast_context)

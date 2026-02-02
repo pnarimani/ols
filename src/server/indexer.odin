@@ -31,26 +31,27 @@ should_skip_private_symbol :: proc(symbol: analysis.Symbol, current_pkg, current
 	return false
 }
 
-lookup :: proc(symbols: ^analysis.SymbolCollection, name: string, pkg: string, current_file: string, loc := #caller_location) -> (analysis.Symbol, bool) {
-	if name == "" || symbols == nil {
+// Lookup a symbol by name and package.
+// Uses the global symbol cache from analysis package.
+lookup :: proc(name: string, pkg: string, current_file: string, loc := #caller_location) -> (analysis.Symbol, bool) {
+	if name == "" {
 		return {}, false
 	}
 
-	if _pkg, ok := &symbols.packages[pkg]; ok {
-		if symbol, ok := _pkg.symbols[name]; ok {
-			current_pkg := get_package_from_filepath(current_file)
-			if should_skip_private_symbol(symbol, current_pkg, current_file) {
-				return {}, false
-			}
-			return symbol, true
+	if symbol, ok := analysis.lookup_symbol(name, pkg); ok {
+		current_pkg := get_package_from_filepath(current_file)
+		if should_skip_private_symbol(symbol, current_pkg, current_file) {
+			return {}, false
 		}
+		return symbol, true
 	}
 
 	return {}, false
 }
 
+// Fuzzy search for symbols by name across packages.
+// Uses the global symbol cache from analysis package.
 fuzzy_search :: proc(
-	symbols: ^analysis.SymbolCollection,
 	name: string,
 	pkgs: []string,
 	current_file: string,
@@ -60,10 +61,7 @@ fuzzy_search :: proc(
 	[]FuzzyResult,
 	bool,
 ) {
-	if symbols == nil {
-		return {}, false
-	}
-	results, ok := symbol_collection_fuzzy_search(symbols, name, pkgs, current_file, resolve_fields, limit = limit)
+	results, ok := symbol_collection_fuzzy_search(name, pkgs, current_file, resolve_fields, limit = limit)
 	if !ok {
 		return {}, false
 	}

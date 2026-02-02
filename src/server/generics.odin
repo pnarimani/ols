@@ -1,13 +1,13 @@
 #+feature using-stmt
 package server
 
-import "src:analysis"
-import "src:codeprint"
 import "core:odin/ast"
 import "core:odin/tokenizer"
 import "core:reflect"
 import "core:strings"
 
+import "src:analysis"
+import "src:codeprint"
 import "src:common"
 
 resolve_poly :: proc(

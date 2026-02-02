@@ -23,7 +23,7 @@ Source :: struct {
 	packages:     []Package,
 	document:     ^server.Document,
 	doc_ctx:      server.DocumentContext, // Parsed document context
-	symbols:      analysis.SymbolCollection, // Per-test symbol collection
+	// Symbol access is through analysis cache helpers
 	diagnostics:  server.DiagnosticCollection, // Per-test diagnostic collection
 	collections:  map[string]string,
 	config:       common.Config,
@@ -38,7 +38,6 @@ make_test_request_context :: proc(src: ^Source) -> server.RequestContext {
 		doc_ctx = src.doc_ctx,
 		config = &src.config,
 		position = src.position,
-		symbols = src.symbols,
 	}
 }
 
@@ -56,11 +55,9 @@ setup :: proc(src: ^Source) {
 	// Parse position markers: {*} for cursor, {<} for range start, {>} for range end
 	parse_position_markers(src)
 
-	// Create a fresh symbol collection for this test
-	// This includes builtins from the filesystem for builtin function testing
-	// Pass the test config so that enable_fake_method etc. are respected
-	// Pass empty string for current_package since test files don't have a real package directory
-	src.symbols = analysis.build_request_symbols({}, "", &src.config)
+	// Reset and initialize the symbol cache for this test
+	// This ensures each test starts with a fresh cache
+	analysis.init_symbol_cache(&src.config)
 
 	// Create DocumentContext for the test document
 	src.doc_ctx, _ = server.create_document_context(src.document, &src.config)
@@ -71,8 +68,8 @@ setup :: proc(src: ^Source) {
 	// Run diagnostics checks if enabled in config
 	server.run_hint_diagnostics(src.doc_ctx, &src.config, &src.diagnostics)
 
-	// Collect symbols from the main document
-	if ret := analysis.collect_symbols(&src.symbols, src.doc_ctx.ast, src.document.uri.uri); ret != .None {
+	// Collect symbols from the main document into the cache
+	if ret := analysis.collect_symbols_to_cache(src.doc_ctx.ast, src.document.uri.uri); ret != .None {
 		return
 	}
 
@@ -111,7 +108,7 @@ setup :: proc(src: ^Source) {
 			panic("Parser error in test package source")
 		}
 
-		if ret := analysis.collect_symbols(&src.symbols, file, uri.uri); ret != .None {
+		if ret := analysis.collect_symbols_to_cache(file, uri.uri); ret != .None {
 			return
 		}
 	}
@@ -119,6 +116,7 @@ setup :: proc(src: ^Source) {
 
 @(private)
 teardown :: proc(src: ^Source) {
+	analysis.shutdown_symbol_cache()
 	free_all(context.temp_allocator)
 }
 

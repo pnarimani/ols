@@ -119,42 +119,38 @@ collect_methods :: proc(
 	remove_edit: []TextEdit,
 	results: ^[dynamic]CompletionResult,
 ) {
-	for k, v in ast_context.symbols.packages {
-		symbols, ok := &v.methods[method]
-		if !ok {
+	// Get all methods for this method key across all packages
+	method_symbols := analysis.get_all_methods(method, context.temp_allocator)
+
+	for &symbol in method_symbols {
+		if should_skip_private_symbol(symbol, ast_context.current_package, ast_context.fullpath) {
 			continue
 		}
+		resolve_unresolved_symbol(ast_context, &symbol)
 
-		for &symbol in symbols {
-			if should_skip_private_symbol(symbol, ast_context.current_package, ast_context.fullpath) {
-				continue
-			}
-			resolve_unresolved_symbol(ast_context, &symbol)
-
-			#partial switch &sym_value in symbol.value {
-			case analysis.SymbolProcedureValue:
-				add_proc_method_completion(
-					ast_context,
-					position_context,
-					&symbol,
-					sym_value,
-					pointers,
-					receiver,
-					remove_edit,
-					results,
-				)
-			case analysis.SymbolProcedureGroupValue:
-				add_proc_group_method_completion(
-					ast_context,
-					position_context,
-					&symbol,
-					sym_value,
-					pointers,
-					receiver,
-					remove_edit,
-					results,
-				)
-			}
+		#partial switch &sym_value in symbol.value {
+		case analysis.SymbolProcedureValue:
+			add_proc_method_completion(
+				ast_context,
+				position_context,
+				&symbol,
+				sym_value,
+				pointers,
+				receiver,
+				remove_edit,
+				results,
+			)
+		case analysis.SymbolProcedureGroupValue:
+			add_proc_group_method_completion(
+				ast_context,
+				position_context,
+				&symbol,
+				sym_value,
+				pointers,
+				receiver,
+				remove_edit,
+				results,
+			)
 		}
 	}
 }

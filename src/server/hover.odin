@@ -333,7 +333,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 
 					if resolved, ok := resolve_symbol_return(
 						&ast_context,
-						lookup(ast_context.symbols, ident.name, selector.pkg, ast_context.fullpath),
+						lookup(ident.name, selector.pkg, ast_context.fullpath),
 					); ok {
 						build_documentation(&ast_context, &resolved, false)
 						resolved.name = ident.name

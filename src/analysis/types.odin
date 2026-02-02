@@ -1,5 +1,6 @@
 package analysis
 
+import "core:mem"
 import "core:odin/ast"
 import "core:odin/tokenizer"
 
@@ -9,7 +10,9 @@ import "src:common"
 // SymbolCollection and related types
 // ============================================================================
 
+@(private = "package")
 SymbolCollection :: struct {
+	allocator:      mem.Allocator,
 	config:         ^common.Config,
 	packages:       map[string]SymbolPackage,
 	unique_strings: map[string]string, //store all our strings as unique strings and reference them to save memory.
@@ -31,6 +34,7 @@ Method :: struct {
 	name: string,
 }
 
+@(private = "package")
 SymbolPackage :: struct {
 	symbols:            map[string]Symbol,
 	objc_structs:       map[string]ObjcStruct, //mapping from struct name to function

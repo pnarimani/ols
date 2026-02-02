@@ -7,11 +7,9 @@ import "core:strings"
 import "src:analysis"
 import "src:common"
 
-symbol_collection_lookup :: proc(collection: ^analysis.SymbolCollection, name: string, pkg: string) -> (analysis.Symbol, bool) {
-	if _pkg, ok := &collection.packages[pkg]; ok {
-		return _pkg.symbols[name]
-	}
-	return {}, false
+// Lookup a symbol by name and package using the global cache.
+symbol_collection_lookup :: proc(name: string, pkg: string) -> (analysis.Symbol, bool) {
+	return analysis.lookup_symbol(name, pkg)
 }
 
 score_name :: proc(matchers: []^common.FuzzyMatcher, name: string) -> (f32, bool) {
@@ -27,8 +25,8 @@ score_name :: proc(matchers: []^common.FuzzyMatcher, name: string) -> (f32, bool
 	return score, true
 }
 
+// Fuzzy search for symbols using the global cache.
 symbol_collection_fuzzy_search :: proc(
-	collection: ^analysis.SymbolCollection,
 	name: string,
 	pkgs: []string,
 	current_file: string,
@@ -50,70 +48,70 @@ symbol_collection_fuzzy_search :: proc(
 	current_pkg := get_package_from_filepath(current_file)
 
 	for pkg in pkgs {
-		if pkg, ok := collection.packages[pkg]; ok {
-			for _, symbol in pkg.symbols {
-				if should_skip_private_symbol(symbol, current_pkg, current_file) {
-					continue
-				}
-				if resolve_fields {
-					// TODO: this only does the top level fields, we may want to travers all the way down in the future
-					#partial switch v in symbol.value {
-					case analysis.SymbolStructValue:
-						for name, i in v.names {
-							full_name := fmt.tprintf("%s.%s", symbol.name, name)
-							if score, ok := score_name(matchers[:], full_name); ok {
-								s := symbol
-								construct_struct_field_symbol(&s, symbol.name, v, i)
-								s.name = full_name
-								result := FuzzyResult {
-									symbol = s,
-									score  = score,
-								}
-
-								append(&symbols, result)
+		// Get all symbols from the package via the cache
+		pkg_symbols := analysis.get_package_symbols(pkg, context.temp_allocator)
+		for symbol in pkg_symbols {
+			if should_skip_private_symbol(symbol, current_pkg, current_file) {
+				continue
+			}
+			if resolve_fields {
+				// TODO: this only does the top level fields, we may want to travers all the way down in the future
+				#partial switch v in symbol.value {
+				case analysis.SymbolStructValue:
+					for field_name, i in v.names {
+						full_name := fmt.tprintf("%s.%s", symbol.name, field_name)
+						if score, ok := score_name(matchers[:], full_name); ok {
+							s := symbol
+							construct_struct_field_symbol(&s, symbol.name, v, i)
+							s.name = full_name
+							result := FuzzyResult {
+								symbol = s,
+								score  = score,
 							}
+
+							append(&symbols, result)
 						}
-					case analysis.SymbolBitFieldValue:
-						for name, i in v.names {
-							full_name := fmt.tprintf("%s.%s", symbol.name, name)
-							if score, ok := score_name(matchers[:], full_name); ok {
-								s := symbol
-								construct_bit_field_field_symbol(&s, symbol.name, v, i)
-								s.name = full_name
-								result := FuzzyResult {
-									symbol = s,
-									score  = score,
-								}
-
-								append(&symbols, result)
+					}
+				case analysis.SymbolBitFieldValue:
+					for field_name, i in v.names {
+						full_name := fmt.tprintf("%s.%s", symbol.name, field_name)
+						if score, ok := score_name(matchers[:], full_name); ok {
+							s := symbol
+							construct_bit_field_field_symbol(&s, symbol.name, v, i)
+							s.name = full_name
+							result := FuzzyResult {
+								symbol = s,
+								score  = score,
 							}
+
+							append(&symbols, result)
 						}
-					case analysis.SymbolGenericValue:
-						for name, i in v.field_names {
-							full_name := fmt.tprintf("%s.%s", symbol.name, name)
-							if score, ok := score_name(matchers[:], full_name); ok {
-								s := symbol
-								s.name = full_name
-								s.type = .Field
-								s.range = v.ranges[i]
-								result := FuzzyResult {
-									symbol = s,
-									score  = score,
-								}
-
-								append(&symbols, result)
+					}
+				case analysis.SymbolGenericValue:
+					for field_name, i in v.field_names {
+						full_name := fmt.tprintf("%s.%s", symbol.name, field_name)
+						if score, ok := score_name(matchers[:], full_name); ok {
+							s := symbol
+							s.name = full_name
+							s.type = .Field
+							s.range = v.ranges[i]
+							result := FuzzyResult {
+								symbol = s,
+								score  = score,
 							}
+
+							append(&symbols, result)
 						}
 					}
 				}
-				if score, ok := score_name(matchers[:], symbol.name); ok {
-					result := FuzzyResult {
-						symbol = symbol,
-						score  = score,
-					}
-
-					append(&symbols, result)
+			}
+			if score, ok := score_name(matchers[:], symbol.name); ok {
+				result := FuzzyResult {
+					symbol = symbol,
+					score  = score,
 				}
+
+				append(&symbols, result)
 			}
 		}
 	}

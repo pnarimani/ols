@@ -17,6 +17,70 @@ import "core:strings"
 import "src:common"
 import doc "src:documents"
 
+@(private = "package")
+g_symbol_cache: SymbolCollection
+
+// Initialize the global symbol cache. Called once at startup.
+init_symbol_cache :: proc(config: ^common.Config) {
+	g_symbol_cache = SymbolCollection {
+		allocator	   = context.allocator,
+		config         = config,
+		packages       = make(map[string]SymbolPackage, 64),
+		unique_strings = make(map[string]string, 256),
+	}
+
+	// Load builtins at startup
+	builtin_path := get_builtin_path()
+	if os.exists(builtin_path) {
+		load_package(builtin_path)
+	}
+
+	// Load runtime at startup
+	runtime_path := get_runtime_path()
+	if runtime_path != "" && os.exists(runtime_path) {
+		load_package(runtime_path)
+	}
+}
+
+// Reset the symbol cache (for testing purposes).
+shutdown_symbol_cache :: proc() {
+	// Clear package data
+	for name, &pkg in g_symbol_cache.packages {
+		delete(pkg.symbols)
+		delete(pkg.objc_structs)
+		delete(pkg.methods)
+		delete(pkg.imports)
+		delete(pkg.proc_group_members)
+	}
+	clear(&g_symbol_cache.packages)
+	clear(&g_symbol_cache.unique_strings)
+}
+
+// Build symbols for a request, loading packages into the global cache as needed.
+// This is the main entry point for building symbols for a request.
+build_cache_for_request :: proc(imports: []doc.Package, current_package: string, config: ^common.Config = nil) {
+	context.allocator = g_symbol_cache.allocator
+	if current_package != "" && os.exists(current_package) {
+		load_package(current_package)
+	}
+
+	for imp in imports {
+		load_package(imp.name)
+	}
+}
+
+// Update the cache for a specific document.
+// This parses the document and collects its symbols into the global cache,
+// replacing any existing symbols from that file.
+update_doc :: proc(uri: string, file: ast.File) {
+	context.allocator = g_symbol_cache.allocator
+	collect_symbols(&g_symbol_cache, file, uri)
+}
+
+// ============================================================================
+// Platform configuration
+// ============================================================================
+
 platform_os: map[string]struct{} = {
 	"windows" = {},
 	"linux"   = {},
@@ -158,14 +222,11 @@ should_collect_file :: proc(file_tags: parser.File_Tags) -> bool {
 	return true
 }
 
-// Build symbols from a package into the provided symbol collection.
-// No caching - symbols are built fresh each time.
-build_package_symbols :: proc(symbols: ^SymbolCollection, pkg_name: string, loaded_pkgs: ^map[string]bool) {
-	// Check if already loaded in this request to avoid infinite loops
-	if pkg_name in loaded_pkgs {
+@(private = "package")
+load_package :: proc(pkg_name: string) {
+	if pkg_name in g_symbol_cache.packages {
 		return
 	}
-	loaded_pkgs[pkg_name] = true
 
 	matches, err := filepath.glob(fmt.tprintf("%v/*.odin", pkg_name), context.temp_allocator)
 
@@ -220,11 +281,12 @@ build_package_symbols :: proc(symbols: ^SymbolCollection, pkg_name: string, load
 
 		uri := common.create_uri(fullpath, context.temp_allocator)
 
-		collect_symbols(symbols, file, uri.uri)
+		collect_symbols(&g_symbol_cache, file, uri.uri)
 	}
 }
 
 // Get the builtin package path
+@(private = "package")
 get_builtin_path :: proc() -> string {
 	dir_exe := common.get_executable_path(context.temp_allocator)
 	return path.join({dir_exe, "builtin"}, context.temp_allocator)
@@ -236,39 +298,6 @@ get_runtime_path :: proc() -> string {
 		return path.join({base, "runtime"}, context.temp_allocator)
 	}
 	return ""
-}
-
-// Build a fresh symbol collection for a request.
-// Includes builtins, runtime, the current package, and all imported packages.
-build_request_symbols :: proc(imports: []doc.Package, current_package: string, config: ^common.Config = nil) -> SymbolCollection {
-	// Use provided config or fall back to global config
-	actual_config := config if config != nil else &common.config
-	symbols := make_symbol_collection(actual_config)
-	loaded_pkgs := make(map[string]bool, 16)
-
-	// Always load builtins
-	builtin_path := get_builtin_path()
-	if os.exists(builtin_path) {
-		build_package_symbols(&symbols, builtin_path, &loaded_pkgs)
-	}
-
-	// Load runtime
-	runtime_path := get_runtime_path()
-	if runtime_path != "" && os.exists(runtime_path) {
-		build_package_symbols(&symbols, runtime_path, &loaded_pkgs)
-	}
-
-	// Load current document's package
-	if current_package != "" && os.exists(current_package) {
-		build_package_symbols(&symbols, current_package, &loaded_pkgs)
-	}
-
-	// Load all imported packages
-	for imp in imports {
-		build_package_symbols(&symbols, imp.name, &loaded_pkgs)
-	}
-
-	return symbols
 }
 
 log_error_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {

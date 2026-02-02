@@ -1,5 +1,6 @@
 package main
 
+import "src:analysis"
 import "base:intrinsics"
 
 import "core:fmt"
@@ -59,6 +60,8 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 	defer common.config_storage_shutdown()
 	server.document_storage_init()
 	defer server.document_storage_shutdown()
+	analysis.init_symbol_cache(&common.config)
+	defer analysis.shutdown_symbol_cache()
 
 	common.config.running = true
 

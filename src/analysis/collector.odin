@@ -846,9 +846,7 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: stri
 			collect_objc(collection, expr.attributes, symbol)
 		}
 
-		if v, ok := pkg.symbols[symbol.name]; !ok || v.name == "" {
-			pkg.symbols[symbol.name] = symbol
-		}
+		pkg.symbols[symbol.name] = symbol
 	}
 
 	// Second pass: collect fake methods after all symbols and proc group members are recorded

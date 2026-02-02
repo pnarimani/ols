@@ -44,8 +44,8 @@ get_code_actions :: proc(
 	[]CodeAction,
 	bool,
 ) {
-	// Build fresh symbols for this request
-	symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name, config)
+	// Build symbol cache for this request's packages
+	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name, config)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -53,7 +53,6 @@ get_code_actions :: proc(
 		doc_ctx.package_name,
 		doc_ctx.uri.uri,
 		doc_ctx.fullpath,
-		&symbols,
 		context.temp_allocator,
 	)
 

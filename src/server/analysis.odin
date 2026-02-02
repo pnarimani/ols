@@ -32,7 +32,7 @@ AstContext :: struct {
 	file:                      ast.File,
 	allocator:                 mem.Allocator,
 	imports:                   []Package, //imports for the current document
-	symbols:                   ^analysis.SymbolCollection, //per-request symbol collection
+	// Symbol access is through the analysis package's cache helpers (analysis.lookup_symbol, etc.)
 	current_package:           string,
 	document_package:          string,
 	deferred_package:          [DeferredDepth]string, //When a package change happens when resolving
@@ -74,7 +74,6 @@ make_ast_context :: proc {
 make_ast_context_from_request :: proc(req_ctx: ^RequestContext, allocator := context.temp_allocator) -> AstContext {
 	return make_ast_context_from_doc_ctx(
 		&req_ctx.doc_ctx,
-		&req_ctx.symbols,
 		allocator,
 	)
 }
@@ -82,7 +81,6 @@ make_ast_context_from_request :: proc(req_ctx: ^RequestContext, allocator := con
 // Create AstContext from a DocumentContext pointer. This is the preferred method.
 make_ast_context_from_doc_ctx :: proc(
 	doc_ctx: ^DocumentContext,
-	symbols: ^analysis.SymbolCollection,
 	allocator := context.temp_allocator,
 ) -> AstContext {
 	ast_context := AstContext {
@@ -93,7 +91,6 @@ make_ast_context_from_doc_ctx :: proc(
 		call_expr_recursion_cache = make(map[rawptr]SymbolResult, 0, allocator),
 		file                      = doc_ctx.ast,
 		imports                   = doc_ctx.imports,
-		symbols                   = symbols,
 		use_locals                = true,
 		use_usings                = true,
 		document_package          = doc_ctx.package_name,
@@ -117,7 +114,6 @@ make_ast_context_from_doc :: proc(
 	package_name: string,
 	uri: string,
 	fullpath: string,
-	symbols: ^analysis.SymbolCollection,
 	allocator := context.temp_allocator,
 ) -> AstContext {
 	ast_context := AstContext {
@@ -128,7 +124,6 @@ make_ast_context_from_doc :: proc(
 		call_expr_recursion_cache = make(map[rawptr]SymbolResult, 0, allocator),
 		file                      = file,
 		imports                   = imports,
-		symbols                   = symbols,
 		use_locals                = true,
 		use_usings                = true,
 		document_package          = package_name,
@@ -1440,7 +1435,7 @@ resolve_call_directive :: proc(ast_context: ^AstContext, call: ^ast.Call_Expr) -
 		}
 	case "location":
 		runtime_path := analysis.get_runtime_path()
-		return lookup(ast_context.symbols, "Source_Code_Location", runtime_path, call.pos.file)
+		return lookup("Source_Code_Location", runtime_path, call.pos.file)
 	case "hash", "load_hash":
 		ident := analysis.new_type(ast.Ident, call.pos, call.end)
 		ident.name = "int"
@@ -1722,7 +1717,7 @@ resolve_selector_expression :: proc(ast_context: ^AstContext, node: ^ast.Selecto
 			if node.field != nil {
 				return resolve_symbol_return(
 					ast_context,
-					lookup(ast_context.symbols, node.field.name, selector.pkg, node.pos.file),
+					lookup(node.field.name, selector.pkg, node.pos.file),
 				)
 			} else {
 				return analysis.Symbol{}, false
@@ -1827,7 +1822,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 		for u in ast_context.usings {
 			for imp in ast_context.imports {
 				if strings.compare(imp.name, u.pkg_name) == 0 {
-					if symbol, ok := lookup(ast_context.symbols, node.name, imp.name, node.pos.file); ok {
+					if symbol, ok := lookup(node.name, imp.name, node.pos.file); ok {
 						return resolve_symbol_return(ast_context, symbol)
 					}
 				}
@@ -1871,14 +1866,14 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 	switch node.name {
 	case "context":
 		// Look up Context in the builtin package
-		if symbol, ok := lookup(ast_context.symbols, "Context", "$builtin", ""); ok {
+		if symbol, ok := lookup("Context", "$builtin", ""); ok {
 			symbol.type = .Variable
 			return symbol, ok
 		}
 		// Also try the runtime package
 		runtime_path := analysis.get_runtime_path()
 		if runtime_path != "" {
-			if symbol, ok := lookup(ast_context.symbols, "Context", runtime_path, ""); ok {
+			if symbol, ok := lookup("Context", runtime_path, ""); ok {
 				symbol.type = .Variable
 				return symbol, ok
 			}
@@ -1900,18 +1895,18 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 	is_runtime := strings.contains(ast_context.current_package, "base/runtime")
 
 	if is_runtime {
-		if symbol, ok := lookup(ast_context.symbols, node.name, "$builtin", node.pos.file); ok {
+		if symbol, ok := lookup(node.name, "$builtin", node.pos.file); ok {
 			return resolve_symbol_return(ast_context, symbol)
 		}
 	}
 
 	//last option is to check the index
-	if symbol, ok := lookup(ast_context.symbols, node.name, ast_context.current_package, node.pos.file); ok {
+	if symbol, ok := lookup(node.name, ast_context.current_package, node.pos.file); ok {
 		return resolve_symbol_return(ast_context, symbol)
 	}
 
 	if !is_runtime {
-		if symbol, ok := lookup(ast_context.symbols, node.name, "$builtin", node.pos.file); ok {
+		if symbol, ok := lookup(node.name, "$builtin", node.pos.file); ok {
 			return resolve_symbol_return(ast_context, symbol)
 		}
 	}
@@ -1919,7 +1914,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 	// Try the runtime package as a last resort
 	runtime_path := analysis.get_runtime_path()
 	if runtime_path != "" {
-		if symbol, ok := lookup(ast_context.symbols, node.name, runtime_path, node.pos.file); ok {
+		if symbol, ok := lookup(node.name, runtime_path, node.pos.file); ok {
 			return resolve_symbol_return(ast_context, symbol)
 		}
 	}
@@ -2848,7 +2843,7 @@ resolve_location_identifier :: proc(ast_context: ^AstContext, node: ast.Ident) -
 		usings := get_using_packages(ast_context)
 
 		for pkg in usings {
-			if symbol, ok := lookup(ast_context.symbols, node.name, pkg, node.pos.file); ok {
+			if symbol, ok := lookup(node.name, pkg, node.pos.file); ok {
 				return symbol, ok
 			}
 		}
@@ -2880,11 +2875,11 @@ resolve_location_identifier :: proc(ast_context: ^AstContext, node: ast.Ident) -
 	}
 
 	pkg := get_package_from_node(node)
-	if symbol, ok := lookup(ast_context.symbols, node.name, pkg, node.pos.file); ok {
+	if symbol, ok := lookup(node.name, pkg, node.pos.file); ok {
 		return symbol, ok
 	}
 
-	if symbol, ok := lookup(ast_context.symbols, node.name, "$builtin", node.pos.file); ok {
+	if symbol, ok := lookup(node.name, "$builtin", node.pos.file); ok {
 		return resolve_symbol_return(ast_context, symbol)
 	}
 
@@ -3067,7 +3062,7 @@ resolve_location_implicit_selector :: proc(
 resolve_container_allocator :: proc(ast_context: ^AstContext, container_name: string) -> (analysis.Symbol, bool) {
 	using analysis
 	// Try $builtin first
-	if symbol, ok := lookup(ast_context.symbols, container_name, "$builtin", ast_context.fullpath); ok {
+	if symbol, ok := lookup(container_name, "$builtin", ast_context.fullpath); ok {
 		if v, ok := symbol.value.(analysis.SymbolStructValue); ok {
 			for name, i in v.names {
 				if name == "allocator" {
@@ -3084,7 +3079,7 @@ resolve_container_allocator :: proc(ast_context: ^AstContext, container_name: st
 	// Try runtime package
 	runtime_path := get_runtime_path()
 	if runtime_path != "" {
-		if symbol, ok := lookup(ast_context.symbols, container_name, runtime_path, ast_context.fullpath); ok {
+		if symbol, ok := lookup(container_name, runtime_path, ast_context.fullpath); ok {
 			if v, ok := symbol.value.(analysis.SymbolStructValue); ok {
 				for name, i in v.names {
 					if name == "allocator" {
@@ -3104,7 +3099,7 @@ resolve_container_allocator :: proc(ast_context: ^AstContext, container_name: st
 
 resolve_container_allocator_location :: proc(ast_context: ^AstContext, container_name: string) -> (analysis.Symbol, bool) {
 	// Try $builtin first
-	if symbol, ok := lookup(ast_context.symbols, container_name, "$builtin", ast_context.fullpath); ok {
+	if symbol, ok := lookup(container_name, "$builtin", ast_context.fullpath); ok {
 		if v, ok := symbol.value.(analysis.SymbolStructValue); ok {
 			for name, i in v.names {
 				if name == "allocator" {
@@ -3119,7 +3114,7 @@ resolve_container_allocator_location :: proc(ast_context: ^AstContext, container
 	// Try runtime package
 	runtime_path := analysis.get_runtime_path()
 	if runtime_path != "" {
-		if symbol, ok := lookup(ast_context.symbols, container_name, runtime_path, ast_context.fullpath); ok {
+		if symbol, ok := lookup(container_name, runtime_path, ast_context.fullpath); ok {
 			if v, ok := symbol.value.(analysis.SymbolStructValue); ok {
 				for name, i in v.names {
 					if name == "allocator" {
@@ -3192,7 +3187,7 @@ resolve_symbol_selector :: proc(
 			}
 		}
 	case analysis.SymbolPackageValue:
-		if pkg, ok := lookup(ast_context.symbols, field, symbol.pkg, symbol.uri); ok {
+		if pkg, ok := lookup(field, symbol.pkg, symbol.uri); ok {
 			symbol.range = pkg.range
 			symbol.uri = pkg.uri
 		} else {

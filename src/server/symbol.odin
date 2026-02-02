@@ -221,9 +221,7 @@ expand_usings :: proc(ast_context: ^AstContext, b: ^analysis.SymbolStructValueBu
 expand_objc :: proc(ast_context: ^AstContext, b: ^analysis.SymbolStructValueBuilder) {
 	symbol := b.symbol
 	if .ObjC in symbol.flags {
-		pkg := ast_context.symbols.packages[symbol.pkg]
-
-		if obj_struct, ok := pkg.objc_structs[symbol.name]; ok {
+		if obj_struct, ok := analysis.get_objc_struct(symbol.pkg, symbol.name); ok {
 			_objc_function: for function, i in obj_struct.functions {
 				base := analysis.new_type(ast.Ident, {}, {})
 				base.name = obj_struct.pkg

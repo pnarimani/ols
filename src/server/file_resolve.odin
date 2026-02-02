@@ -28,8 +28,8 @@ reset_position_context :: proc(position_context: ^DocumentPositionContext) {
 }
 
 resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> map[uintptr]analysis.SymbolAndNode {
-	// Build fresh symbols for this request
-	request_symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
+	// Build symbol cache for this request's packages
+	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -37,7 +37,6 @@ resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> ma
 		doc_ctx.package_name,
 		doc_ctx.uri.uri,
 		doc_ctx.fullpath,
-		&request_symbols,
 	)
 
 	position_context: DocumentPositionContext
@@ -67,8 +66,8 @@ resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> ma
 }
 
 resolve_entire_file :: proc(doc_ctx: DocumentContext, flag := ResolveReferenceFlag.None) -> map[uintptr]analysis.SymbolAndNode {
-	// Build fresh symbols for this request
-	request_symbols := analysis.build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
+	// Build symbol cache for this request's packages
+	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -76,7 +75,6 @@ resolve_entire_file :: proc(doc_ctx: DocumentContext, flag := ResolveReferenceFl
 		doc_ctx.package_name,
 		doc_ctx.uri.uri,
 		doc_ctx.fullpath,
-		&request_symbols,
 	)
 
 	position_context: DocumentPositionContext

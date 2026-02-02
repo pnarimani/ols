@@ -77,24 +77,15 @@ get_workspace_symbols :: proc(query: string) -> (workspace_symbols: []WorkspaceS
 	// Find all workspace packages
 	workspace_pkgs := find_workspace_packages()
 
-	// Build a symbol collection containing all workspace packages
-	symbols := analysis.make_symbol_collection(&common.config)
-	loaded_pkgs := make(map[string]bool, 16)
 
-	// Load builtins
-	builtin_path := analysis.get_builtin_path()
-	if os.exists(builtin_path) {
-		analysis.build_package_symbols(&symbols, builtin_path, &loaded_pkgs)
-	}
-
-	// Load all workspace packages
+	// Load all workspace packages into the cache
 	for pkg in workspace_pkgs {
-		analysis.build_package_symbols(&symbols, pkg, &loaded_pkgs)
+		analysis.build_cache_for_request({}, pkg)
 	}
 
 	limit :: 100
 	result_symbols := make([dynamic]WorkspaceSymbol, 0, limit, context.temp_allocator)
-	if results, ok := fuzzy_search(&symbols, query, workspace_pkgs[:], "", resolve_fields = false, limit = limit); ok {
+	if results, ok := fuzzy_search(query, workspace_pkgs[:], "", resolve_fields = false, limit = limit); ok {
 		for result in results {
 			symbol := WorkspaceSymbol {
 				name = result.symbol.name,
