@@ -1,59 +1,24 @@
 package server
 
 import "src:documents"
-import "base:runtime"
-import "core:log"
 import "core:slice"
-import "core:strings"
 
 import "src:common"
+import "src:diagnostics"
 
-DiagnosticType :: enum {
-	Syntax,
-	Unused,
-	Check,
-	Hint,
-}
+// Re-export types from diagnostics package for backward compatibility
+DiagnosticType :: diagnostics.DiagnosticType
+DiagnosticCollection :: diagnostics.DiagnosticCollection
+Diagnostic :: diagnostics.Diagnostic
+DiagnosticSeverity :: diagnostics.DiagnosticSeverity
+DiagnosticTag :: diagnostics.DiagnosticTag
 
-// DiagnosticCollection holds diagnostics computed for a request
-DiagnosticCollection :: struct {
-	diagnostics: [DiagnosticType]map[string][dynamic]Diagnostic,
-}
-
-make_diagnostic_collection :: proc() -> DiagnosticCollection {
-	collection := DiagnosticCollection{}
-	for &diag_map in collection.diagnostics {
-		diag_map = make(map[string][dynamic]Diagnostic, 16)
-	}
-	return collection
-}
+make_diagnostic_collection :: diagnostics.make_diagnostic_collection
+add_diagnostic :: diagnostics.add_diagnostic
 
 // Run hint diagnostics for a document (exported for testing)
 run_hint_diagnostics :: proc(doc_ctx: documents.Document, config: ^common.Config, collection: ^DiagnosticCollection) {
-	if config != nil && config.enable_invert_if_diagnostics {
-		check_invert_if_suggestions(doc_ctx, config, collection)
-	}
-}
-
-add_diagnostic :: proc(collection: ^DiagnosticCollection, type: DiagnosticType, uri: string, diagnostic: Diagnostic) {
-	if collection == nil {
-		return
-	}
-
-	diagnostic_type := &collection.diagnostics[type]
-
-	diagnostic_array := &diagnostic_type[uri]
-
-	if diagnostic_array == nil {
-		diagnostic_type[strings.clone(uri)] = make([dynamic]Diagnostic)
-		diagnostic_array = &diagnostic_type[uri]
-	}
-
-	diagnostic := diagnostic
-	diagnostic.message = strings.clone(diagnostic.message)
-	diagnostic.code = strings.clone(diagnostic.code)
-
-	append(diagnostic_array, diagnostic)
+	diagnostics.run_hint_diagnostics(doc_ctx, config, collection)
 }
 
 push_diagnostics :: proc(collection: ^DiagnosticCollection, writer: ^Writer) {
