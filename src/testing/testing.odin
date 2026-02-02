@@ -23,7 +23,6 @@ Source :: struct {
 	packages:     []Package,
 	document:     ^documents.DocumentData,
 	doc_ctx:      documents.Document, 
-	diagnostics:  server.DiagnosticCollection, // Per-test diagnostic collection
 	collections:  map[string]string,
 	config:       common.Config,
 	position:     common.Position,
@@ -58,14 +57,14 @@ setup :: proc(src: ^Source) {
 	// This ensures each test starts with a fresh cache
 	analysis.init_symbol_cache(&src.config)
 
+	// Initialize the diagnostic store for this test
+	server.init_diagnostic_store(context.temp_allocator)
+
 	// Create documents.Document for the test document
 	src.doc_ctx, _ = server.create_document_context(src.document, &src.config)
 
-	// Create a fresh diagnostic collection for this test
-	src.diagnostics = server.make_diagnostic_collection()
-
 	// Run diagnostics checks if enabled in config
-	server.run_hint_diagnostics(src.doc_ctx, &src.config, &src.diagnostics)
+	server.run_hint_diagnostics(src.doc_ctx, &src.config)
 
 	// Collect symbols from the main document into the cache
 	if ret := analysis.collect_symbols_to_cache(src.doc_ctx.ast, src.document.uri.uri); ret != .None {
@@ -116,6 +115,7 @@ setup :: proc(src: ^Source) {
 @(private)
 teardown :: proc(src: ^Source) {
 	analysis.shutdown_symbol_cache()
+	server.shutdown_diagnostic_store()
 	free_all(context.temp_allocator)
 }
 

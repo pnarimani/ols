@@ -5,6 +5,7 @@ import "core:strings"
 import "core:testing"
 
 import "src:common"
+import "src:diagnostics"
 import "src:server"
 
 // Test that a specific diagnostic is present at the exact range marked by {<} and {>} in the source
@@ -24,19 +25,18 @@ expect_diagnostic_at :: proc(t: ^testing.T, src: ^Source, code: string, message_
 	found := false
 	found_diagnostics := make([dynamic]server.Diagnostic, context.temp_allocator)
 
-	diag_map := &src.diagnostics.diagnostics[.Hint]
-	if diag_arr, ok := diag_map[uri.uri]; ok {
-		for diag in diag_arr {
-			if diag.code == code {
-				append(&found_diagnostics, diag)
+	// Query the persistent diagnostic store for .Hint diagnostics
+	diag_arr := diagnostics.get_diagnostics_for_uri(uri.uri, .Hint, context.temp_allocator)
+	for diag in diag_arr {
+		if diag.code == code {
+			append(&found_diagnostics, diag)
 
-				range_matches := diag.range.start == expected_range.start && diag.range.end == expected_range.end
-				message_matches := message_contains == "" || strings.contains(diag.message, message_contains)
+			range_matches := diag.range.start == expected_range.start && diag.range.end == expected_range.end
+			message_matches := message_contains == "" || strings.contains(diag.message, message_contains)
 
-				if range_matches && message_matches {
-					found = true
-					break
-				}
+			if range_matches && message_matches {
+				found = true
+				break
 			}
 		}
 	}
@@ -74,15 +74,13 @@ expect_no_diagnostic :: proc(t: ^testing.T, src: ^Source, code: string) {
 	path := src.document.uri.path
 	uri := common.create_uri(path, context.temp_allocator)
 	
-	// Check the diagnostics collection for our document
-	diag_map := &src.diagnostics.diagnostics[.Hint]
-	if diag_arr, ok := diag_map[uri.uri]; ok {
-		for diag in diag_arr {
-			if diag.code == code {
-				log.errorf("Expected no diagnostic with code '%s', but found one: %s", code, diag.message)
-				testing.expect(t, false)
-				return
-			}
+	// Query the persistent diagnostic store for .Hint diagnostics
+	diag_arr := diagnostics.get_diagnostics_for_uri(uri.uri, .Hint, context.temp_allocator)
+	for diag in diag_arr {
+		if diag.code == code {
+			log.errorf("Expected no diagnostic with code '%s', but found one: %s", code, diag.message)
+			testing.expect(t, false)
+			return
 		}
 	}
 }

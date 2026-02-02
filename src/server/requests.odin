@@ -1089,17 +1089,17 @@ notification_did_open :: proc(
 
 	document := doc.open(open_params.textDocument.uri, open_params.textDocument.text) or_return
 
-	diagnostics := make_diagnostic_collection()
-
 	if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
 		// Update the symbol cache with the document's symbols
 		analysis.update_doc(doc_ctx.uri.uri, doc_ctx.ast)
 
-		check_unused_imports(doc_ctx, config, &diagnostics)
-		check_invert_if_suggestions(doc_ctx, config, &diagnostics)
+		// Run lightweight diagnostics
+		check_unused_imports(doc_ctx, config)
+		check_invert_if_suggestions(doc_ctx, config)
 	}
 
-	push_diagnostics(&diagnostics, writer)
+	// Publish any dirty diagnostics
+	publish_diagnostics(writer)
 
 	return .None
 }
@@ -1130,13 +1130,21 @@ notification_did_change :: proc(
 		writer,
 	)
 
-	// Update the symbol cache with the changed document's symbols
+	// Update the symbol cache and run lightweight diagnostics
 	document := document_get(change_params.textDocument.uri)
 	if document != nil {
 		if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
 			analysis.update_doc(doc_ctx.uri.uri, doc_ctx.ast)
+
+			// Run lightweight AST-based diagnostics on edit for immediate feedback
+			// (full odin check only runs on save as it's too expensive for every keystroke)
+			check_unused_imports(doc_ctx, config)
+			check_invert_if_suggestions(doc_ctx, config)
 		}
 	}
+
+	// Publish any dirty diagnostics
+	publish_diagnostics(writer)
 
 	return .None
 }
@@ -1199,19 +1207,20 @@ notification_did_save :: proc(
 
 	corrected_uri := common.create_uri(fullpath, context.temp_allocator)
 
-	diagnostics := make_diagnostic_collection()
-
-	check(config.profile.checker_path[:], corrected_uri, config, &diagnostics)
+	// Run odin check - this clears old .Check diagnostics and adds new ones
+	check(config.profile.checker_path[:], corrected_uri, config)
 
 	document := document_get(save_params.textDocument.uri)
 	if document != nil {
 		if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
-			check_unused_imports(doc_ctx, config, &diagnostics)
-			check_invert_if_suggestions(doc_ctx, config, &diagnostics)
+			// Run lightweight diagnostics for the current document
+			check_unused_imports(doc_ctx, config)
+			check_invert_if_suggestions(doc_ctx, config)
 		}
 	}
 
-	push_diagnostics(&diagnostics, writer)
+	// Publish all dirty diagnostics
+	publish_diagnostics(writer)
 
 	return .None
 }

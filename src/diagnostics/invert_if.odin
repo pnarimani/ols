@@ -40,11 +40,10 @@ Diagnostic_Reason :: enum {
 Invert_If_Visitor_Data :: struct {
 	doc_ctx:    documents.Document,
 	uri:        string,
-	collection: ^DiagnosticCollection,
 }
 
 // Check document for if statements that could benefit from inversion
-check_invert_if_suggestions :: proc(doc_ctx: documents.Document, config: ^common.Config, collection: ^DiagnosticCollection) {
+check_invert_if_suggestions :: proc(doc_ctx: documents.Document, config: ^common.Config) {
 	if config == nil || !config.enable_invert_if_diagnostics {
 		return
 	}
@@ -60,10 +59,12 @@ check_invert_if_suggestions :: proc(doc_ctx: documents.Document, config: ^common
 	}
 	uri := common.create_uri(path, context.temp_allocator)
 
+	// Clear existing .Hint diagnostics for this URI before adding new ones
+	begin_diagnostic_update(uri.uri, .Hint)
+
 	visitor_data := Invert_If_Visitor_Data {
 		doc_ctx    = doc_ctx,
 		uri        = uri.uri,
-		collection = collection,
 	}
 
 	visit_ast_nodes(doc_ctx.ast.decls[:], invert_if_visitor, &visitor_data)
@@ -89,7 +90,7 @@ invert_if_visitor :: proc(node: ^ast.Node, ctx: ^AST_Visitor_Context, user_data:
 	}
 
 	// Add the diagnostic
-	add_invert_if_diagnostic(if_stmt, data.doc_ctx, data.uri, reason, data.collection)
+	add_invert_if_diagnostic(if_stmt, data.doc_ctx, data.uri, reason)
 
 	return false // Continue to find more
 }
@@ -232,7 +233,7 @@ is_early_exit :: proc(stmt: ^ast.Stmt) -> bool {
 }
 
 // Add a diagnostic for an if statement that should be inverted
-add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Document, uri: string, reason: Diagnostic_Reason, collection: ^DiagnosticCollection) {
+add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Document, uri: string, reason: Diagnostic_Reason) {
 	if if_stmt == nil {
 		return
 	}
@@ -248,7 +249,6 @@ add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Docum
 	message := get_diagnostic_message(reason)
 
 	add_diagnostic(
-		collection,
 		.Hint,
 		uri,
 		Diagnostic {

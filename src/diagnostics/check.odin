@@ -57,7 +57,7 @@ fallback_find_odin_directories :: proc(config: ^common.Config) -> []string {
 	return data[:]
 }
 
-check :: proc(paths: []string, uri: common.Uri, config: ^common.Config, collection: ^DiagnosticCollection) {
+check :: proc(paths: []string, uri: common.Uri, config: ^common.Config) {
 	paths := paths
 
 	if len(paths) == 0 {
@@ -68,6 +68,15 @@ check :: proc(paths: []string, uri: common.Uri, config: ^common.Config, collecti
 		}
 	}
 
+	// Clear .Check diagnostics for all URIs that previously had them
+	// (we're about to re-check and will add back any that still exist)
+	previous_check_uris := get_uris_with_diagnostic_type(.Check, context.temp_allocator)
+	for prev_uri in previous_check_uris {
+		begin_diagnostic_update(prev_uri, .Check)
+	}
+
+	// Track which URIs we add diagnostics to (for those not in previous list)
+	checked_uris := make(map[string]bool, 32, context.temp_allocator)
 
 	data := make([]byte, mem.Kilobyte * 200, context.temp_allocator)
 
@@ -144,8 +153,24 @@ check :: proc(paths: []string, uri: common.Uri, config: ^common.Config, collecti
 
 			error_uri := common.create_uri(error_path, context.temp_allocator)
 
+			// If this URI wasn't in the previous list and we haven't seen it yet,
+			// begin an update for it (to ensure clean slate)
+			if error_uri.uri not_in checked_uris {
+				checked_uris[error_uri.uri] = true
+				// Only call begin_diagnostic_update if not already cleared above
+				has_previous := false
+				for prev_uri in previous_check_uris {
+					if prev_uri == error_uri.uri {
+						has_previous = true
+						break
+					}
+				}
+				if !has_previous {
+					begin_diagnostic_update(error_uri.uri, .Check)
+				}
+			}
+
 			add_diagnostic(
-				collection,
 				.Check,
 				error_uri.uri,
 				Diagnostic {
