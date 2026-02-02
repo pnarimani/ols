@@ -370,12 +370,12 @@ main :: proc() {
 @(test)
 action_extract_proc_not_available_for_defer :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	{<}defer free(nil){>}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -385,14 +385,14 @@ main :: proc() {
 @(test)
 action_extract_proc_not_available_for_nested_defer :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	{<}if true {
 		defer free(nil)
 	}{>}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -402,12 +402,12 @@ main :: proc() {
 @(test)
 action_extract_proc_not_available_outside_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 {<}CONSTANT :: 42{>}
 
 main :: proc() {}
-`,
+`},
 		extra_files = {},
 	}
 
@@ -417,12 +417,12 @@ main :: proc() {}
 @(test)
 action_extract_proc_not_available_for_empty_selection :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	x := 1{*}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -900,14 +900,14 @@ main :: proc() {
 @(test)
 action_extract_proc_no_statements_selected :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	x := 1
 {<}
 {>}	y := x
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -941,13 +941,13 @@ main :: proc() {
 @(test)
 action_extract_proc_defer_at_selection_start :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	{<}defer cleanup()
 	x := 5{>}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -957,13 +957,13 @@ main :: proc() {
 @(test)
 action_extract_proc_defer_at_selection_end :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	{<}x := 5
 	defer cleanup(){>}
 }
-`,
+`},
 		extra_files = {},
 	}
 

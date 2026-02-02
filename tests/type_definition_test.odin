@@ -9,7 +9,7 @@ import test "src:testing"
 @(test)
 ast_type_definition_struct_definition :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Bar :: struct {
 			bar: int,
 		}
@@ -17,7 +17,7 @@ ast_type_definition_struct_definition :: proc(t: ^testing.T) {
 		main :: proc() {
 			b{*}ar := Bar{}
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -30,7 +30,7 @@ ast_type_definition_struct_definition :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_struct_field_definition :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -43,7 +43,7 @@ ast_type_definition_struct_field_definition :: proc(t: ^testing.T) {
 				ba{*}r = Foo{},
 			}
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -56,7 +56,7 @@ ast_type_definition_struct_field_definition :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_struct_field_definition_from_use :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -69,7 +69,7 @@ ast_type_definition_struct_field_definition_from_use :: proc(t: ^testing.T) {
 			bar := Bar{}
 			bar.ba{*}r = Foo{}
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -82,7 +82,7 @@ ast_type_definition_struct_field_definition_from_use :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_struct_from_rhs_use :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -96,7 +96,7 @@ ast_type_definition_struct_from_rhs_use :: proc(t: ^testing.T) {
 
 			foo := b{*}ar.bar
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -109,7 +109,7 @@ ast_type_definition_struct_from_rhs_use :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_struct_field_from_rhs_use :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -123,7 +123,7 @@ ast_type_definition_struct_field_from_rhs_use :: proc(t: ^testing.T) {
 
 			foo := bar.b{*}ar
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -136,7 +136,7 @@ ast_type_definition_struct_field_from_rhs_use :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_struct_field_pointer_from_rhs_use :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -150,7 +150,7 @@ ast_type_definition_struct_field_pointer_from_rhs_use :: proc(t: ^testing.T) {
 
 			foo := bar.b{*}ar
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -163,7 +163,7 @@ ast_type_definition_struct_field_pointer_from_rhs_use :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_local_pointer_from_rhs_use :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -177,7 +177,7 @@ ast_type_definition_local_pointer_from_rhs_use :: proc(t: ^testing.T) {
 
 			foo := b{*}ar.bar
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -190,7 +190,7 @@ ast_type_definition_local_pointer_from_rhs_use :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_struct_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -203,7 +203,7 @@ ast_type_definition_struct_variable :: proc(t: ^testing.T) {
 			bar := Bar{}
 			ba{*}r.bar = "Test"
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -216,7 +216,7 @@ ast_type_definition_struct_variable :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_struct_field_definition_from_declaration :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -224,7 +224,7 @@ ast_type_definition_struct_field_definition_from_declaration :: proc(t: ^testing
 		Bar :: struct {
 			f{*}oo: Foo,
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -237,7 +237,7 @@ ast_type_definition_struct_field_definition_from_declaration :: proc(t: ^testing
 @(test)
 ast_type_definition_procedure_return_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -249,7 +249,7 @@ ast_type_definition_procedure_return_value :: proc(t: ^testing.T) {
 		main :: proc() {
 			f{*}oo := bar()
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -262,7 +262,7 @@ ast_type_definition_procedure_return_value :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_procedure_mulitple_return_first_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -278,7 +278,7 @@ ast_type_definition_procedure_mulitple_return_first_value :: proc(t: ^testing.T)
 		main :: proc() {
 			fo{*}o, bar := new_foo_bar()
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -291,7 +291,7 @@ ast_type_definition_procedure_mulitple_return_first_value :: proc(t: ^testing.T)
 @(test)
 ast_type_definition_procedure_mulitple_return_second_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -307,7 +307,7 @@ ast_type_definition_procedure_mulitple_return_second_value :: proc(t: ^testing.T
 		main :: proc() {
 			foo, ba{*}r := new_foo_bar()
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -320,12 +320,12 @@ ast_type_definition_procedure_mulitple_return_second_value :: proc(t: ^testing.T
 @(test)
 ast_type_definition_builtin_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 		main :: proc() {
 			f{*}oo := "Hello, World!"
 		}
-		`,
+		`},
 	}
 
 	test.expect_type_definition_locations(t, &source, {})
@@ -334,7 +334,7 @@ ast_type_definition_builtin_type :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_struct_field_builtin_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -344,7 +344,7 @@ ast_type_definition_struct_field_builtin_type :: proc(t: ^testing.T) {
 				f{*}oo = "Hello, World!"
 			}
 		}
-		`,
+		`},
 	}
 
 	test.expect_type_definition_locations(t, &source, {})
@@ -353,11 +353,11 @@ ast_type_definition_struct_field_builtin_type :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_struct_field_definition_from_declaration_builtin_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			f{*}oo: string,
 		}
-		`,
+		`},
 	}
 
 	test.expect_type_definition_locations(t, &source, {})
@@ -366,7 +366,7 @@ ast_type_definition_struct_field_definition_from_declaration_builtin_type :: pro
 @(test)
 ast_type_definition_on_proc_with_multiple_return_goto_first_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -378,7 +378,7 @@ ast_type_definition_on_proc_with_multiple_return_goto_first_return :: proc(t: ^t
 		main :: proc() {
 			my_foo, ok := f{*}oo()
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -391,7 +391,7 @@ ast_type_definition_on_proc_with_multiple_return_goto_first_return :: proc(t: ^t
 @(test)
 ast_type_definition_proc_first_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -403,7 +403,7 @@ ast_type_definition_proc_first_return :: proc(t: ^testing.T) {
 		main :: proc() {
 			my_foo, ok := f{*}oo()
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -416,14 +416,14 @@ ast_type_definition_proc_first_return :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_proc_with_no_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		foo :: proc() {
 		}
 
 		main :: proc() {
 			f{*}oo()
 		}
-		`,
+		`},
 	}
 
 	test.expect_type_definition_locations(t, &source, {})
@@ -432,7 +432,7 @@ ast_type_definition_proc_with_no_return :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_variable_array_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			my_int: int,
 		}
@@ -446,7 +446,7 @@ ast_type_definition_variable_array_type :: proc(t: ^testing.T) {
 
 			b{*}ars[0].foo = Foo{}
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -459,7 +459,7 @@ ast_type_definition_variable_array_type :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_proc_from_definition :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -471,7 +471,7 @@ ast_type_definition_proc_from_definition :: proc(t: ^testing.T) {
 		main :: proc() {
 			my_foo, ok := foo()
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -484,7 +484,7 @@ ast_type_definition_proc_from_definition :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_proc_with_slice_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -496,7 +496,7 @@ ast_type_definition_proc_with_slice_return :: proc(t: ^testing.T) {
 		main :: proc() {
 			my_foo, ok := foo()
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -509,7 +509,7 @@ ast_type_definition_proc_with_slice_return :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_param_of_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			foo: string,
 		}
@@ -521,7 +521,7 @@ ast_type_definition_param_of_proc :: proc(t: ^testing.T) {
 			foo := Foo{}
 			do_foo(f{*}oo)
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -534,7 +534,7 @@ ast_type_definition_param_of_proc :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_enum :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: enum {
 			Foo1,
 			Foo2,
@@ -547,7 +547,7 @@ ast_type_definition_enum :: proc(t: ^testing.T) {
 		main :: proc() {
 			f{*}oo := get_foo()
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -560,7 +560,7 @@ ast_type_definition_enum :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_predeclared_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: union {
 			i64,
 			f64,
@@ -575,7 +575,7 @@ ast_type_definition_predeclared_variable :: proc(t: ^testing.T) {
 
 			f{*}oo = get_foo()
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -603,14 +603,14 @@ ast_type_definition_external_package :: proc(t: ^testing.T) {
 		},
 	)
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 		import "my_package"
 
 		main :: proc() {
 			cool: my_package.My_Struct
 			cool{*}
 		}
-		`,
+		`},
 		extra_files = packages[:],
 	}
 
@@ -640,7 +640,7 @@ ast_type_definition_external_package_from_proc :: proc(t: ^testing.T) {
 		},
 	)
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 		import "my_package"
 
 		get_my_struct :: proc() -> my_package.My_Struct {
@@ -650,7 +650,7 @@ ast_type_definition_external_package_from_proc :: proc(t: ^testing.T) {
 		main :: proc() {
 			my_struct := ge{*}t_my_struct()
 		}
-		`,
+		`},
 		extra_files = packages[:],
 	}
 
@@ -680,7 +680,7 @@ ast_type_definition_external_package_from_proc_slice_return :: proc(t: ^testing.
 		},
 	)
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 		import "my_package"
 
 		get_my_struct :: proc() -> []my_package.My_Struct {
@@ -690,7 +690,7 @@ ast_type_definition_external_package_from_proc_slice_return :: proc(t: ^testing.
 		main :: proc() {
 			my_struct := ge{*}t_my_struct()
 		}
-		`,
+		`},
 		extra_files = packages[:],
 	}
 
@@ -724,13 +724,13 @@ ast_type_definition_external_package_from_external_proc :: proc(t: ^testing.T) {
 		},
 	)
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 		import "my_package"
 
 		main :: proc() {
 			my_struct := my_package.ge{*}t_my_struct()
 		}
-		`,
+		`},
 		extra_files = packages[:],
 	}
 
@@ -745,7 +745,7 @@ ast_type_definition_external_package_from_external_proc :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_array_of_pointers :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 		Foo :: struct {
 			bar: int,
@@ -755,7 +755,7 @@ ast_type_definition_array_of_pointers :: proc(t: ^testing.T) {
 			foos := []^Foo{}
 			l := len(f{*}oos)
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -768,7 +768,7 @@ ast_type_definition_array_of_pointers :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_type_cast :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 		Foo :: struct {
 			bar: int,
@@ -780,7 +780,7 @@ ast_type_definition_type_cast :: proc(t: ^testing.T) {
 
 			bar := fo{*}o.bar
 		}
-		`,
+		`},
 	}
 
 	location := common.Location {
@@ -793,7 +793,7 @@ ast_type_definition_type_cast :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_proc_named_param :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 		Bar :: struct{
 			bar: int,
@@ -805,7 +805,7 @@ ast_type_definition_proc_named_param :: proc(t: ^testing.T) {
 			a := "hellope"
 			foo(a{*} = {})
 		}
-		`,
+		`},
 	}
 
 	locations := []common.Location{{range = {start = {line = 2, character = 2}, end = {line = 2, character = 5}}}}
@@ -816,7 +816,7 @@ ast_type_definition_proc_named_param :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_proc_named_param_with_default_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 		Bar :: struct{
 			bar: int,
@@ -830,7 +830,7 @@ ast_type_definition_proc_named_param_with_default_value :: proc(t: ^testing.T) {
 			b := Bar{}
 			foo(a{*} = b)
 		}
-		`,
+		`},
 	}
 
 	locations := []common.Location{{range = {start = {line = 2, character = 2}, end = {line = 2, character = 5}}}}
@@ -841,7 +841,7 @@ ast_type_definition_proc_named_param_with_default_value :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_multi_pointer :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 		Foo :: struct {
 			b{*}ars: [^]Bar,
@@ -850,7 +850,7 @@ ast_type_definition_multi_pointer :: proc(t: ^testing.T) {
 		Bar :: struct{
 			bar: int,
 		}
-		`,
+		`},
 	}
 
 	locations := []common.Location{{range = {start = {line = 6, character = 2}, end = {line = 6, character = 5}}}}
@@ -861,7 +861,7 @@ ast_type_definition_multi_pointer :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_comp_lit_proc_arg :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 		Foo :: struct{}
 
@@ -870,7 +870,7 @@ ast_type_definition_comp_lit_proc_arg :: proc(t: ^testing.T) {
 		main :: proc() {
 			bar({{*}})
 		}
-		`,
+		`},
 	}
 
 	locations := []common.Location{{range = {start = {line = 2, character = 2}, end = {line = 2, character = 5}}}}
@@ -881,14 +881,14 @@ ast_type_definition_comp_lit_proc_arg :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_comp_lit_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 		Foo :: struct{}
 
 		main :: proc() {
 			foo: Foo = {{*}}
 		}
-		`,
+		`},
 	}
 
 	locations := []common.Location{{range = {start = {line = 2, character = 2}, end = {line = 2, character = 5}}}}
@@ -899,7 +899,7 @@ ast_type_definition_comp_lit_variable :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_variable_in_comp_lit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 		Foo :: struct{}
 
@@ -913,7 +913,7 @@ ast_type_definition_variable_in_comp_lit :: proc(t: ^testing.T) {
 				foo = fo{*}o,
 			}
 		}
-		`,
+		`},
 	}
 
 	locations := []common.Location{{range = {start = {line = 2, character = 2}, end = {line = 2, character = 5}}}}
@@ -924,7 +924,7 @@ ast_type_definition_variable_in_comp_lit :: proc(t: ^testing.T) {
 @(test)
 ast_type_definition_polymorphic_type_with_specialization :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 		Vec :: [2]f32
 		foo :: proc (a: $T/[$N]$E) -> T {return a}
 
@@ -932,7 +932,7 @@ ast_type_definition_polymorphic_type_with_specialization :: proc(t: ^testing.T) 
 			a: Vec
 			f{*} := foo(a)
 		}
-		`,
+		`},
 	}
 
 	locations := []common.Location{{range = {start = {line = 1, character = 2}, end = {line = 1, character = 5}}}}
@@ -957,13 +957,13 @@ ast_type_definition_package_proc :: proc(t: ^testing.T) {
 	)
 
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 		import "my_package"
 
 		main :: proc () {
 			f{*}oo := my_package.get_foo()
 		}
-		`,
+		`},
 		extra_files = packages[:],
 	}
 

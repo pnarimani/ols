@@ -9,15 +9,14 @@ import test "src:testing"
 @(test)
 semantic_tokens :: proc(t: ^testing.T) {
 	src := test.Source {
-		main =
-`package test
+		main = {source = `package test
 Proc_Type :: proc(a: string) -> int
 my_function :: proc() {
 	a := 2
 	b := a
 	c := 2 + b
 }
-`,
+`},
 	}
 
 	test.expect_semantic_tokens(t, &src, {
@@ -37,11 +36,11 @@ my_function :: proc() {
 @(test)
 semantic_tokens_global_consts :: proc(t: ^testing.T) {
 	src := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: [2]f32
 		Foo2 :: [2]f32{1,2}
 		Foo3 :: Foo
-		`
+		`},
 	}
 
 	test.expect_semantic_tokens(t, &src, {
@@ -57,12 +56,12 @@ semantic_tokens_global_consts :: proc(t: ^testing.T) {
 @(test)
 semantic_tokens_literals_with_explicit_types :: proc(t: ^testing.T) {
 	src := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: 1
 		Foo2 : int : 1
 		Foo3 :: cast(string) "hello"
 		Foo4 :: cstring("hello")
-		`
+		`},
 	}
 
 	test.expect_semantic_tokens(t, &src, {
@@ -79,7 +78,7 @@ semantic_tokens_literals_with_explicit_types :: proc(t: ^testing.T) {
 @(test)
 semantic_tokens_struct_fields :: proc(t: ^testing.T) {
 	src := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: struct {
 			bar: int,
 		}
@@ -88,7 +87,7 @@ semantic_tokens_struct_fields :: proc(t: ^testing.T) {
 			foo: Foo
 			foo.bar = 2
 		}
-		`
+		`},
 	}
 
 	test.expect_semantic_tokens(t, &src, {
@@ -106,12 +105,12 @@ semantic_tokens_struct_fields :: proc(t: ^testing.T) {
 @(test)
 semantic_tokens_proc_return :: proc(t: ^testing.T) {
 	src := test.Source {
-		main = `package test
+		main = {source = `package test
 		foo :: proc() -> (ret: int) {
 			ret += 1
 			return
 		}
-		`
+		`},
 	}
 
 	test.expect_semantic_tokens(t, &src, {
@@ -125,12 +124,12 @@ semantic_tokens_proc_return :: proc(t: ^testing.T) {
 @(test)
 semantic_tokens_fixed_array_fields :: proc(t: ^testing.T) {
 	src := test.Source {
-		main = `package test
+		main = {source = `package test
 		main :: proc() {
 			foo: [2]f32
 			y := foo.x
 		}
-		`
+		`},
 	}
 
 	test.expect_semantic_tokens(t, &src, {
@@ -146,14 +145,14 @@ semantic_tokens_fixed_array_fields :: proc(t: ^testing.T) {
 @(test)
 semantic_tokens_enum_member_default_param :: proc(t: ^testing.T) {
 	src := test.Source {
-		main = `package test
+		main = {source = `package test
 		Foo :: enum {
 			A,
 			B,
 		}
 
 		bar :: proc(foo: Foo = .A) {}
-		`
+		`},
 	}
 
 	test.expect_semantic_tokens(t, &src, {

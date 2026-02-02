@@ -9,9 +9,9 @@ expect_reference_locations :: proc(t: ^testing.T, src: ^Source) {
 	setup(src)
 	defer teardown(src)
 
-	locations, ok := server.get_references(src.doc_ctx, src.position)
+	locations, ok := server.get_references(src.main.doc_ctx, src.main.position)
 
-	for expect_location in src.encoded_locations {
+	for expect_location in src.main.encoded_locations {
 		match := false
 		for location in locations {
 			if location.range == expect_location.range {

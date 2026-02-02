@@ -297,14 +297,14 @@ main :: proc() {
 @(test)
 action_inline_variable_reassigned :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	{*}x := 10
 	x = 20
 	y := x
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -315,12 +315,12 @@ main :: proc() {
 @(test)
 action_inline_variable_no_usages :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	{*}x := 10
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -331,12 +331,12 @@ main :: proc() {
 @(test)
 action_inline_variable_not_on_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	x := {*}10
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -347,13 +347,13 @@ main :: proc() {
 @(test)
 action_inline_variable_procedure_decl :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	{*}helper :: proc() {}
 	helper()
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -364,7 +364,7 @@ main :: proc() {
 @(test)
 action_inline_variable_used_in_loop_assignment :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	{*}sum := 0
@@ -372,7 +372,7 @@ main :: proc() {
 		sum += i
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -383,14 +383,14 @@ main :: proc() {
 @(test)
 action_inline_variable_outside_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 {*}GLOBAL :: 42
 
 main :: proc() {
 	x := GLOBAL
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -401,13 +401,13 @@ main :: proc() {
 @(test)
 action_inline_variable_multi_var_decl_first :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	{*}a, b := 1, 2
 	x := a + b
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -418,13 +418,13 @@ main :: proc() {
 @(test)
 action_inline_variable_multi_var_decl_second :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	a, {*}b := 1, 2
 	x := a + b
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -439,14 +439,14 @@ main :: proc() {
 @(test)
 action_inline_variable_from_usage_reassigned :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	x := 10
 	x = 20
 	y := {*}x
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -457,7 +457,7 @@ main :: proc() {
 @(test)
 action_inline_variable_from_usage_mutated_in_loop :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	sum := 0
@@ -466,7 +466,7 @@ main :: proc() {
 	}
 	result := {*}sum
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -477,13 +477,13 @@ main :: proc() {
 @(test)
 action_inline_variable_from_usage_multi_var_decl :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	a, b := 1, 2
 	x := {*}a + b
 }
-`,
+`},
 		extra_files = {},
 	}
 

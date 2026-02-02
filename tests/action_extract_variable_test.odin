@@ -324,14 +324,14 @@ main :: proc() {
 action_extract_variable_in_for_condition_not_available :: proc(t: ^testing.T) {
 	// Cannot extract because `i` is only available inside the for loop
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	limit := 10
 	for i := 0; {<}i < limit{>}; i += 1 {
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -704,13 +704,13 @@ main :: proc() {
 @(test)
 action_extract_variable_not_available_for_simple_ident :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	x := 5
 	y := {<}x{>}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -720,13 +720,13 @@ main :: proc() {
 @(test)
 action_extract_variable_not_available_for_after_taking_address :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	x := 5
 	y := &{<}x{>}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -736,12 +736,12 @@ main :: proc() {
 @(test)
 action_extract_variable_not_available_for_literal :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	x := {<}42{>}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -751,12 +751,12 @@ main :: proc() {
 @(test)
 action_extract_variable_not_available_when_selecting_entire_multi_assignment :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	x, y := {<}42, 43{>}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -766,12 +766,12 @@ main :: proc() {
 @(test)
 action_extract_variable_not_available_for_string_literal :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	x := {<}"hello"{>}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -781,12 +781,12 @@ main :: proc() {
 @(test)
 action_extract_variable_not_available_for_empty_selection :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 main :: proc() {
 	x := 5{*}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -796,12 +796,12 @@ main :: proc() {
 @(test)
 action_extract_variable_not_available_outside_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = `package test
+		main     = {source = `package test
 
 {<}CONSTANT :: 42{>}
 
 main :: proc() {}
-`,
+`},
 		extra_files = {},
 	}
 

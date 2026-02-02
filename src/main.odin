@@ -1,5 +1,6 @@
 package main
 
+import "src:diagnostics"
 import "src:analysis"
 import "base:intrinsics"
 
@@ -62,6 +63,8 @@ run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
 	defer server.document_storage_shutdown()
 	analysis.init_symbol_cache(&common.config)
 	defer analysis.shutdown_symbol_cache()
+	diagnostics.init()
+	defer diagnostics.shutdown()
 
 	common.config.running = true
 

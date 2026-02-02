@@ -10,7 +10,7 @@ REDUNDANT_ELSE_ACTION :: "Remove redundant else"
 @(test)
 action_redundant_else_with_return_edit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	x := 5
@@ -21,7 +21,7 @@ main :: proc() {
 		bar()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -37,7 +37,7 @@ main :: proc() {
 @(test)
 action_redundant_else_with_return_multiple_stmts :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	x := 5
@@ -49,7 +49,7 @@ main :: proc() {
 		baz()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -68,7 +68,7 @@ main :: proc() {
 @(test)
 action_redundant_else_with_break_edit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	for i in 0..<10 {
@@ -80,7 +80,7 @@ main :: proc() {
 		}
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -98,7 +98,7 @@ main :: proc() {
 @(test)
 action_redundant_else_with_continue_edit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	for i in 0..<10 {
@@ -109,7 +109,7 @@ main :: proc() {
 		}
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -126,7 +126,7 @@ main :: proc() {
 @(test)
 action_redundant_else_not_on_if :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	x := 5
@@ -137,7 +137,7 @@ main :: proc() {
 		bar()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -148,12 +148,12 @@ main :: proc() {
 @(test)
 action_redundant_else_not_on_non_if :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	x :={*} 5
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -164,7 +164,7 @@ main :: proc() {
 @(test)
 action_redundant_else_no_else_clause :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x{*} > 0 {
@@ -172,7 +172,7 @@ main :: proc() {
 		return
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -184,7 +184,7 @@ main :: proc() {
 @(test)
 action_redundant_else_no_terminating_stmt :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x > 0 {
@@ -193,7 +193,7 @@ main :: proc() {
 		bar()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -204,7 +204,7 @@ main :: proc() {
 @(test)
 action_redundant_else_break_outside_loop :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x > 0 {
@@ -214,7 +214,7 @@ main :: proc() {
 		bar()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -225,7 +225,7 @@ main :: proc() {
 @(test)
 action_redundant_else_continue_outside_loop :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x > 0 {
@@ -235,7 +235,7 @@ main :: proc() {
 		bar()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -248,7 +248,7 @@ main :: proc() {
 @(test)
 action_redundant_else_else_if_chain_edit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x > 0 {
@@ -260,7 +260,7 @@ main :: proc() {
 		baz()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -280,7 +280,7 @@ main :: proc() {
 @(test)
 action_redundant_else_else_if_chain_simple_edit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x > 0 {
@@ -290,7 +290,7 @@ main :: proc() {
 		bar()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -308,7 +308,7 @@ main :: proc() {
 @(test)
 action_redundant_else_nested_if :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	for i in 0..<10 {
@@ -322,7 +322,7 @@ main :: proc() {
 		}
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -333,7 +333,7 @@ main :: proc() {
 @(test)
 action_redundant_else_with_init_edit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x := foo(); x > 0 {
@@ -343,7 +343,7 @@ main :: proc() {
 		baz()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -359,7 +359,7 @@ main :: proc() {
 @(test)
 action_redundant_else_in_switch :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	switch x {
@@ -372,7 +372,7 @@ main :: proc() {
 		}
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -383,7 +383,7 @@ main :: proc() {
 @(test)
 action_redundant_else_return_not_last :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x > 0 {
@@ -393,7 +393,7 @@ main :: proc() {
 		bar()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -404,7 +404,7 @@ main :: proc() {
 @(test)
 action_redundant_else_empty_if_body :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x > 0 {
@@ -412,7 +412,7 @@ main :: proc() {
 		bar()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -423,7 +423,7 @@ main :: proc() {
 @(test)
 action_redundant_else_empty_else_body_edit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x > 0 {
@@ -432,7 +432,7 @@ main :: proc() {
 	} {*}else {
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -449,7 +449,7 @@ main :: proc() {
 @(test)
 action_redundant_else_labeled_break :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	outer: for i in 0..<10 {
@@ -463,7 +463,7 @@ main :: proc() {
 		}
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -474,7 +474,7 @@ main :: proc() {
 @(test)
 action_redundant_else_labeled_continue :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	outer: for i in 0..<10 {
@@ -488,7 +488,7 @@ main :: proc() {
 		}
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -501,7 +501,7 @@ main :: proc() {
 @(test)
 action_redundant_else_with_fallthrough :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	switch x {
@@ -516,7 +516,7 @@ main :: proc() {
 		baz()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 

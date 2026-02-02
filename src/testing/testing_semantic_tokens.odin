@@ -10,12 +10,12 @@ expect_semantic_tokens :: proc(t: ^testing.T, src: ^Source, expected: []server.S
 
 
 	resolve_flag: server.ResolveReferenceFlag
-	symbols_and_nodes := server.resolve_entire_file(src.doc_ctx, resolve_flag)
+	symbols_and_nodes := server.resolve_entire_file(src.main.doc_ctx, resolve_flag)
 
 	range := common.Range {
 		end = {line = 9000000},
 	} //should be enough
-	tokens := server.get_semantic_tokens(src.doc_ctx, range, symbols_and_nodes)
+	tokens := server.get_semantic_tokens(src.main.doc_ctx, range, symbols_and_nodes)
 
 	testing.expectf(
 		t,

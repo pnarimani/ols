@@ -13,11 +13,11 @@ expect_diagnostic_at :: proc(t: ^testing.T, src: ^Source, code: string, message_
 	setup(src)
 	defer teardown(src)
 
-	encoded_path := common.make_encoded_path(src.document.filepath, context.temp_allocator)
+	encoded_path := common.make_encoded_path(src.main.document.filepath, context.temp_allocator)
 
-	expected_range := common.Range {
-		start = src.position,
-		end   = src.end_position,
+	range := common.Range {
+		start = src.main.position,
+		end   = src.main.end_position,
 	}
 
 	// Collect all diagnostics with matching code for error reporting
@@ -30,7 +30,7 @@ expect_diagnostic_at :: proc(t: ^testing.T, src: ^Source, code: string, message_
 		if diag.code == code {
 			append(&found_diagnostics, diag)
 
-			range_matches := diag.range.start == expected_range.start && diag.range.end == expected_range.end
+			range_matches := diag.range.start == range.start && diag.range.end == range.end
 			message_matches := message_contains == "" || strings.contains(diag.message, message_contains)
 
 			if range_matches && message_matches {
@@ -44,14 +44,14 @@ expect_diagnostic_at :: proc(t: ^testing.T, src: ^Source, code: string, message_
 		if len(found_diagnostics) == 0 {
 			testing.expectf(t, false, "Expected diagnostic '%s' at range (%d:%d)-(%d:%d) not found. No diagnostics with code '%s' exist.",
 				code,
-				expected_range.start.line, expected_range.start.character,
-				expected_range.end.line, expected_range.end.character,
+				range.start.line, range.start.character,
+				range.end.line, range.end.character,
 				code)
 		} else {
 			log.errorf("Expected diagnostic '%s' at range (%d:%d)-(%d:%d)",
 				code,
-				expected_range.start.line, expected_range.start.character,
-				expected_range.end.line, expected_range.end.character)
+				range.start.line, range.start.character,
+				range.end.line, range.end.character)
 			log.errorf("Found %d diagnostic(s) with code '%s':", len(found_diagnostics), code)
 			for diag, i in found_diagnostics {
 				log.errorf("  [%d] range (%d:%d)-(%d:%d): %s",
@@ -70,8 +70,8 @@ expect_no_diagnostic :: proc(t: ^testing.T, src: ^Source, code: string) {
 	setup(src)
 	defer teardown(src)
 
-	path := src.document.filepath
-	encoded_path := common.make_encoded_path(src.document.filepath, context.temp_allocator)
+	path := src.main.document.filepath
+	encoded_path := common.make_encoded_path(src.main.document.filepath, context.temp_allocator)
 	
 	// Query the persistent diagnostic store for .Hint diagnostics
 	diag_arr := diagnostics.get_diagnostics_for_path(encoded_path, .Hint, context.temp_allocator)

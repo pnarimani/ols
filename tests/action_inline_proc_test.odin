@@ -351,7 +351,7 @@ main :: proc() {
 @(test)
 action_inline_proc_recursive :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 factorial :: proc(n: int) -> int {
 	if n <= 1 {
@@ -363,7 +363,7 @@ factorial :: proc(n: int) -> int {
 main :: proc() {
 	x := {*}factorial(5)
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -374,14 +374,14 @@ main :: proc() {
 @(test)
 action_inline_proc_no_body :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 foreign_proc :: proc(x: int) -> int ---
 
 main :: proc() {
 	x := {*}foreign_proc(5)
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -391,7 +391,7 @@ main :: proc() {
 @(test)
 action_inline_proc_not_on_call :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 foo :: proc() -> int {
 	return 42
@@ -400,7 +400,7 @@ foo :: proc() -> int {
 main :: proc() {
 	x := {*}123
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -410,7 +410,7 @@ main :: proc() {
 @(test)
 action_inline_proc_from_definition_no_calls :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 {*}unused :: proc(n: int) -> int {
 	return n
@@ -419,7 +419,7 @@ action_inline_proc_from_definition_no_calls :: proc(t: ^testing.T) {
 main :: proc() {
 	x := 10
 }
-`,
+`},
 		extra_files = {},
 	}
 

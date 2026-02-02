@@ -18,11 +18,11 @@ expect_inlay_hints :: proc(t: ^testing.T, src: ^Source) {
 	{
 		last, line, col: int
 		saw_brackets: bool
-		for i := 0; i < len(src.main); i += 1 {
+		for i := 0; i < len(src.main.source); i += 1 {
 			if saw_brackets {
-				if i + 1 < len(src.main) && src.main[i:][:len(HINT_CLOSE)] == HINT_CLOSE {
+				if i + 1 < len(src.main.source) && src.main.source[i:][:len(HINT_CLOSE)] == HINT_CLOSE {
 					saw_brackets = false
-					hint_str := src.main[last:i]
+					hint_str := src.main.source[last:i]
 					last = i + len(HINT_CLOSE)
 					i = last - 1
 					append(
@@ -31,12 +31,12 @@ expect_inlay_hints :: proc(t: ^testing.T, src: ^Source) {
 					)
 				}
 			} else {
-				if i + 1 < len(src.main) && src.main[i:][:len(HINT_OPEN)] == HINT_OPEN {
-					strings.write_string(&src_builder, src.main[last:i])
+				if i + 1 < len(src.main.source) && src.main.source[i:][:len(HINT_OPEN)] == HINT_OPEN {
+					strings.write_string(&src_builder, src.main.source[last:i])
 					saw_brackets = true
 					last = i + len(HINT_OPEN)
 					i = last - 1
-				} else if src.main[i] == '\n' {
+				} else if src.main.source[i] == '\n' {
 					line += 1
 					col = 0
 				} else {
@@ -50,20 +50,20 @@ expect_inlay_hints :: proc(t: ^testing.T, src: ^Source) {
 			return
 		}
 
-		strings.write_string(&src_builder, src.main[last:len(src.main)])
+		strings.write_string(&src_builder, src.main.source[last:len(src.main.source)])
 	}
 
-	src.main = strings.to_string(src_builder)
+	src.main.source = strings.to_string(src_builder)
 
 	setup(src)
 	defer teardown(src)
 
-	symbols_and_nodes := server.resolve_entire_file(src.doc_ctx)
+	symbols_and_nodes := server.resolve_entire_file(src.main.doc_ctx)
 
 	range := common.Range {
 		end = {line = 9000000},
 	} //should be enough
-	hints, hints_ok := server.get_inlay_hints(src.doc_ctx, range, symbols_and_nodes, &src.config)
+	hints, hints_ok := server.get_inlay_hints(src.main.doc_ctx, range, symbols_and_nodes, &src.config)
 	if !hints_ok {
 		log.error("Failed get_inlay_hints")
 		return
@@ -77,7 +77,7 @@ expect_inlay_hints :: proc(t: ^testing.T, src: ^Source) {
 		len(hints),
 	)
 
-	lines := strings.split_lines(src.main, context.temp_allocator)
+	lines := strings.split_lines(src.main.source, context.temp_allocator)
 
 	get_source_line_with_hint :: proc(lines: []string, hint: server.InlayHint) -> string {
 		line := lines[hint.position.line] if hint.position.line >= 0 && hint.position.line < len(lines) else ""

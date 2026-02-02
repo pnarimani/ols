@@ -15,8 +15,8 @@ DiagnosticTag :: diagnostics.DiagnosticTag
 // Re-export procedures from diagnostics package
 add_diagnostic :: diagnostics.add_diagnostic
 begin_diagnostic_update :: diagnostics.begin_diagnostic_update
-init_diagnostic_store :: diagnostics.init_diagnostic_store
-shutdown_diagnostic_store :: diagnostics.shutdown_diagnostic_store
+init_diagnostic_store :: diagnostics.init
+shutdown_diagnostic_store :: diagnostics.shutdown
 
 // Run hint diagnostics for a document (exported for testing)
 run_hint_diagnostics :: proc(doc_ctx: documents.Document, config: ^common.Config) {

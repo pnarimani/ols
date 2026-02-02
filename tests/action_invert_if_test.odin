@@ -74,12 +74,12 @@ main :: proc() {
 @(test)
 action_invert_if_not_on_if :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	x :={*} 5
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -91,14 +91,14 @@ main :: proc() {
 @(test)
 action_invert_if_inside_of_statement :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	if x != 0 {
 		foo{*}()
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -258,7 +258,7 @@ main :: proc() {
 @(test)
 action_invert_if_not_on_else_if :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	x := something()
@@ -269,7 +269,7 @@ main :: proc() {
 	}
 	statement3()
 }
-`,
+`},
 		extra_files = {},
 	}
 
@@ -280,7 +280,7 @@ main :: proc() {
 @(test)
 action_invert_if_not_on_else :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = `package test
+		main = {source = `package test
 
 main :: proc() {
 	x := something()
@@ -290,7 +290,7 @@ main :: proc() {
 		statement3(){*}
 	}
 }
-`,
+`},
 		extra_files = {},
 	}
 
