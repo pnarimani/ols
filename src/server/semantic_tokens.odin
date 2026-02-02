@@ -15,6 +15,7 @@ import "core:odin/ast"
 import "core:odin/tokenizer"
 import "core:unicode/utf8"
 
+import "src:analysis"
 import "src:common"
 
 SemanticTokenTypes :: enum u32 {
@@ -120,7 +121,7 @@ SemanticTokensResponseParams :: struct {
 SemanticTokenBuilder :: struct {
 	current_start: int,
 	tokens:        [dynamic]SemanticToken,
-	symbols:       map[uintptr]SymbolAndNode,
+	symbols:       map[uintptr]analysis.SymbolAndNode,
 	src:           string,
 }
 
@@ -131,7 +132,7 @@ semantic_tokens_to_response_params :: proc(tokens: []SemanticToken) -> SemanticT
 get_semantic_tokens :: proc(
 	doc_ctx: DocumentContext,
 	range: common.Range,
-	symbols: map[uintptr]SymbolAndNode,
+	symbols: map[uintptr]analysis.SymbolAndNode,
 ) -> []SemanticToken {
 	// Build fresh symbols for this request
 	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
@@ -570,7 +571,7 @@ visit_ident :: proc(
 	#partial switch symbol.type {
 	case .Variable, .Constant, .Function:
 		#partial switch _ in symbol.value {
-		case SymbolProcedureValue, SymbolProcedureGroupValue, SymbolAggregateValue:
+		case analysis.SymbolProcedureValue, analysis.SymbolProcedureGroupValue, analysis.SymbolAggregateValue:
 			write_semantic_node(builder, ident, .Function, modifiers)
 		case:
 			if .Parameter in symbol.flags {
@@ -586,26 +587,26 @@ visit_ident :: proc(
 	case:
 		/* type idents */
 		switch v in symbol.value {
-		case SymbolPackageValue:
+		case analysis.SymbolPackageValue:
 			write_semantic_node(builder, ident, .Namespace, modifiers)
-		case SymbolStructValue, SymbolBitFieldValue:
+		case analysis.SymbolStructValue, analysis.SymbolBitFieldValue:
 			write_semantic_node(builder, ident, .Struct, modifiers)
-		case SymbolEnumValue, SymbolUnionValue:
+		case analysis.SymbolEnumValue, analysis.SymbolUnionValue:
 			write_semantic_node(builder, ident, .Enum, modifiers)
-		case SymbolProcedureValue,
-		     SymbolMatrixValue,
-		     SymbolBitSetValue,
-		     SymbolDynamicArrayValue,
-		     SymbolFixedArrayValue,
-		     SymbolSliceValue,
-		     SymbolMapValue,
-		     SymbolMultiPointerValue,
-		     SymbolBasicValue,
-		     SymbolPolyTypeValue:
+		case analysis.SymbolProcedureValue,
+		     analysis.SymbolMatrixValue,
+		     analysis.SymbolBitSetValue,
+		     analysis.SymbolDynamicArrayValue,
+		     analysis.SymbolFixedArrayValue,
+		     analysis.SymbolSliceValue,
+		     analysis.SymbolMapValue,
+		     analysis.SymbolMultiPointerValue,
+		     analysis.SymbolBasicValue,
+		     analysis.SymbolPolyTypeValue:
 			write_semantic_node(builder, ident, .Type, modifiers)
-		case SymbolUntypedValue:
+		case analysis.SymbolUntypedValue:
 		// handled by static syntax highlighting
-		case SymbolGenericValue, SymbolProcedureGroupValue, SymbolAggregateValue:
+		case analysis.SymbolGenericValue, analysis.SymbolProcedureGroupValue, analysis.SymbolAggregateValue:
 		// unused
 		case:
 		}

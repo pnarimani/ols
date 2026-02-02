@@ -5,12 +5,13 @@ import "core:fmt"
 import "core:log"
 import "core:odin/ast"
 
+import "src:analysis"
 import "src:common"
 
 get_inlay_hints :: proc(
 	doc_ctx: DocumentContext,
 	range: common.Range,
-	symbols: map[uintptr]SymbolAndNode,
+	symbols: map[uintptr]analysis.SymbolAndNode,
 	config: ^common.Config,
 ) -> (
 	[]InlayHint,
@@ -19,7 +20,7 @@ get_inlay_hints :: proc(
 	Visitor_Data :: struct {
 		doc_ctx:  DocumentContext,
 		range:    common.Range,
-		symbols:  map[uintptr]SymbolAndNode,
+		symbols:  map[uintptr]analysis.SymbolAndNode,
 		config:   ^common.Config,
 		hints:    [dynamic]InlayHint,
 		depth:    int,
@@ -103,7 +104,7 @@ get_inlay_hints :: proc(
 		is_selector_call &&= selector.op.kind == .Arrow_Right
 
 		symbol_and_node := data.symbols[uintptr(call.expr)] or_return // could not resolve symbol
-		proc_symbol := symbol_and_node.symbol.value.(SymbolProcedureValue) or_return // not a procedure call, e.g. type cast
+		proc_symbol := symbol_and_node.symbol.value.(analysis.SymbolProcedureValue) or_return // not a procedure call, e.g. type cast
 
 		param_idx := 1 if is_selector_call else 0
 		label_idx := 0
@@ -119,7 +120,7 @@ get_inlay_hints :: proc(
 			multi_return: {
 				arg_call := arg.derived.(^ast.Call_Expr) or_break multi_return
 				arg_symbol_and_node := data.symbols[uintptr(arg_call.expr)] or_break multi_return
-				arg_proc_symbol := arg_symbol_and_node.symbol.value.(SymbolProcedureValue) or_break multi_return
+				arg_proc_symbol := arg_symbol_and_node.symbol.value.(analysis.SymbolProcedureValue) or_break multi_return
 
 				if len(arg_proc_symbol.return_types) <= 1 do break multi_return
 

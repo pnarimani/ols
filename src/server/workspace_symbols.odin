@@ -1,5 +1,7 @@
 package server
 
+import "src:analysis"
+
 import "core:fmt"
 import "core:log"
 import "core:os"
@@ -76,7 +78,7 @@ get_workspace_symbols :: proc(query: string) -> (workspace_symbols: []WorkspaceS
 	workspace_pkgs := find_workspace_packages()
 
 	// Build a symbol collection containing all workspace packages
-	symbols := make_symbol_collection(&common.config)
+	symbols := analysis.make_symbol_collection(&common.config)
 	loaded_pkgs := make(map[string]bool, 16)
 
 	// Load builtins

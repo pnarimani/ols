@@ -1,6 +1,8 @@
 #+feature using-stmt
 package server
 
+
+import "src:analysis"
 import "core:log"
 import "core:odin/ast"
 
@@ -170,7 +172,7 @@ get_generic_assignment :: proc(
 				//Handle the old way of type casting
 				if v, ok := keyword_map[ident.name]; ok {
 					//keywords
-					type_ident := new_type(Ident, ident.pos, ident.end)
+					type_ident := analysis.new_type(Ident, ident.pos, ident.end)
 					type_ident.name = ident.name
 					append(results, type_ident)
 					break
@@ -181,9 +183,9 @@ get_generic_assignment :: proc(
 		// If we have a call expr followed immediately by another call expr, we want to return value
 		// of the second call. Eg a := foo()()
 		if _, ok := v.expr.derived.(^Call_Expr); ok {
-			symbol := Symbol{}
+			symbol := analysis.Symbol{}
 			if ok := internal_resolve_type_expression(ast_context, v.expr, &symbol); ok {
-				if value, ok := symbol.value.(SymbolProcedureValue); ok {
+				if value, ok := symbol.value.(analysis.SymbolProcedureValue); ok {
 					if len(value.return_types) == 1 {
 						if proc_type, ok := value.return_types[0].type.derived.(^Proc_Type); ok {
 							for return_item in proc_type.results.list {
@@ -200,7 +202,7 @@ get_generic_assignment :: proc(
 							return
 						} else if ident, ok := value.return_types[0].type.derived.(^ast.Ident); ok {
 							if ok := internal_resolve_type_expression(ast_context, ident, &symbol); ok {
-								if value, ok := symbol.value.(SymbolProcedureValue); ok {
+								if value, ok := symbol.value.(analysis.SymbolProcedureValue); ok {
 									for return_item in value.return_types {
 										get_generic_assignment(
 											file,
@@ -225,28 +227,28 @@ get_generic_assignment :: proc(
 		//We have to resolve early and can't rely on lazy evalutation because it can have multiple returns.
 		if symbol, ok := resolve_type_expression(ast_context, v.expr); ok {
 			#partial switch symbol_value in symbol.value {
-			case SymbolProcedureValue:
+			case analysis.SymbolProcedureValue:
 				return_types := get_proc_return_types(ast_context, symbol, v, is_mutable)
 				for ret in return_types {
 					calls[len(results)] = {}
 					append(results, ret)
 				}
-			case SymbolAggregateValue:
+			case analysis.SymbolAggregateValue:
 				//In case we can't resolve the proc group, just save it anyway, so it won't cause any issues further down the line.
 				append(results, value)
 
-			case SymbolStructValue:
+			case analysis.SymbolStructValue:
 				// Parametrized struct
 				get_generic_assignment(file, v.expr, ast_context, results, calls, flags, is_mutable)
-			case SymbolUnionValue:
+			case analysis.SymbolUnionValue:
 				// Parametrized union
 				get_generic_assignment(file, v.expr, ast_context, results, calls, flags, is_mutable)
-			case SymbolBasicValue:
+			case analysis.SymbolBasicValue:
 				get_generic_assignment(file, v.expr, ast_context, results, calls, flags, is_mutable)
 			case:
 				if ident, ok := v.expr.derived.(^ast.Ident); ok {
 					//TODO: Simple assumption that you are casting it the type.
-					type_ident := new_type(Ident, ident.pos, ident.end)
+					type_ident := analysis.new_type(Ident, ident.pos, ident.end)
 					type_ident.name = ident.name
 					append(results, type_ident)
 				}
@@ -537,15 +539,15 @@ get_locals_block_stmt :: proc(
 get_locals_using :: proc(expr: ^ast.Expr, ast_context: ^AstContext) {
 	if symbol, expr, ok := unwrap_procedure_until_struct_bit_field_or_package(ast_context, expr); ok {
 		#partial switch v in symbol.value {
-		case SymbolPackageValue:
+		case analysis.SymbolPackageValue:
 			if ident, ok := expr.derived.(^ast.Ident); ok {
 				add_using(ast_context, ident.name, symbol.pkg)
 			}
-		case SymbolStructValue:
+		case analysis.SymbolStructValue:
 			for name, i in v.names {
-				selector := new_type(ast.Selector_Expr, v.types[i].pos, v.types[i].end)
+				selector := analysis.new_type(ast.Selector_Expr, v.types[i].pos, v.types[i].end)
 				selector.expr = expr
-				selector.field = new_type(ast.Ident, v.types[i].pos, v.types[i].end)
+				selector.field = analysis.new_type(ast.Ident, v.types[i].pos, v.types[i].end)
 				selector.field.name = name
 				store_local(
 					ast_context,
@@ -560,11 +562,11 @@ get_locals_using :: proc(expr: ^ast.Expr, ast_context: ^AstContext) {
 					false,
 				)
 			}
-		case SymbolBitFieldValue:
+		case analysis.SymbolBitFieldValue:
 			for name, i in v.names {
-				selector := new_type(ast.Selector_Expr, v.types[i].pos, v.types[i].end)
+				selector := analysis.new_type(ast.Selector_Expr, v.types[i].pos, v.types[i].end)
 				selector.expr = expr
-				selector.field = new_type(ast.Ident, v.types[i].pos, v.types[i].end)
+				selector.field = analysis.new_type(ast.Ident, v.types[i].pos, v.types[i].end)
 				selector.field.name = name
 				store_local(
 					ast_context,
@@ -681,7 +683,7 @@ get_locals_for_range_stmt :: proc(
 
 	symbol, ok := resolve_type_expression(ast_context, stmt.expr)
 
-	if v, ok := symbol.value.(SymbolProcedureValue); ok {
+	if v, ok := symbol.value.(analysis.SymbolProcedureValue); ok {
 		//Not quite sure how the custom iterator is defined, but it seems that it's two or three arguments. So temporarily just assume three arguments are iterators.
 		if len(v.return_types) != 3 && len(v.return_types) != 2 && len(v.return_types) != 0 {
 			if v.return_types[0].type != nil {
@@ -694,7 +696,7 @@ get_locals_for_range_stmt :: proc(
 
 	if ok {
 		#partial switch v in symbol.value {
-		case SymbolProcedureValue:
+		case analysis.SymbolProcedureValue:
 			calls := make(map[int]struct{}, context.temp_allocator)
 			get_generic_assignment(file, stmt.expr, ast_context, &results, &calls, {}, false)
 			if len(results) > 0 {
@@ -716,7 +718,7 @@ get_locals_for_range_stmt :: proc(
 					}
 				}
 			}
-		case SymbolUntypedValue:
+		case analysis.SymbolUntypedValue:
 			if len(stmt.vals) == 1 {
 				if ident, ok := unwrap_ident(stmt.vals[0]); ok {
 					if v.type == .String {
@@ -735,7 +737,7 @@ get_locals_for_range_stmt :: proc(
 					}
 				}
 			}
-		case SymbolBasicValue:
+		case analysis.SymbolBasicValue:
 			if len(stmt.vals) == 1 {
 				if ident, ok := unwrap_ident(stmt.vals[0]); ok {
 					if v.ident.name == "string" {
@@ -754,7 +756,7 @@ get_locals_for_range_stmt :: proc(
 					}
 				}
 			}
-		case SymbolMapValue:
+		case analysis.SymbolMapValue:
 			if len(stmt.vals) >= 1 {
 				if ident, ok := unwrap_ident(stmt.vals[0]); ok {
 					store_local(
@@ -787,7 +789,7 @@ get_locals_for_range_stmt :: proc(
 					)
 				}
 			}
-		case SymbolDynamicArrayValue:
+		case analysis.SymbolDynamicArrayValue:
 			if len(stmt.vals) >= 1 {
 				if ident, ok := unwrap_ident(stmt.vals[0]); ok {
 					store_local(
@@ -820,7 +822,7 @@ get_locals_for_range_stmt :: proc(
 					)
 				}
 			}
-		case SymbolFixedArrayValue:
+		case analysis.SymbolFixedArrayValue:
 			if len(stmt.vals) >= 1 {
 				if ident, ok := unwrap_ident(stmt.vals[0]); ok {
 					store_local(
@@ -842,7 +844,7 @@ get_locals_for_range_stmt :: proc(
 				if ident, ok := unwrap_ident(stmt.vals[1]); ok {
 					//Look for enumarated arrays
 					if len_symbol, ok := resolve_type_expression(ast_context, v.len); ok {
-						if _, is_enum := len_symbol.value.(SymbolEnumValue); is_enum {
+						if _, is_enum := len_symbol.value.(analysis.SymbolEnumValue); is_enum {
 							store_local(
 								ast_context,
 								ident,
@@ -872,7 +874,7 @@ get_locals_for_range_stmt :: proc(
 					}
 				}
 			}
-		case SymbolSliceValue:
+		case analysis.SymbolSliceValue:
 			if len(stmt.vals) >= 1 {
 				if ident, ok := unwrap_ident(stmt.vals[0]); ok {
 					store_local(
@@ -905,7 +907,7 @@ get_locals_for_range_stmt :: proc(
 					)
 				}
 			}
-		case SymbolBitSetValue:
+		case analysis.SymbolBitSetValue:
 			if len(stmt.vals) >= 1 {
 				if ident, ok := unwrap_ident(stmt.vals[0]); ok {
 					store_local(
@@ -938,7 +940,7 @@ get_locals_for_range_stmt :: proc(
 					)
 				}
 			}
-		case SymbolEnumValue:
+		case analysis.SymbolEnumValue:
 			if len(stmt.vals) >= 1 {
 				if ident, ok := unwrap_ident(stmt.vals[0]); ok {
 					store_local(

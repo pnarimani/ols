@@ -1,5 +1,5 @@
 #+feature using-stmt
-package server
+package analysis
 
 import "base:intrinsics"
 

@@ -1,5 +1,7 @@
 package server
 
+
+import "src:analysis"
 import "core:odin/ast"
 
 import "src:common"
@@ -39,7 +41,7 @@ get_document_symbols :: proc(doc_ctx: DocumentContext) -> []DocumentSymbol {
 			// TODO: this only does the top level fields, we may want to travers all the way down in the future
 			if s, ok := resolve_type_expression(&ast_context, global.expr); ok {
 				#partial switch v in s.value {
-				case SymbolStructValue:
+				case analysis.SymbolStructValue:
 					children := make([dynamic]DocumentSymbol, context.temp_allocator)
 					for name, i in v.names {
 						if name == "" {
@@ -53,7 +55,7 @@ get_document_symbols :: proc(doc_ctx: DocumentContext) -> []DocumentSymbol {
 						append(&children, child)
 					}
 					symbol.children = children[:]
-				case SymbolBitFieldValue:
+				case analysis.SymbolBitFieldValue:
 					children := make([dynamic]DocumentSymbol, context.temp_allocator)
 					for name, i in v.names {
 						if name == "" {
@@ -95,7 +97,7 @@ get_document_symbols :: proc(doc_ctx: DocumentContext) -> []DocumentSymbol {
 					}
 				}
 				#partial switch v in s.value {
-				case SymbolStructValue:
+				case analysis.SymbolStructValue:
 					children := make([dynamic]DocumentSymbol, context.temp_allocator)
 					for name, i in v.names {
 						child: DocumentSymbol
@@ -108,7 +110,7 @@ get_document_symbols :: proc(doc_ctx: DocumentContext) -> []DocumentSymbol {
 						}
 					}
 					symbol.children = children[:]
-				case SymbolBitFieldValue:
+				case analysis.SymbolBitFieldValue:
 					children := make([dynamic]DocumentSymbol, context.temp_allocator)
 					for name, i in v.names {
 						child: DocumentSymbol

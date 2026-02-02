@@ -1,5 +1,7 @@
 package server
 
+
+import "src:analysis"
 import "base:runtime"
 
 import "core:log"
@@ -106,17 +108,17 @@ get_struct_field_type_position :: proc(
 	position_context: ^DocumentPositionContext,
 	node: ^ast.Expr,
 ) -> (
-	Symbol,
+	analysis.Symbol,
 	bool,
 ) {
 	#partial switch v in node.derived {
 	case ^ast.Ident:
-		symbol := Symbol {
+		symbol := analysis.Symbol{
 			range = common.get_token_range(node, ast_context.file.src),
 		}
 		return symbol, true
 	case ^ast.Selector_Expr:
-		symbol := Symbol {
+		symbol := analysis.Symbol{
 			range = common.get_token_range(v.field, ast_context.file.src),
 		}
 		return symbol, true
@@ -133,7 +135,7 @@ prepare_rename :: proc(
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 ) -> (
-	symbol: Symbol,
+	symbol: analysis.Symbol,
 	ok: bool,
 ) {
 	ok = false
@@ -144,7 +146,7 @@ prepare_rename :: proc(
 		done_struct: for field in position_context.struct_type.fields.list {
 			for name in field.names {
 				if position_in_node(name, position_context.position) {
-					symbol = Symbol {
+					symbol = analysis.Symbol{
 						range = common.get_token_range(name, ast_context.file.src),
 					}
 					found = true
@@ -170,7 +172,7 @@ prepare_rename :: proc(
 		done_enum: for field in position_context.enum_type.fields {
 			if ident, ok := field.derived.(^ast.Ident); ok {
 				if position_in_node(ident, position_context.position) {
-					symbol = Symbol {
+					symbol = analysis.Symbol{
 						range = common.get_token_range(ident, ast_context.file.src),
 					}
 					found = true
@@ -178,13 +180,13 @@ prepare_rename :: proc(
 				}
 			} else if value, ok := field.derived.(^ast.Field_Value); ok {
 				if position_in_node(value.field, position_context.position) {
-					symbol = Symbol {
+					symbol = analysis.Symbol{
 						range = common.get_token_range(value.field, ast_context.file.src),
 					}
 					found = true
 					break done_enum
 				} else if position_in_node(value.value, position_context.position) {
-					symbol = Symbol {
+					symbol = analysis.Symbol{
 						range = common.get_token_range(value.value, ast_context.file.src),
 					}
 					found = true
@@ -197,7 +199,7 @@ prepare_rename :: proc(
 		}
 	} else if position_context.bitset_type != nil {
 		if position_in_node(position_context.bitset_type.elem, position_context.position) {
-			symbol = Symbol {
+			symbol = analysis.Symbol{
 				range = common.get_token_range(position_context.bitset_type.elem, ast_context.file.src),
 			}
 			return symbol, true
@@ -207,7 +209,7 @@ prepare_rename :: proc(
 		found := false
 		for variant in position_context.union_type.variants {
 			if position_in_node(variant, position_context.position) {
-				symbol = Symbol {
+				symbol = analysis.Symbol{
 					range = common.get_token_range(variant, ast_context.file.src),
 				}
 				found = true
@@ -222,14 +224,14 @@ prepare_rename :: proc(
 		range := common.get_token_range(position_context.implicit_selector_expr, ast_context.file.src)
 		// Skip the `.`
 		range.start.character += 1
-		symbol = Symbol {
+		symbol = analysis.Symbol{
 			range = range,
 		}
 	} else if position_context.field_value != nil &&
 	   position_context.comp_lit != nil &&
 	   !is_expr_basic_lit(position_context.field_value.field) &&
 	   position_in_node(position_context.field_value.field, position_context.position) {
-		symbol = Symbol {
+		symbol = analysis.Symbol{
 			range = common.get_token_range(position_context.field_value.field, ast_context.file.src),
 		}
 	} else if position_context.selector_expr != nil {
@@ -251,7 +253,7 @@ prepare_rename :: proc(
 	} else if position_context.identifier != nil {
 		ident := position_context.identifier.derived.(^ast.Ident)
 
-		symbol = Symbol {
+		symbol = analysis.Symbol{
 			range = common.get_token_range(position_context.identifier^, ast_context.file.src),
 		}
 	} else {

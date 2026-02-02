@@ -1,5 +1,6 @@
 package server
 
+import "src:analysis"
 import "src:common"
 
 import "core:os"
@@ -10,7 +11,7 @@ import "core:strings"
 //Used in semantic tokens and inlay hints to handle the entire file being resolved.
 
 FileResolve :: struct {
-	symbols: map[uintptr]SymbolAndNode,
+	symbols: map[uintptr]analysis.SymbolAndNode,
 }
 
 // Find all package aliases from all collections.

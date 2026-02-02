@@ -1,5 +1,6 @@
 package server
 
+import "src:analysis"
 import "core:odin/ast"
 import "core:odin/tokenizer"
 import "core:reflect"
@@ -10,7 +11,7 @@ import "src:common"
 resolve_poly :: proc(
 	ast_context: ^AstContext,
 	call_node: ^ast.Expr,
-	call_symbol: Symbol,
+	call_symbol: analysis.Symbol,
 	poly_node: ^ast.Expr,
 	poly_map: ^map[string]^ast.Expr,
 ) -> bool {
@@ -37,7 +38,7 @@ resolve_poly :: proc(
 	if specialization == nil {
 		if type != nil {
 			if ident, ok := unwrap_ident(type); ok {
-				if untyped_value, ok := call_symbol.value.(SymbolUntypedValue); ok {
+				if untyped_value, ok := call_symbol.value.(analysis.SymbolUntypedValue); ok {
 					save_poly_map(ident, symbol_to_expr(call_symbol, call_node.pos.file), poly_map)
 				} else {
 					save_poly_map(
@@ -110,7 +111,7 @@ resolve_poly :: proc(
 	case ^ast.Call_Expr:
 		if call_struct, ok := call_node.derived.(^ast.Struct_Type); ok {
 			arg_index := 0
-			struct_value := call_symbol.value.(SymbolStructValue)
+			struct_value := call_symbol.value.(analysis.SymbolStructValue)
 			found := false
 			for arg in p.args {
 				if poly_type, ok := arg.derived.(^ast.Poly_Type); ok {
@@ -479,13 +480,13 @@ resolve_generic_function :: proc {
 resolve_generic_function_ast :: proc(
 	ast_context: ^AstContext,
 	proc_lit: ast.Proc_Lit,
-	proc_symbol: Symbol,
+	proc_symbol: analysis.Symbol,
 ) -> (
-	Symbol,
+	analysis.Symbol,
 	bool,
 ) {
 	if ast_context.call == nil {
-		return Symbol{}, false
+		return analysis.Symbol{}, false
 	}
 
 	params: []^ast.Field
@@ -509,9 +510,9 @@ resolve_generic_function_symbol :: proc(
 	params: []^ast.Field,
 	results: []^ast.Field,
 	inlining: ast.Proc_Inlining,
-	proc_symbol: Symbol,
+	proc_symbol: analysis.Symbol,
 ) -> (
-	Symbol,
+	analysis.Symbol,
 	bool,
 ) {
 	if ast_context.call == nil {
@@ -559,7 +560,7 @@ resolve_generic_function_symbol :: proc(
 				}
 
 				//If we have a function call, we should instead look at the return value: bar(foo(123))
-				if symbol_value, ok := symbol.value.(SymbolProcedureValue); ok && len(symbol_value.return_types) > 0 {
+				if symbol_value, ok := symbol.value.(analysis.SymbolProcedureValue); ok && len(symbol_value.return_types) > 0 {
 					if _, ok := call_expr.args[i].derived.(^ast.Call_Expr); ok {
 						if symbol_value.return_types[0].type != nil {
 							if symbol, ok = resolve_type_expression(ast_context, symbol_value.return_types[0].type);
@@ -577,12 +578,12 @@ resolve_generic_function_symbol :: proc(
 				symbol_expr.pos.offset = call_expr.pos.offset
 				symbol_expr.end.offset = call_expr.end.offset
 
-				symbol_expr = clone_expr(symbol_expr, nil)
-				param_type := clone_expr(param.type, nil)
+				symbol_expr = analysis.clone_expr(symbol_expr, nil)
+				param_type := analysis.clone_expr(param.type, nil)
 
 				if resolve_poly(ast_context, symbol_expr, symbol, param_type, &poly_map) {
 					if poly, ok := name.derived.(^ast.Poly_Type); ok {
-						poly_map[poly.type.name] = clone_expr(call_expr.args[i], nil)
+						poly_map[poly.type.name] = analysis.clone_expr(call_expr.args[i], nil)
 					}
 				}
 			}
@@ -618,7 +619,7 @@ resolve_generic_function_symbol :: proc(
 			continue
 		}
 
-		field := cast(^ast.Field)clone_node(result, nil)
+		field := cast(^ast.Field)analysis.clone_node(result, nil)
 
 		if ident, ok := unwrap_ident(field.type); ok {
 			if expr, ok := poly_map[ident.name]; ok {
@@ -632,7 +633,7 @@ resolve_generic_function_symbol :: proc(
 	}
 
 	for param in params {
-		field := cast(^ast.Field)clone_node(param, nil)
+		field := cast(^ast.Field)analysis.clone_node(param, nil)
 
 		if field.type != nil {
 			if poly_type, ok := field.type.derived.(^ast.Poly_Type); ok {
@@ -663,7 +664,7 @@ resolve_generic_function_symbol :: proc(
 
 
 	symbol := proc_symbol
-	symbol.value = SymbolProcedureValue {
+	symbol.value = analysis.SymbolProcedureValue {
 		return_types      = return_types[:],
 		arg_types         = argument_types[:],
 		orig_arg_types    = params[:],
@@ -692,7 +693,7 @@ is_procedure_generic :: proc(proc_type: ^ast.Proc_Type) -> bool {
 	return false
 }
 
-resolve_poly_struct :: proc(ast_context: ^AstContext, b: ^SymbolStructValueBuilder, poly_params: ^ast.Field_List) {
+resolve_poly_struct :: proc(ast_context: ^AstContext, b: ^analysis.SymbolStructValueBuilder, poly_params: ^ast.Field_List) {
 	if ast_context.call == nil {
 		return
 	}
@@ -736,7 +737,7 @@ resolve_poly_struct :: proc(ast_context: ^AstContext, b: ^SymbolStructValueBuild
 
 	Visit_Data :: struct {
 		poly_map:             map[string]^ast.Expr,
-		symbol_value_builder: ^SymbolStructValueBuilder,
+		symbol_value_builder: ^analysis.SymbolStructValueBuilder,
 		parent:               ^ast.Node,
 		parent_proc:          ^ast.Proc_Type,
 		i:                    int,
@@ -834,12 +835,12 @@ resolve_poly_struct :: proc(ast_context: ^AstContext, b: ^SymbolStructValueBuild
 }
 
 
-resolve_poly_union :: proc(ast_context: ^AstContext, poly_params: ^ast.Field_List, symbol: ^Symbol) {
+resolve_poly_union :: proc(ast_context: ^AstContext, poly_params: ^ast.Field_List, symbol: ^analysis.Symbol) {
 	if ast_context.call == nil {
 		return
 	}
 
-	symbol_value := &symbol.value.(SymbolUnionValue)
+	symbol_value := &symbol.value.(analysis.SymbolUnionValue)
 
 	if symbol_value == nil {
 		return

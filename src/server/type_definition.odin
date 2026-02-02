@@ -1,5 +1,7 @@
 package server
 
+
+import "src:analysis"
 import "core:fmt"
 import "core:log"
 import "core:mem"
@@ -9,7 +11,7 @@ import "core:strings"
 import "src:common"
 
 @(private = "file")
-append_symbol_to_locations :: proc(locations: ^[dynamic]common.Location, doc_ctx: DocumentContext, symbol: Symbol) {
+append_symbol_to_locations :: proc(locations: ^[dynamic]common.Location, doc_ctx: DocumentContext, symbol: analysis.Symbol) {
 	if symbol.range == {} {
 		return
 	}
@@ -62,7 +64,7 @@ get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Loc
 			if comp_symbol, ok := resolve_comp_literal(&ast_context, &position_context); ok {
 				if field, ok := position_context.field_value.field.derived.(^ast.Ident); ok {
 					if position_in_node(field, position_context.position) {
-						if v, ok := comp_symbol.value.(SymbolStructValue); ok {
+						if v, ok := comp_symbol.value.(analysis.SymbolStructValue); ok {
 							for name, i in v.names {
 								if name == field.name {
 									if symbol, ok := resolve_location_type_expression(&ast_context, v.types[i]); ok {
@@ -72,7 +74,7 @@ get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Loc
 								}
 							}
 						}
-					} else if v, ok := comp_symbol.value.(SymbolBitFieldValue); ok {
+					} else if v, ok := comp_symbol.value.(analysis.SymbolBitFieldValue); ok {
 						for name, i in v.names {
 							if name == field.name {
 								if symbol, ok := resolve_type_expression(&ast_context, v.types[i]); ok {
@@ -144,7 +146,7 @@ get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Loc
 			}
 		}
 
-		selector: Symbol
+		selector: analysis.Symbol
 
 		selector, ok = resolve_type_expression(&ast_context, position_context.selector)
 
@@ -161,7 +163,7 @@ get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Loc
 			}
 		}
 
-		if v, is_proc := selector.value.(SymbolProcedureValue); is_proc {
+		if v, is_proc := selector.value.(analysis.SymbolProcedureValue); is_proc {
 			if len(v.return_types) == 0 || v.return_types[0].type == nil {
 				return {}, false
 			}
@@ -176,7 +178,7 @@ get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Loc
 		ast_context.current_package = selector.pkg
 
 		#partial switch v in selector.value {
-		case SymbolStructValue:
+		case analysis.SymbolStructValue:
 			for name, i in v.names {
 				if name == field {
 					if symbol, ok := resolve_location_type_expression(&ast_context, v.types[i]); ok {
@@ -185,7 +187,7 @@ get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Loc
 					}
 				}
 			}
-		case SymbolBitFieldValue:
+		case analysis.SymbolBitFieldValue:
 			for name, i in v.names {
 				if name == field {
 					if symbol, ok := resolve_type_expression(&ast_context, v.types[i]); ok {
@@ -194,7 +196,7 @@ get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Loc
 					}
 				}
 			}
-		case SymbolPackageValue:
+		case analysis.SymbolPackageValue:
 			if position_context.field != nil {
 				if ident, ok := position_context.field.derived.(^ast.Ident); ok {
 					// check to see if we are in a position call context

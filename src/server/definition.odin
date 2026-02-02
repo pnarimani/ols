@@ -14,6 +14,7 @@ import "core:sort"
 import "core:strconv"
 import "core:strings"
 
+import "src:analysis"
 import "src:common"
 
 get_all_package_file_locations :: proc(
@@ -143,7 +144,7 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 			if req_ctx.config.enable_overload_resolution {
 				resolved = try_resolve_proc_group_overload(&ast_context, &position_context, resolved)
 			}
-			if v, ok := resolved.value.(SymbolAggregateValue); ok {
+			if v, ok := resolved.value.(analysis.SymbolAggregateValue); ok {
 				for symbol in v.symbols {
 					append(&locations, common.Location{range = symbol.range, uri = symbol.uri})
 				}
@@ -173,9 +174,9 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 try_resolve_proc_group_overload :: proc(
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
-	symbol: Symbol,
+	symbol: analysis.Symbol,
 	selector_expr: ^ast.Node = nil,
-) -> Symbol {
+) -> analysis.Symbol {
 	if position_context.call == nil {
 		return symbol
 	}
@@ -197,7 +198,7 @@ try_resolve_proc_group_overload :: proc(
 		full_symbol = result
 	}
 
-	proc_group_value, is_proc_group := full_symbol.value.(SymbolProcedureGroupValue)
+	proc_group_value, is_proc_group := full_symbol.value.(analysis.SymbolProcedureGroupValue)
 	if !is_proc_group {
 		return symbol
 	}
@@ -227,16 +228,16 @@ try_resolve_proc_group_overload :: proc(
 get_full_symbol_from_selector :: proc(
 	ast_context: ^AstContext,
 	selector_expr: ^ast.Node,
-	symbol: Symbol,
+	symbol: analysis.Symbol,
 ) -> (
-	full_symbol: Symbol,
+	full_symbol: analysis.Symbol,
 	ok: bool,
 ) {
 	if selector_expr == nil do return
 
 	selector := selector_expr.derived.(^ast.Selector_Expr) or_return
 
-	_, is_pkg := symbol.value.(SymbolPackageValue)
+	_, is_pkg := symbol.value.(analysis.SymbolPackageValue)
 	if !is_pkg && symbol.value != nil do return
 
 	if selector.field == nil do return
@@ -249,9 +250,9 @@ get_full_symbol_from_selector :: proc(
 get_full_symbol_from_identifier :: proc(
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
-	symbol: Symbol,
+	symbol: analysis.Symbol,
 ) -> (
-	full_symbol: Symbol,
+	full_symbol: analysis.Symbol,
 	ok: bool,
 ) {
 	if position_context.identifier == nil || symbol.value != nil do return
@@ -271,11 +272,11 @@ get_full_symbol_from_identifier :: proc(
 	global := ast_context.globals[ident.name] or_return
 	if proc_group, is_proc_group := global.expr.derived.(^ast.Proc_Group); is_proc_group {
 		full_symbol = symbol
-		full_symbol.value = SymbolProcedureGroupValue {
+		full_symbol.value = analysis.SymbolProcedureGroupValue {
 			group = global.expr,
 		}
 		return full_symbol, true
 	}
 
-	return Symbol{}, false
+	return analysis.Symbol{}, false
 }

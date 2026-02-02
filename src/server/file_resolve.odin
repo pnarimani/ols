@@ -5,6 +5,7 @@ import "core:odin/ast"
 import "core:odin/tokenizer"
 import "core:strings"
 
+import "src:analysis"
 import "src:common"
 
 ResolveReferenceFlag :: enum {
@@ -26,7 +27,7 @@ reset_position_context :: proc(position_context: ^DocumentPositionContext) {
 	position_context.index = nil
 }
 
-resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> map[uintptr]SymbolAndNode {
+resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> map[uintptr]analysis.SymbolAndNode {
 	// Build fresh symbols for this request
 	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
 
@@ -46,7 +47,7 @@ resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> ma
 
 	ast_context.current_package = ast_context.document_package
 
-	symbols := make(map[uintptr]SymbolAndNode, 10000)
+	symbols := make(map[uintptr]analysis.SymbolAndNode, 10000)
 
 	margin := 20
 
@@ -65,7 +66,7 @@ resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> ma
 	return symbols
 }
 
-resolve_entire_file :: proc(doc_ctx: DocumentContext, flag := ResolveReferenceFlag.None) -> map[uintptr]SymbolAndNode {
+resolve_entire_file :: proc(doc_ctx: DocumentContext, flag := ResolveReferenceFlag.None) -> map[uintptr]analysis.SymbolAndNode {
 	// Build fresh symbols for this request
 	request_symbols := build_request_symbols(doc_ctx.imports, doc_ctx.package_name)
 
@@ -85,7 +86,7 @@ resolve_entire_file :: proc(doc_ctx: DocumentContext, flag := ResolveReferenceFl
 
 	ast_context.current_package = ast_context.document_package
 
-	symbols := make(map[uintptr]SymbolAndNode, 10000)
+	symbols := make(map[uintptr]analysis.SymbolAndNode, 10000)
 
 	for decl in doc_ctx.ast.decls {
 		if _, is_value := decl.derived.(^ast.Value_Decl); !is_value {
@@ -101,7 +102,7 @@ resolve_entire_file :: proc(doc_ctx: DocumentContext, flag := ResolveReferenceFl
 
 FileResolveData :: struct {
 	ast_context:      ^AstContext,
-	symbols:          ^map[uintptr]SymbolAndNode,
+	symbols:          ^map[uintptr]analysis.SymbolAndNode,
 	id_counter:       int,
 	doc_ctx:          DocumentContext,
 	position_context: ^DocumentPositionContext,
@@ -114,7 +115,7 @@ resolve_decl :: proc(
 	ast_context: ^AstContext,
 	doc_ctx: DocumentContext,
 	decl: ^ast.Node,
-	symbols: ^map[uintptr]SymbolAndNode,
+	symbols: ^map[uintptr]analysis.SymbolAndNode,
 	flag: ResolveReferenceFlag,
 ) {
 	data := FileResolveData {
@@ -171,14 +172,14 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 		data.position_context.identifier = node
 		if data.flag != .None {
 			if symbol, ok := resolve_location_identifier(data.ast_context, n^); ok {
-				data.symbols[cast(uintptr)node] = SymbolAndNode {
+				data.symbols[cast(uintptr)node] = analysis.SymbolAndNode {
 					node   = n,
 					symbol = symbol,
 				}
 			}
 		} else {
 			if symbol, ok := resolve_type_identifier(data.ast_context, n^); ok {
-				data.symbols[cast(uintptr)node] = SymbolAndNode {
+				data.symbols[cast(uintptr)node] = analysis.SymbolAndNode {
 					node   = n,
 					symbol = symbol,
 				}
@@ -200,7 +201,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 		data.position_context.implicit_selector_expr = n
 		data.position_context.position = n.pos.offset
 		if symbol, ok := resolve_location_implicit_selector(data.ast_context, data.position_context, n); ok {
-			data.symbols[cast(uintptr)node] = SymbolAndNode {
+			data.symbols[cast(uintptr)node] = analysis.SymbolAndNode {
 				node   = n,
 				symbol = symbol,
 			}
@@ -213,12 +214,12 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 		if data.flag != .None {
 			if symbol, ok := resolve_location_selector(data.ast_context, n); ok {
 				if data.flag != .Base {
-					data.symbols[cast(uintptr)node] = SymbolAndNode {
+					data.symbols[cast(uintptr)node] = analysis.SymbolAndNode {
 						node   = n.field,
 						symbol = symbol,
 					}
 				} else {
-					data.symbols[cast(uintptr)node] = SymbolAndNode {
+					data.symbols[cast(uintptr)node] = analysis.SymbolAndNode {
 						node   = n,
 						symbol = symbol,
 					}
@@ -232,7 +233,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 			}
 		} else {
 			if symbol, ok := resolve_type_expression(data.ast_context, &n.node); ok {
-				data.symbols[cast(uintptr)node] = SymbolAndNode {
+				data.symbols[cast(uintptr)node] = analysis.SymbolAndNode {
 					node   = n,
 					symbol = symbol,
 				}
@@ -250,7 +251,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 			data.position_context.position = n.pos.offset
 
 			if symbol, ok := resolve_location_comp_lit_field(data.ast_context, data.position_context); ok {
-				data.symbols[cast(uintptr)node] = SymbolAndNode {
+				data.symbols[cast(uintptr)node] = analysis.SymbolAndNode {
 					node   = n.field,
 					symbol = symbol,
 				}
@@ -259,7 +260,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 			resolve_node(n.value, data)
 		} else if data.flag != .None && data.position_context.call != nil {
 			if symbol, ok := resolve_location_proc_param_name(data.ast_context, data.position_context); ok {
-				data.symbols[cast(uintptr)node] = SymbolAndNode {
+				data.symbols[cast(uintptr)node] = analysis.SymbolAndNode {
 					node   = n.field,
 					symbol = symbol,
 				}
@@ -520,9 +521,9 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 		if data.flag != .None {
 			for field in n.fields.list {
 				for name in field.names {
-					data.symbols[cast(uintptr)name] = SymbolAndNode {
+					data.symbols[cast(uintptr)name] = analysis.SymbolAndNode {
 						node = name,
-						symbol = Symbol {
+						symbol = analysis.Symbol{
 							range = common.get_token_range(name, string(data.doc_ctx.text)),
 							uri = strings.clone(
 								common.create_uri(field.pos.file, data.ast_context.allocator).uri,
@@ -545,9 +546,9 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 
 		if data.flag != .None {
 			for field in n.fields {
-				data.symbols[cast(uintptr)field] = SymbolAndNode {
+				data.symbols[cast(uintptr)field] = analysis.SymbolAndNode {
 					node = field,
-					symbol = Symbol {
+					symbol = analysis.Symbol{
 						range = common.get_token_range(field, string(data.doc_ctx.text)),
 						uri = strings.clone(
 							common.create_uri(field.pos.file, data.ast_context.allocator).uri,
@@ -558,9 +559,9 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 				// In the case of a Field_Value, we explicitly add them so we can find the LHS correctly for things like renaming
 				if field, ok := field.derived.(^ast.Field_Value); ok {
 					if ident, ok := field.field.derived.(^ast.Ident); ok {
-						data.symbols[cast(uintptr)ident] = SymbolAndNode {
+						data.symbols[cast(uintptr)ident] = analysis.SymbolAndNode {
 							node = ident,
-							symbol = Symbol {
+							symbol = analysis.Symbol{
 								name = ident.name,
 								range = common.get_token_range(ident, string(data.doc_ctx.text)),
 								uri = strings.clone(
@@ -570,9 +571,9 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 							},
 						}
 					} else if binary, ok := field.field.derived.(^ast.Binary_Expr); ok {
-						data.symbols[cast(uintptr)binary] = SymbolAndNode {
+						data.symbols[cast(uintptr)binary] = analysis.SymbolAndNode {
 							node = binary,
-							symbol = Symbol {
+							symbol = analysis.Symbol{
 								name = "binary",
 								range = common.get_token_range(binary, string(data.doc_ctx.text)),
 								uri = strings.clone(
@@ -609,9 +610,9 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 		resolve_node(n.type, data)
 		resolve_node(n.bit_size, data)
 		if data.flag != .None {
-			data.symbols[cast(uintptr)n.name] = SymbolAndNode {
+			data.symbols[cast(uintptr)n.name] = analysis.SymbolAndNode {
 				node = n.name,
-				symbol = Symbol {
+				symbol = analysis.Symbol{
 					range = common.get_token_range(n.name, string(data.doc_ctx.text)),
 					uri = strings.clone(
 						common.create_uri(n.pos.file, data.ast_context.allocator).uri,

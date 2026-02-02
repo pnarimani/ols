@@ -4,9 +4,10 @@ import "core:fmt"
 import "core:slice"
 import "core:strings"
 
+import "src:analysis"
 import "src:common"
 
-symbol_collection_lookup :: proc(collection: ^SymbolCollection, name: string, pkg: string) -> (Symbol, bool) {
+symbol_collection_lookup :: proc(collection: ^analysis.SymbolCollection, name: string, pkg: string) -> (analysis.Symbol, bool) {
 	if _pkg, ok := &collection.packages[pkg]; ok {
 		return _pkg.symbols[name]
 	}
@@ -27,7 +28,7 @@ score_name :: proc(matchers: []^common.FuzzyMatcher, name: string) -> (f32, bool
 }
 
 symbol_collection_fuzzy_search :: proc(
-	collection: ^SymbolCollection,
+	collection: ^analysis.SymbolCollection,
 	name: string,
 	pkgs: []string,
 	current_file: string,
@@ -57,7 +58,7 @@ symbol_collection_fuzzy_search :: proc(
 				if resolve_fields {
 					// TODO: this only does the top level fields, we may want to travers all the way down in the future
 					#partial switch v in symbol.value {
-					case SymbolStructValue:
+					case analysis.SymbolStructValue:
 						for name, i in v.names {
 							full_name := fmt.tprintf("%s.%s", symbol.name, name)
 							if score, ok := score_name(matchers[:], full_name); ok {
@@ -72,7 +73,7 @@ symbol_collection_fuzzy_search :: proc(
 								append(&symbols, result)
 							}
 						}
-					case SymbolBitFieldValue:
+					case analysis.SymbolBitFieldValue:
 						for name, i in v.names {
 							full_name := fmt.tprintf("%s.%s", symbol.name, name)
 							if score, ok := score_name(matchers[:], full_name); ok {
@@ -87,7 +88,7 @@ symbol_collection_fuzzy_search :: proc(
 								append(&symbols, result)
 							}
 						}
-					case SymbolGenericValue:
+					case analysis.SymbolGenericValue:
 						for name, i in v.field_names {
 							full_name := fmt.tprintf("%s.%s", symbol.name, name)
 							if score, ok := score_name(matchers[:], full_name); ok {

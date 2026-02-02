@@ -1,5 +1,6 @@
 package server
 
+import "src:analysis"
 import "core:fmt"
 import "core:log"
 import "core:mem"
@@ -54,7 +55,7 @@ create_remove_edit :: proc(
 
 append_method_completion :: proc(
 	ast_context: ^AstContext,
-	selector_symbol: Symbol,
+	selector_symbol: analysis.Symbol,
 	position_context: ^DocumentPositionContext,
 	results: ^[dynamic]CompletionResult,
 	receiver: string,
@@ -68,10 +69,10 @@ append_method_completion :: proc(
 		return
 	}
 
-	if value, ok := selector_symbol.value.(SymbolUntypedValue); ok {
+	if value, ok := selector_symbol.value.(analysis.SymbolUntypedValue); ok {
 		cases := untyped_map[value.type]
 		for c in cases {
-			method := Method {
+			method := analysis.Method{
 				name = c,
 				pkg  = "$builtin", // Untyped values are always builtin types
 			}
@@ -91,7 +92,7 @@ append_method_completion :: proc(
 		if is_builtin_type_name(selector_symbol.name) {
 			method_pkg = "$builtin"
 		}
-		method := Method {
+		method := analysis.Method{
 			name = selector_symbol.name,
 			pkg  = method_pkg,
 		}
@@ -112,7 +113,7 @@ append_method_completion :: proc(
 collect_methods :: proc(
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
-	method: Method,
+	method: analysis.Method,
 	pointers: int,
 	receiver: string,
 	remove_edit: []TextEdit,
@@ -131,7 +132,7 @@ collect_methods :: proc(
 			resolve_unresolved_symbol(ast_context, &symbol)
 
 			#partial switch &sym_value in symbol.value {
-			case SymbolProcedureValue:
+			case analysis.SymbolProcedureValue:
 				add_proc_method_completion(
 					ast_context,
 					position_context,
@@ -142,7 +143,7 @@ collect_methods :: proc(
 					remove_edit,
 					results,
 				)
-			case SymbolProcedureGroupValue:
+			case analysis.SymbolProcedureGroupValue:
 				add_proc_group_method_completion(
 					ast_context,
 					position_context,
@@ -162,8 +163,8 @@ collect_methods :: proc(
 add_proc_method_completion :: proc(
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
-	symbol: ^Symbol,
-	value: SymbolProcedureValue,
+	symbol: ^analysis.Symbol,
+	value: analysis.SymbolProcedureValue,
 	pointers: int,
 	receiver: string,
 	remove_edit: []TextEdit,
@@ -178,7 +179,7 @@ add_proc_method_completion :: proc(
 		return
 	}
 
-	first_arg: Symbol
+	first_arg: analysis.Symbol
 	first_arg, ok = resolve_type_expression(ast_context, value.arg_types[0].type)
 	if !ok {
 		return
@@ -213,8 +214,8 @@ add_proc_method_completion :: proc(
 add_proc_group_method_completion :: proc(
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
-	symbol: ^Symbol,
-	value: SymbolProcedureGroupValue,
+	symbol: ^analysis.Symbol,
+	value: analysis.SymbolProcedureGroupValue,
 	pointers: int,
 	receiver: string,
 	remove_edit: []TextEdit,
@@ -231,18 +232,18 @@ add_proc_group_method_completion :: proc(
 	}
 
 	// Get first member to determine pointer adjustments
-	first_member: Symbol
+	first_member: analysis.Symbol
 	first_member, ok = resolve_type_expression(ast_context, proc_group.args[0])
 	if !ok {
 		return
 	}
 
-	member_proc, is_proc := first_member.value.(SymbolProcedureValue)
+	member_proc, is_proc := first_member.value.(analysis.SymbolProcedureValue)
 	if !is_proc || len(member_proc.arg_types) == 0 || member_proc.arg_types[0].type == nil {
 		return
 	}
 
-	first_arg: Symbol
+	first_arg: analysis.Symbol
 	first_arg, ok = resolve_type_expression(ast_context, member_proc.arg_types[0].type)
 	if !ok {
 		return
@@ -253,12 +254,12 @@ add_proc_group_method_completion :: proc(
 	// Check if any member of the proc group has additional arguments beyond the receiver
 	has_additional_args := false
 	for member_expr in proc_group.args {
-		member: Symbol
+		member: analysis.Symbol
 		member, ok = resolve_type_expression(ast_context, member_expr)
 		if !ok {
 			continue
 		}
-		if proc_val, is_proc_val := member.value.(SymbolProcedureValue); is_proc_val {
+		if proc_val, is_proc_val := member.value.(analysis.SymbolProcedureValue); is_proc_val {
 			if len(proc_val.arg_types) > 1 {
 				has_additional_args = true
 				break
@@ -308,7 +309,7 @@ compute_pointer_adjustments :: proc(
 @(private = "file")
 build_method_call_text :: proc(
 	ast_context: ^AstContext,
-	symbol: ^Symbol,
+	symbol: ^analysis.Symbol,
 	receiver: string,
 	references: string,
 	dereferences: string,

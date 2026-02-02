@@ -7,9 +7,10 @@ import "core:odin/ast"
 import "core:odin/tokenizer"
 import "core:strings"
 
+import "src:analysis"
 import "src:common"
 
-write_hover_content :: proc(ast_context: ^AstContext, symbol: Symbol) -> MarkupContent {
+write_hover_content :: proc(ast_context: ^AstContext, symbol: analysis.Symbol) -> MarkupContent {
 	content: MarkupContent
 	cat := construct_symbol_information(ast_context, symbol)
 	doc := construct_symbol_docs(symbol)
@@ -96,7 +97,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 	if position_context.value_decl != nil && len(position_context.value_decl.names) != 0 {
 		if position_context.enum_type != nil {
 			if enum_symbol, ok := resolve_type_expression(&ast_context, position_context.value_decl.names[0]); ok {
-				if v, ok := enum_symbol.value.(SymbolEnumValue); ok {
+				if v, ok := enum_symbol.value.(analysis.SymbolEnumValue); ok {
 					for field in position_context.enum_type.fields {
 						if ident, ok := field.derived.(^ast.Ident); ok {
 							if position_in_node(ident, position_context.position) {
@@ -143,7 +144,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 										position_context.value_decl.names[0],
 									); ok {
 										name := get_field_parent_name(value_decl_symbol, struct_symbol)
-										if value, ok := struct_symbol.value.(SymbolStructValue); ok {
+										if value, ok := struct_symbol.value.(analysis.SymbolStructValue); ok {
 											construct_struct_field_symbol(
 												&symbol,
 												name,
@@ -178,7 +179,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 									position_context.value_decl.names[0],
 								); ok {
 									name := get_field_parent_name(value_decl_symbol, bit_field_symbol)
-									if value, ok := bit_field_symbol.value.(SymbolBitFieldValue); ok {
+									if value, ok := bit_field_symbol.value.(analysis.SymbolBitFieldValue); ok {
 										construct_bit_field_field_symbol(&symbol, name, value, i)
 										hover.range = symbol.range
 										hover.contents = write_hover_content(&ast_context, symbol)
@@ -200,7 +201,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 			if comp_symbol, ok := resolve_comp_literal(&ast_context, &position_context); ok {
 				if field, ok := position_context.field_value.field.derived.(^ast.Ident); ok {
 					if position_in_node(field, position_context.position) {
-						if v, ok := comp_symbol.value.(SymbolStructValue); ok {
+						if v, ok := comp_symbol.value.(analysis.SymbolStructValue); ok {
 							for name, i in v.names {
 								if name == field.name {
 									if symbol, ok := resolve_type_expression(&ast_context, v.types[i]); ok {
@@ -212,7 +213,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 								}
 							}
 						}
-					} else if v, ok := comp_symbol.value.(SymbolBitFieldValue); ok {
+					} else if v, ok := comp_symbol.value.(analysis.SymbolBitFieldValue); ok {
 						for name, i in v.names {
 							if name == field.name {
 								if symbol, ok := resolve_type_expression(&ast_context, v.types[i]); ok {
@@ -264,7 +265,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 			}
 		}
 
-		selector: Symbol
+		selector: analysis.Symbol
 
 		selector, ok = resolve_type_expression(&ast_context, position_context.selector)
 
@@ -281,7 +282,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 			}
 		}
 
-		if v, is_proc := selector.value.(SymbolProcedureValue); is_proc {
+		if v, is_proc := selector.value.(analysis.SymbolProcedureValue); is_proc {
 			if len(v.return_types) == 0 || v.return_types[0].type == nil {
 				return {}, false, false
 			}
@@ -297,7 +298,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 
 		// TODO: Use resolve_selector_expression for this?
 		#partial switch v in selector.value {
-		case SymbolStructValue:
+		case analysis.SymbolStructValue:
 			for name, i in v.names {
 				if name == field {
 					if symbol, ok := resolve_type_expression(&ast_context, v.types[i]); ok {
@@ -308,7 +309,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 					}
 				}
 			}
-		case SymbolBitFieldValue:
+		case analysis.SymbolBitFieldValue:
 			for name, i in v.names {
 				if name == field {
 					if symbol, ok := resolve_type_expression(&ast_context, v.types[i]); ok {
@@ -318,7 +319,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 					}
 				}
 			}
-		case SymbolPackageValue:
+		case analysis.SymbolPackageValue:
 			if position_context.field != nil {
 				if ident, ok := position_context.field.derived.(^ast.Ident); ok {
 					// check to see if we are in a position call context
@@ -347,10 +348,10 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 					}
 				}
 			}
-		case SymbolEnumValue:
+		case analysis.SymbolEnumValue:
 			for name, i in v.names {
 				if name == field {
-					symbol := Symbol {
+					symbol := analysis.Symbol{
 						name      = selector.name,
 						pkg       = selector.pkg,
 						signature = get_enum_field_signature(v, i),
@@ -360,9 +361,9 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 					return hover, true, true
 				}
 			}
-		case SymbolSliceValue:
+		case analysis.SymbolSliceValue:
 			return get_soa_field_hover(&ast_context, selector, v.expr, nil, field)
-		case SymbolDynamicArrayValue:
+		case analysis.SymbolDynamicArrayValue:
 			if field == "allocator" {
 				if symbol, ok := resolve_container_allocator(&ast_context, "Raw_Dynamic_Array"); ok {
 					hover.contents = write_hover_content(&ast_context, symbol)
@@ -370,9 +371,9 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 				}
 			}
 			return get_soa_field_hover(&ast_context, selector, v.expr, nil, field)
-		case SymbolFixedArrayValue:
+		case analysis.SymbolFixedArrayValue:
 			return get_soa_field_hover(&ast_context, selector, v.expr, v.len, field)
-		case SymbolMapValue:
+		case analysis.SymbolMapValue:
 			if field == "allocator" {
 				if symbol, ok := resolve_container_allocator(&ast_context, "Raw_Map"); ok {
 					hover.contents = write_hover_content(&ast_context, symbol)
@@ -385,7 +386,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 		hover.range = common.get_token_range(implicit_selector, req_ctx.doc_ctx.ast.src)
 		if symbol, ok := resolve_implicit_selector(&ast_context, &position_context); ok {
 			#partial switch v in symbol.value {
-			case SymbolEnumValue:
+			case analysis.SymbolEnumValue:
 				for name, i in v.names {
 					if strings.compare(name, implicit_selector.field.name) == 0 {
 						construct_enum_field_symbol(&symbol, v, i)
@@ -393,10 +394,10 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 						return hover, true, true
 					}
 				}
-			case SymbolUnionValue:
+			case analysis.SymbolUnionValue:
 				for type in v.types {
 					enum_symbol := resolve_type_expression(&ast_context, type) or_continue
-					v := enum_symbol.value.(SymbolEnumValue) or_continue
+					v := enum_symbol.value.(analysis.SymbolEnumValue) or_continue
 					for name, i in v.names {
 						if strings.compare(name, implicit_selector.field.name) == 0 {
 							construct_enum_field_symbol(&enum_symbol, v, i)
@@ -405,9 +406,9 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 						}
 					}
 				}
-			case SymbolBitSetValue:
+			case analysis.SymbolBitSetValue:
 				if enum_symbol, ok := resolve_type_expression(&ast_context, v.expr); ok {
-					if v, ok := enum_symbol.value.(SymbolEnumValue); ok {
+					if v, ok := enum_symbol.value.(analysis.SymbolEnumValue); ok {
 						for name, i in v.names {
 							if strings.compare(name, implicit_selector.field.name) == 0 {
 								construct_enum_field_symbol(&enum_symbol, v, i)
@@ -457,7 +458,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 @(private = "file")
 get_soa_field_hover :: proc(
 	ast_context: ^AstContext,
-	selector: Symbol,
+	selector: analysis.Symbol,
 	expr: ^ast.Expr,
 	size: ^ast.Expr,
 	field: string,
@@ -483,7 +484,7 @@ get_soa_field_hover :: proc(
 }
 
 @(private = "file")
-get_field_parent_name :: proc(value_decl_symbol, symbol: Symbol) -> string {
+get_field_parent_name :: proc(value_decl_symbol, symbol: analysis.Symbol) -> string {
 	if value_decl_symbol.range != symbol.range {
 		return symbol.name
 	}

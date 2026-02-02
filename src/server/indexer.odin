@@ -3,12 +3,14 @@ package server
 import "core:log"
 import "core:strings"
 
+import "src:analysis"
+
 FuzzyResult :: struct {
-	symbol: Symbol,
+	symbol: analysis.Symbol,
 	score:  f32,
 }
 
-should_skip_private_symbol :: proc(symbol: Symbol, current_pkg, current_file: string) -> bool {
+should_skip_private_symbol :: proc(symbol: analysis.Symbol, current_pkg, current_file: string) -> bool {
 	if .PrivateFile not_in symbol.flags && .PrivatePackage not_in symbol.flags {
 		return false
 	}
@@ -29,7 +31,7 @@ should_skip_private_symbol :: proc(symbol: Symbol, current_pkg, current_file: st
 	return false
 }
 
-lookup :: proc(symbols: ^SymbolCollection, name: string, pkg: string, current_file: string, loc := #caller_location) -> (Symbol, bool) {
+lookup :: proc(symbols: ^analysis.SymbolCollection, name: string, pkg: string, current_file: string, loc := #caller_location) -> (analysis.Symbol, bool) {
 	if name == "" || symbols == nil {
 		return {}, false
 	}
@@ -48,7 +50,7 @@ lookup :: proc(symbols: ^SymbolCollection, name: string, pkg: string, current_fi
 }
 
 fuzzy_search :: proc(
-	symbols: ^SymbolCollection,
+	symbols: ^analysis.SymbolCollection,
 	name: string,
 	pkgs: []string,
 	current_file: string,

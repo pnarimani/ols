@@ -6,13 +6,15 @@ import "core:odin/ast"
 import path "core:path/slashpath"
 import "core:strings"
 
+import "src:analysis"
+
 DOC_SECTION_DELIMITER :: "\n---\n"                                   // The string separating each section of documentation
 DOC_FMT_ODIN          :: "```odin\n%v\n```"                          // The format for wrapping odin code in a markdown codeblock
 DOC_FMT_MARKDOWN      :: DOC_FMT_ODIN + DOC_SECTION_DELIMITER + "%v" // The format for presenting documentation on hover
 
 // Adds signature and docs information to the provided symbol
 // This should only be used for a symbol created with the temp allocator
-build_documentation :: proc(ast_context: ^AstContext, symbol: ^Symbol, short_signature := true) {
+build_documentation :: proc(ast_context: ^AstContext, symbol: ^analysis.Symbol, short_signature := true) {
 	if short_signature {
 		symbol.signature = get_short_signature(ast_context, symbol^)
 	} else {
@@ -24,7 +26,7 @@ build_documentation :: proc(ast_context: ^AstContext, symbol: ^Symbol, short_sig
 	}
 }
 
-construct_symbol_docs :: proc(symbol: Symbol, allocator := context.temp_allocator) -> string {
+construct_symbol_docs :: proc(symbol: analysis.Symbol, allocator := context.temp_allocator) -> string {
 	sb := strings.builder_make(allocator = allocator)
 	if symbol.doc != "" {
 		strings.write_string(&sb, symbol.doc)
@@ -41,17 +43,17 @@ construct_symbol_docs :: proc(symbol: Symbol, allocator := context.temp_allocato
 }
 
 // Returns the fully detailed signature for the symbol, including things like attributes and fields
-get_signature :: proc(ast_context: ^AstContext, symbol: Symbol, depth := 0) -> string {
+get_signature :: proc(ast_context: ^AstContext, symbol: analysis.Symbol, depth := 0) -> string {
 	sb := strings.builder_make(ast_context.allocator)
 	write_signature(&sb, ast_context, symbol, depth)
 	return strings.to_string(sb)
 }
 
-write_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: Symbol, depth := 0) {
+write_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: analysis.Symbol, depth := 0) {
 	pointer_prefix := repeat("^", symbol.pointers, ast_context.allocator)
 
 	#partial switch v in symbol.value {
-	case SymbolEnumValue:
+	case analysis.SymbolEnumValue:
 		if .Distinct in symbol.flags {
 			strings.write_string(sb, "distinct ")
 		}
@@ -91,13 +93,13 @@ write_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: 
 		write_indent(sb, depth)
 		strings.write_string(sb, "}")
 		return
-	case SymbolStructValue:
+	case analysis.SymbolStructValue:
 		if .Distinct in symbol.flags {
 			strings.write_string(sb, "distinct ")
 		}
 		write_struct_hover(sb, ast_context, v, depth)
 		return
-	case SymbolUnionValue:
+	case analysis.SymbolUnionValue:
 		if .Distinct in symbol.flags {
 			strings.write_string(sb, "distinct ")
 		}
@@ -127,10 +129,10 @@ write_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: 
 		write_indent(sb, depth)
 		strings.write_string(sb, "}")
 		return
-	case SymbolAggregateValue:
+	case analysis.SymbolAggregateValue:
 		strings.write_string(sb, "proc {\n")
 		for symbol in v.symbols {
-			if value, ok := symbol.value.(SymbolProcedureValue); ok {
+			if value, ok := symbol.value.(analysis.SymbolProcedureValue); ok {
 				write_indent(sb, depth + 1)
 				fmt.sbprintf(sb, "%s :: ", symbol.name)
 				write_procedure_symbol_signature(sb, value, detailed_signature = false)
@@ -140,13 +142,13 @@ write_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: 
 		write_indent(sb, depth)
 		strings.write_string(sb, "}")
 		return
-	case SymbolProcedureValue:
+	case analysis.SymbolProcedureValue:
 		if symbol.type == .Type_Function && depth == 0 {
 			strings.write_string(sb, "#type ")
 		}
 		write_procedure_symbol_signature(sb, v, detailed_signature = true)
 		return
-	case SymbolBitFieldValue:
+	case analysis.SymbolBitFieldValue:
 		if .Distinct in symbol.flags {
 			strings.write_string(sb, "distinct ")
 		}
@@ -191,32 +193,32 @@ write_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: 
 	write_short_signature(sb, ast_context, symbol)
 }
 
-get_short_signature :: proc(ast_context: ^AstContext, symbol: Symbol) -> string {
+get_short_signature :: proc(ast_context: ^AstContext, symbol: analysis.Symbol) -> string {
 	sb := strings.builder_make(ast_context.allocator)
 	write_short_signature(&sb, ast_context, symbol)
 	return strings.to_string(sb)
 }
 
-write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: Symbol) {
+write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: analysis.Symbol) {
 	pointer_prefix := repeat("^", symbol.pointers, ast_context.allocator)
 	if .Distinct in symbol.flags {
 		strings.write_string(sb, "distinct ")
 	}
 	#partial switch v in symbol.value {
-	case SymbolBasicValue:
+	case analysis.SymbolBasicValue:
 		strings.write_string(sb, pointer_prefix)
 		build_string_node(v.ident, sb, false)
 		return
-	case SymbolPolyTypeValue:
+	case analysis.SymbolPolyTypeValue:
 		fmt.sbprintf(sb, "%s$", pointer_prefix)
 		build_string_node(v.ident, sb, false)
 		return
-	case SymbolBitSetValue:
+	case analysis.SymbolBitSetValue:
 		fmt.sbprintf(sb, "%sbit_set[", pointer_prefix)
 		build_string_node(v.expr, sb, false)
 		strings.write_string(sb, "]")
 		return
-	case SymbolEnumValue:
+	case analysis.SymbolEnumValue:
 		// TODO: we need a better way to do this for enum fields
 		if symbol.type == .Field && symbol.type_name == "" {
 			strings.write_string(sb, symbol.signature)
@@ -230,22 +232,22 @@ write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, sy
 			strings.write_string(sb, "{}")
 		}
 		return
-	case SymbolMapValue:
+	case analysis.SymbolMapValue:
 		fmt.sbprintf(sb, "%smap[", pointer_prefix)
 		build_string_node(v.key, sb, false)
 		strings.write_string(sb, "]")
 		write_node(sb, ast_context, v.value, "", short_signature = true)
 		return
-	case SymbolProcedureValue:
+	case analysis.SymbolProcedureValue:
 		if symbol.type == .Type_Function {
 			strings.write_string(sb, "#type ")
 		}
 		write_procedure_symbol_signature(sb, v, detailed_signature = true)
 		return
-	case SymbolAggregateValue, SymbolProcedureGroupValue:
+	case analysis.SymbolAggregateValue, analysis.SymbolProcedureGroupValue:
 		strings.write_string(sb, "proc (..)")
 		return
-	case SymbolStructValue:
+	case analysis.SymbolStructValue:
 		strings.write_string(sb, pointer_prefix)
 		strings.write_string(sb, "struct")
 		write_poly_list(sb, v.poly, v.poly_names)
@@ -255,7 +257,7 @@ write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, sy
 			strings.write_string(sb, "{}")
 		}
 		return
-	case SymbolUnionValue:
+	case analysis.SymbolUnionValue:
 		strings.write_string(sb, pointer_prefix)
 		strings.write_string(sb, "union")
 		write_poly_list(sb, v.poly, v.poly_names)
@@ -265,7 +267,7 @@ write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, sy
 			strings.write_string(sb, "{}")
 		}
 		return
-	case SymbolBitFieldValue:
+	case analysis.SymbolBitFieldValue:
 		fmt.sbprintf(sb, "%sbit_field ", pointer_prefix)
 		build_string_node(v.backing_type, sb, false)
 		if len(v.types) > 0 {
@@ -274,11 +276,11 @@ write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, sy
 			strings.write_string(sb, " {}")
 		}
 		return
-	case SymbolMultiPointerValue:
+	case analysis.SymbolMultiPointerValue:
 		fmt.sbprintf(sb, "%s[^]", pointer_prefix)
 		write_node(sb, ast_context, v.expr, "", short_signature = true)
 		return
-	case SymbolDynamicArrayValue:
+	case analysis.SymbolDynamicArrayValue:
 		if .SoaPointer in symbol.flags {
 			strings.write_string(sb, "#soa")
 		}
@@ -289,7 +291,7 @@ write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, sy
 		strings.write_string(sb, "[dynamic]")
 		write_node(sb, ast_context, v.expr, "", short_signature = true)
 		return
-	case SymbolSliceValue:
+	case analysis.SymbolSliceValue:
 		if .SoaPointer in symbol.flags {
 			strings.write_string(sb, "#soa")
 		}
@@ -300,7 +302,7 @@ write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, sy
 		strings.write_string(sb, "[]")
 		write_node(sb, ast_context, v.expr, "", short_signature = true)
 		return
-	case SymbolFixedArrayValue:
+	case analysis.SymbolFixedArrayValue:
 		if .SoaPointer in symbol.flags {
 			strings.write_string(sb, "#soa")
 		}
@@ -316,7 +318,7 @@ write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, sy
 		strings.write_string(sb, "]")
 		write_node(sb, ast_context, v.expr, "", short_signature = true)
 		return
-	case SymbolMatrixValue:
+	case analysis.SymbolMatrixValue:
 		fmt.sbprintf(sb, "%smatrix[", pointer_prefix)
 		build_string_node(v.x, sb, false)
 		strings.write_string(sb, ",")
@@ -324,10 +326,10 @@ write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, sy
 		strings.write_string(sb, "]")
 		build_string_node(v.expr, sb, false)
 		return
-	case SymbolPackageValue:
+	case analysis.SymbolPackageValue:
 		strings.write_string(sb, "package")
 		return
-	case SymbolUntypedValue:
+	case analysis.SymbolUntypedValue:
 		if .Mutable in symbol.flags || symbol.type == .Field {
 			switch v.type {
 			case .Float:
@@ -347,7 +349,7 @@ write_short_signature :: proc(sb: ^strings.Builder, ast_context: ^AstContext, sy
 		}
 		strings.write_string(sb, v.tok.text)
 		return
-	case SymbolGenericValue:
+	case analysis.SymbolGenericValue:
 		build_string_node(v.expr, sb, false)
 		return
 	}
@@ -361,7 +363,7 @@ write_indent :: proc(sb: ^strings.Builder, level: int) {
 	}
 }
 
-get_enum_field_signature :: proc(value: SymbolEnumValue, index: int, allocator := context.temp_allocator) -> string {
+get_enum_field_signature :: proc(value: analysis.SymbolEnumValue, index: int, allocator := context.temp_allocator) -> string {
 	sb := strings.builder_make(allocator)
 	fmt.sbprintf(&sb, ".%s", value.names[index])
 	if index < len(value.values) && value.values[index] != nil {
@@ -372,7 +374,7 @@ get_enum_field_signature :: proc(value: SymbolEnumValue, index: int, allocator :
 }
 
 get_bit_field_field_signature :: proc(
-	value: SymbolBitFieldValue,
+	value: analysis.SymbolBitFieldValue,
 	index: int,
 	allocator := context.temp_allocator,
 ) -> string {
@@ -384,7 +386,7 @@ get_bit_field_field_signature :: proc(
 }
 
 
-write_proc_param_list_and_return :: proc(sb: ^strings.Builder, value: SymbolProcedureValue) {
+write_proc_param_list_and_return :: proc(sb: ^strings.Builder, value: analysis.SymbolProcedureValue) {
 	strings.write_string(sb, "(")
 	for arg, i in value.orig_arg_types {
 		if .Any_Int in arg.flags {
@@ -436,7 +438,7 @@ write_proc_param_list_and_return :: proc(sb: ^strings.Builder, value: SymbolProc
 
 }
 
-write_procedure_symbol_signature :: proc(sb: ^strings.Builder, value: SymbolProcedureValue, detailed_signature: bool) {
+write_procedure_symbol_signature :: proc(sb: ^strings.Builder, value: analysis.SymbolProcedureValue, detailed_signature: bool) {
 	if detailed_signature {
 		if value.inlining == .Inline {
 			strings.write_string(sb, "#force_inline ")
@@ -493,7 +495,7 @@ write_where_clauses :: proc(sb: ^strings.Builder, where_clauses: []^ast.Expr) {
 	}
 }
 
-write_struct_hover :: proc(sb: ^strings.Builder, ast_context: ^AstContext, v: SymbolStructValue, depth: int) {
+write_struct_hover :: proc(sb: ^strings.Builder, ast_context: ^AstContext, v: analysis.SymbolStructValue, depth: int) {
 	strings.write_string(sb, "struct")
 	write_poly_list(sb, v.poly, v.poly_names)
 
@@ -550,7 +552,7 @@ write_struct_hover :: proc(sb: ^strings.Builder, ast_context: ^AstContext, v: Sy
 	longestNameLen := 0
 	for name, i in v.names {
 		l := len(name)
-		if symbol_struct_value_has_using(v, i) {
+		if analysis.symbol_struct_value_has_using(v, i) {
 			l += len(using_prefix)
 		}
 		if l > longestNameLen {
@@ -591,7 +593,7 @@ write_struct_hover :: proc(sb: ^strings.Builder, ast_context: ^AstContext, v: Sy
 		write_indent(sb, depth + 1)
 
 		name_len := len(v.names[i])
-		if symbol_struct_value_has_using(v, i) {
+		if analysis.symbol_struct_value_has_using(v, i) {
 			strings.write_string(sb, using_prefix)
 			name_len += len(using_prefix)
 		}
@@ -665,7 +667,7 @@ write_node :: proc(
 		return
 	}
 
-	symbol: Symbol
+	symbol: analysis.Symbol
 	ok: bool
 	#partial switch n in node.derived {
 	case ^ast.Struct_Type:
@@ -753,7 +755,7 @@ write_comments :: proc(sb: ^strings.Builder, comments: []^ast.Comment_Group, ind
 	}
 }
 
-construct_symbol_information :: proc(ast_context: ^AstContext, symbol: Symbol) -> string {
+construct_symbol_information :: proc(ast_context: ^AstContext, symbol: analysis.Symbol) -> string {
 	if symbol.name in keywords_docs {
 		return symbol.name
 	}
@@ -793,9 +795,9 @@ construct_symbol_information :: proc(ast_context: ^AstContext, symbol: Symbol) -
 	return strings.to_string(sb)
 }
 
-write_symbol_attributes :: proc(sb: ^strings.Builder, symbol: Symbol) {
+write_symbol_attributes :: proc(sb: ^strings.Builder, symbol: analysis.Symbol) {
 	// Currently only attributes for procedures are supported
-	if v, ok := symbol.value.(SymbolProcedureValue); ok {
+	if v, ok := symbol.value.(analysis.SymbolProcedureValue); ok {
 		pkg := path.base(symbol.pkg, false, context.temp_allocator)
 		for attribute in v.attributes {
 			if len(attribute.elems) == 0 {
@@ -836,7 +838,7 @@ write_symbol_attributes :: proc(sb: ^strings.Builder, symbol: Symbol) {
 	}
 }
 
-write_symbol_name :: proc(sb: ^strings.Builder, symbol: Symbol) {
+write_symbol_name :: proc(sb: ^strings.Builder, symbol: analysis.Symbol) {
 	pkg := path.base(symbol.pkg, false, context.temp_allocator)
 
 	if symbol.type == .Package {
@@ -854,7 +856,7 @@ write_symbol_name :: proc(sb: ^strings.Builder, symbol: Symbol) {
 	strings.write_string(sb, symbol.name)
 }
 
-write_symbol_type_information :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: Symbol) -> bool {
+write_symbol_type_information :: proc(sb: ^strings.Builder, ast_context: ^AstContext, symbol: analysis.Symbol) -> bool {
 	if symbol.type_name == "" {
 		return false
 	}
@@ -868,14 +870,14 @@ write_symbol_type_information :: proc(sb: ^strings.Builder, ast_context: ^AstCon
 	}
 
 	#partial switch v in symbol.value {
-	case SymbolUntypedValue,
-	     SymbolBitSetValue,
-	     SymbolMapValue,
-	     SymbolSliceValue,
-	     SymbolDynamicArrayValue,
-	     SymbolFixedArrayValue,
-	     SymbolMatrixValue,
-	     SymbolMultiPointerValue:
+	case analysis.SymbolUntypedValue,
+	     analysis.SymbolBitSetValue,
+	     analysis.SymbolMapValue,
+	     analysis.SymbolSliceValue,
+	     analysis.SymbolDynamicArrayValue,
+	     analysis.SymbolFixedArrayValue,
+	     analysis.SymbolMatrixValue,
+	     analysis.SymbolMultiPointerValue:
 		return false
 	}
 
@@ -895,9 +897,9 @@ write_symbol_type_information :: proc(sb: ^strings.Builder, ast_context: ^AstCon
 	}
 
 	#partial switch v in symbol.value {
-	case SymbolUnionValue:
+	case analysis.SymbolUnionValue:
 		write_poly_list(sb, v.poly, v.poly_names)
-	case SymbolStructValue:
+	case analysis.SymbolStructValue:
 		write_poly_list(sb, v.poly, v.poly_names)
 	}
 	return true

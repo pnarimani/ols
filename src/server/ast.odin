@@ -2,6 +2,8 @@
 #+feature using-stmt
 package server
 
+import "src:analysis"
+
 import "core:fmt"
 import "core:log"
 import "core:mem"
@@ -360,7 +362,7 @@ merge_attributes :: proc(attrs: []^ast.Attribute, foreign_attrs: []^ast.Attribut
 					name_to_check = "link_name"
 				}
 				if _, ok := attr_names[name_to_check]; !ok {
-					new_attr := new_type(ast.Attribute, attr.pos, attr.end)
+					new_attr := analysis.new_type(ast.Attribute, attr.pos, attr.end)
 					elems := make([dynamic]^ast.Expr)
 					append(&elems, elem)
 					new_attr.elems = elems[:]
@@ -1423,11 +1425,11 @@ construct_struct_field_docs :: proc(file: ast.File, v: ^ast.Struct_Type) {
 				if list[0].pos.line == field.pos.line {
 					// if the comment is missing from the appropriate field, we add it (for older versions of the parser)
 					if field.comment == nil {
-						field.comment = new_type(ast.Comment_Group, list[0].pos, parser.end_pos(list[0]))
+						field.comment = analysis.new_type(ast.Comment_Group, list[0].pos, parser.end_pos(list[0]))
 						field.comment.list = list[:1]
 					}
 					if len(list) > 1 {
-						next_field.docs = new_type(ast.Comment_Group, list[1].pos, parser.end_pos(list[len(list) - 2]))
+						next_field.docs = analysis.new_type(ast.Comment_Group, list[1].pos, parser.end_pos(list[len(list) - 2]))
 						next_field.docs.list = list[1:]
 					} else {
 						next_field.docs = nil
@@ -1455,11 +1457,11 @@ construct_bit_field_field_docs :: proc(file: ast.File, v: ^ast.Bit_Field_Type) {
 				list := next_field.docs.list
 				if list[0].pos.line == field.pos.line {
 					if field.comments == nil {
-						field.comments = new_type(ast.Comment_Group, list[0].pos, parser.end_pos(list[0]))
+						field.comments = analysis.new_type(ast.Comment_Group, list[0].pos, parser.end_pos(list[0]))
 						field.comments.list = list[:1]
 					}
 					if len(list) > 1 {
-						next_field.docs = new_type(ast.Comment_Group, list[1].pos, parser.end_pos(list[len(list) - 2]))
+						next_field.docs = analysis.new_type(ast.Comment_Group, list[1].pos, parser.end_pos(list[len(list) - 2]))
 						next_field.docs.list = list[1:]
 					} else {
 						next_field.docs = nil
@@ -1481,7 +1483,7 @@ get_file_comment :: proc(file: ast.File, line: int, start_index := 0) -> (^ast.C
 		c := file.comments[i]
 		if c.pos.line == line {
 			for item, j in c.list {
-				comment := new_type(ast.Comment_Group, item.pos, parser.end_pos(item))
+				comment := analysis.new_type(ast.Comment_Group, item.pos, parser.end_pos(item))
 				if j == len(c.list) - 1 {
 					comment.list = c.list[j:]
 				} else {
@@ -1500,7 +1502,7 @@ get_file_doc :: proc(file: ast.File, end_line: int, start_line := -1, start_inde
 	for i := start_index; i < len(file.comments); i += 1 {
 		c := file.comments[i]
 		if c.end.line == end_line {
-			docs := new_type(ast.Comment_Group, c.pos, c.end)
+			docs := analysis.new_type(ast.Comment_Group, c.pos, c.end)
 			if start_line != -1 {
 				for item, j in c.list {
 					if item.pos.line >= start_line {

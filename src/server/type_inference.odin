@@ -1,5 +1,7 @@
 package server
 
+
+import "src:analysis"
 import "core:odin/ast"
 import "core:strings"
 
@@ -205,7 +207,7 @@ infer_call_type :: proc(ctx: ^InferenceContext, call: ^ast.Call_Expr) -> string 
 	}
 
 	// Handle type casts for non-builtin types (e.g., MyInt(x))
-	if _, is_basic := symbol.value.(SymbolBasicValue); is_basic {
+	if _, is_basic := symbol.value.(analysis.SymbolBasicValue); is_basic {
 		return symbol.name
 	}
 

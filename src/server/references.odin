@@ -1,5 +1,7 @@
 package server
 
+
+import "src:analysis"
 import "base:runtime"
 
 import "core:log"
@@ -45,7 +47,7 @@ prepare_references :: proc(
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 ) -> (
-	symbol: Symbol,
+	symbol: analysis.Symbol,
 	resolve_flag: ResolveReferenceFlag,
 	ok: bool,
 ) {
@@ -57,7 +59,7 @@ prepare_references :: proc(
 		done_enum: for field in position_context.enum_type.fields {
 			if ident, ok := field.derived.(^ast.Ident); ok {
 				if position_in_node(ident, position_context.position) {
-					symbol = Symbol {
+					symbol = analysis.Symbol{
 						pkg   = ast_context.current_package,
 						range = common.get_token_range(ident, ast_context.file.src),
 					}
@@ -67,7 +69,7 @@ prepare_references :: proc(
 				}
 			} else if value, ok := field.derived.(^ast.Field_Value); ok {
 				if position_in_node(value.field, position_context.position) {
-					symbol = Symbol {
+					symbol = analysis.Symbol{
 						range = common.get_token_range(value.field, ast_context.file.src),
 						pkg   = ast_context.current_package,
 					}
@@ -177,7 +179,7 @@ prepare_references :: proc(
 		if position_context.bit_field_type != nil {
 			for field in position_context.bit_field_type.fields {
 				if position_in_node(field.name, position_context.position) {
-					symbol = Symbol {
+					symbol = analysis.Symbol{
 						range = common.get_token_range(field.name, ast_context.file.src),
 						pkg   = ast_context.current_package,
 						uri   = doc_ctx.uri.uri,
@@ -197,7 +199,7 @@ prepare_references :: proc(
 			for field in position_context.struct_type.fields.list {
 				for name in field.names {
 					if position_in_node(name, position_context.position) {
-						symbol = Symbol {
+						symbol = analysis.Symbol{
 							range = common.get_token_range(name, ast_context.file.src),
 							pkg   = ast_context.current_package,
 							uri   = doc_ctx.uri.uri,

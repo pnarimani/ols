@@ -14,6 +14,7 @@ import "core:path/filepath"
 import path "core:path/slashpath"
 import "core:strings"
 
+import "src:analysis"
 import "src:common"
 
 platform_os: map[string]struct{} = {
@@ -159,7 +160,7 @@ should_collect_file :: proc(file_tags: parser.File_Tags) -> bool {
 
 // Build symbols from a package into the provided symbol collection.
 // No caching - symbols are built fresh each time.
-build_package_symbols :: proc(symbols: ^SymbolCollection, pkg_name: string, loaded_pkgs: ^map[string]bool) {
+build_package_symbols :: proc(symbols: ^analysis.SymbolCollection, pkg_name: string, loaded_pkgs: ^map[string]bool) {
 	// Check if already loaded in this request to avoid infinite loops
 	if pkg_name in loaded_pkgs {
 		return
@@ -239,10 +240,10 @@ get_runtime_path :: proc() -> string {
 
 // Build a fresh symbol collection for a request.
 // Includes builtins, runtime, the current package, and all imported packages.
-build_request_symbols :: proc(imports: []Package, current_package: string, config: ^common.Config = nil) -> SymbolCollection {
+build_request_symbols :: proc(imports: []Package, current_package: string, config: ^common.Config = nil) -> analysis.SymbolCollection {
 	// Use provided config or fall back to global config
 	actual_config := config if config != nil else &common.config
-	symbols := make_symbol_collection(actual_config)
+	symbols := analysis.make_symbol_collection(actual_config)
 	loaded_pkgs := make(map[string]bool, 16)
 
 	// Always load builtins

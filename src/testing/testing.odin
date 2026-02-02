@@ -9,6 +9,7 @@ import "core:path/filepath"
 import "core:strings"
 import "core:testing"
 
+import "src:analysis"
 import "src:common"
 import "src:server"
 
@@ -22,7 +23,7 @@ Source :: struct {
 	packages:     []Package,
 	document:     ^server.Document,
 	doc_ctx:      server.DocumentContext, // Parsed document context
-	symbols:      server.SymbolCollection, // Per-test symbol collection
+	symbols:      analysis.SymbolCollection, // Per-test symbol collection
 	diagnostics:  server.DiagnosticCollection, // Per-test diagnostic collection
 	collections:  map[string]string,
 	config:       common.Config,

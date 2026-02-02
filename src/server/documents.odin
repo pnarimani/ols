@@ -6,6 +6,7 @@ import "core:odin/parser"
 import "core:odin/tokenizer"
 import "core:strings"
 
+import "src:analysis"
 import "src:common"
 import doc "src:documents"
 
@@ -21,7 +22,7 @@ RequestContext :: struct {
 	doc_ctx:  DocumentContext,
 	config:   ^common.Config,
 	position: common.Position,
-	symbols:  SymbolCollection,
+	symbols:  analysis.SymbolCollection,
 }
 
 // Creates a RequestContext for a document at a given position.

@@ -1,5 +1,7 @@
 package server
 
+
+import "src:analysis"
 import "core:fmt"
 import "core:log"
 import "core:odin/ast"
@@ -39,8 +41,8 @@ ParameterInformation :: struct {
 	label: string,
 }
 
-seperate_proc_field_arguments :: proc(procedure: ^Symbol) {
-	if value, ok := &procedure.value.(SymbolProcedureValue); ok {
+seperate_proc_field_arguments :: proc(procedure: ^analysis.Symbol) {
+	if value, ok := &procedure.value.(analysis.SymbolProcedureValue); ok {
 		types := make([dynamic]^ast.Field, context.temp_allocator)
 
 		for arg, i in value.orig_arg_types {
@@ -50,7 +52,7 @@ seperate_proc_field_arguments :: proc(procedure: ^Symbol) {
 			}
 
 			for name in arg.names {
-				field: ^ast.Field = new_type(ast.Field, arg.pos, arg.end)
+				field: ^ast.Field = analysis.new_type(ast.Field, arg.pos, arg.end)
 				field.names = make([]^ast.Expr, 1)
 				field.names[0] = name
 				field.type = arg.type
@@ -117,7 +119,7 @@ get_signature_information :: proc(req_ctx: ^RequestContext) -> (SignatureHelp, b
 }
 
 @(private = "file")
-get_signature :: proc(symbol: Symbol) -> string {
+get_signature :: proc(symbol: analysis.Symbol) -> string {
 	sb := strings.builder_make(context.temp_allocator)
 	write_symbol_name(&sb, symbol)
 	strings.write_string(&sb, " :: ")
@@ -152,7 +154,7 @@ add_proc_signature :: proc(
 
 	seperate_proc_field_arguments(&call)
 
-	if value, ok := call.value.(SymbolProcedureValue); ok {
+	if value, ok := call.value.(analysis.SymbolProcedureValue); ok {
 		parameters := make([]ParameterInformation, len(value.orig_arg_types), context.temp_allocator)
 
 		for arg, i in value.orig_arg_types {
@@ -175,12 +177,12 @@ add_proc_signature :: proc(
 			parameters    = parameters,
 		}
 		append(signature_information, info)
-	} else if value, ok := call.value.(SymbolAggregateValue); ok {
+	} else if value, ok := call.value.(analysis.SymbolAggregateValue); ok {
 		//function overloaded procedures
 		for symbol in value.symbols {
 			symbol := symbol
 
-			if value, ok := symbol.value.(SymbolProcedureValue); ok {
+			if value, ok := symbol.value.(analysis.SymbolProcedureValue); ok {
 				parameters := make([]ParameterInformation, len(value.orig_arg_types), context.temp_allocator)
 
 				for arg, i in value.orig_arg_types {
@@ -211,7 +213,7 @@ add_proc_signature :: proc(
 }
 
 @(private = "file")
-write_markdown_doc :: proc(symbol: Symbol) -> MarkupContent {
+write_markdown_doc :: proc(symbol: analysis.Symbol) -> MarkupContent {
 	doc := construct_symbol_docs(symbol)
 	return MarkupContent{kind = "markdown", value = fmt.tprintf(DOC_FMT_ODIN, doc)}
 }

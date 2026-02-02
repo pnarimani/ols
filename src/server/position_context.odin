@@ -1,6 +1,8 @@
 #+feature using-stmt
 package server
 
+import "src:analysis"
+
 import "core:log"
 import "core:odin/ast"
 import "core:odin/parser"
@@ -399,7 +401,7 @@ fallback_position_context_completion :: proc(
 
 		position_context.selector = e
 
-		ident := new_type(ast.Ident, e.pos, e.end)
+		ident := analysis.new_type(ast.Ident, e.pos, e.end)
 		ident.name = string(position_context.file.src[last_dot + 1:end_offset])
 
 		if ident.name != "" {

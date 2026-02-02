@@ -1,5 +1,7 @@
 package server
 
+import "src:analysis"
+
 import "core:fmt"
 import "core:odin/ast"
 import "core:strconv"
@@ -16,7 +18,7 @@ import "core:strconv"
 // value whereas variables will be typed.
 check_builtin_proc_return_type :: proc(
 	ast_context: ^AstContext,
-	symbol: Symbol,
+	symbol: analysis.Symbol,
 	call: ^ast.Call_Expr,
 	is_mutable: bool,
 ) -> (
@@ -141,11 +143,11 @@ if v, ok := expr.derived.(^ast.Field_Value); ok {
 		return get_return_expr(ast_context, v.value, is_mutable)
 	}
 	if ident, ok := expr.derived.(^ast.Ident); ok {
-		symbol := Symbol{}
+		symbol := analysis.Symbol{}
 		if ok := internal_resolve_type_expression(ast_context, ident, &symbol); ok {
-			if v, ok := symbol.value.(SymbolBasicValue); ok {
+			if v, ok := symbol.value.(analysis.SymbolBasicValue); ok {
 				return v.ident
-			} else if v, ok := symbol.value.(SymbolUntypedValue); ok {
+			} else if v, ok := symbol.value.(analysis.SymbolUntypedValue); ok {
 				lit := ast.new(ast.Basic_Lit, expr.pos, expr.end)
 				lit.tok = v.tok
 				return convert_candidate(lit, is_mutable)
@@ -176,11 +178,11 @@ get_complex_return_expr :: proc(ast_context: ^AstContext, expr: ^ast.Expr) -> ^a
 		return get_complex_return_expr(ast_context, v.value)
 	}
 	if ident, ok := expr.derived.(^ast.Ident); ok {
-		symbol := Symbol{}
+		symbol := analysis.Symbol{}
 		if ok := internal_resolve_type_expression(ast_context, ident, &symbol); ok {
-			if v, ok := symbol.value.(SymbolBasicValue); ok {
+			if v, ok := symbol.value.(analysis.SymbolBasicValue); ok {
 				return v.ident
-			} else if v, ok := symbol.value.(SymbolUntypedValue); ok {
+			} else if v, ok := symbol.value.(analysis.SymbolUntypedValue); ok {
 				// There isn't a token for `Complex` so we just set it to `f64` instead
 				ident := ast.new(ast.Ident, expr.pos, expr.end)
 				ident.name = "f64"
@@ -208,11 +210,11 @@ get_quaternion_return_expr :: proc(ast_context: ^AstContext, expr: ^ast.Expr) ->
 		return get_quaternion_return_expr(ast_context, v.value)
 	}
 	if ident, ok := expr.derived.(^ast.Ident); ok {
-		symbol := Symbol{}
+		symbol := analysis.Symbol{}
 		if ok := internal_resolve_type_expression(ast_context, ident, &symbol); ok {
-			if v, ok := symbol.value.(SymbolBasicValue); ok {
+			if v, ok := symbol.value.(analysis.SymbolBasicValue); ok {
 				return v.ident
-			} else if v, ok := symbol.value.(SymbolUntypedValue); ok {
+			} else if v, ok := symbol.value.(analysis.SymbolUntypedValue); ok {
 				// There isn't a token for `Quaternion` so we just set it to `quaternion256` instead
 				ident := ast.new(ast.Ident, expr.pos, expr.end)
 				ident.name = "f64"
