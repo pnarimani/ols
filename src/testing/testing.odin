@@ -8,7 +8,7 @@ import "core:odin/parser"
 import "core:path/filepath"
 import "core:strings"
 import "core:testing"
-
+import "src:documents"
 import "src:analysis"
 import "src:common"
 import "src:server"
@@ -21,9 +21,8 @@ Package :: struct {
 Source :: struct {
 	main:         string,
 	packages:     []Package,
-	document:     ^server.Document,
-	doc_ctx:      server.documents.Document, // Parsed document context
-	// Symbol access is through analysis cache helpers
+	document:     ^documents.DocumentData,
+	doc_ctx:      documents.Document, 
 	diagnostics:  server.DiagnosticCollection, // Per-test diagnostic collection
 	collections:  map[string]string,
 	config:       common.Config,
@@ -48,7 +47,7 @@ setup :: proc(src: ^Source) {
 	context.allocator = context.temp_allocator
 
 	src.main = strings.clone(src.main, context.temp_allocator)
-	src.document = new(server.Document, context.temp_allocator)
+	src.document = new(documents.DocumentData, context.temp_allocator)
 	src.document.uri = common.create_uri("test/test.odin", context.temp_allocator)
 	src.document.text = transmute([]u8)src.main
 
