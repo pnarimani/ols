@@ -590,17 +590,6 @@ collect_objc :: proc(collection: ^SymbolCollection, attributes: []^ast.Attribute
 }
 
 @(private)
-collect_imports :: proc(collection: ^SymbolCollection, file: ast.File, directory: string) {
-	_pkg := get_index_unique_string(collection, directory)
-
-	if _pkg, ok := collection.packages[_pkg]; ok {
-
-	}
-
-}
-
-
-@(private)
 collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: string) -> common.Error {
 	forward, _ := filepath.to_slash(file.fullpath, context.temp_allocator)
 	directory := path.dir(forward, context.temp_allocator)
@@ -860,9 +849,6 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: stri
 	if collection.config != nil && collection.config.enable_fake_method {
 		collect_fake_methods(collection, exprs, directory, uri)
 	}
-
-	collect_imports(collection, file, directory)
-
 
 	return .None
 }

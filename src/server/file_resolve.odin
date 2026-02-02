@@ -30,7 +30,7 @@ reset_position_context :: proc(position_context: ^DocumentPositionContext) {
 
 resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range) -> map[uintptr]analysis.SymbolAndNode {
 	// Build symbol cache for this request's packages
-	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
+	load_document_packages(doc_ctx)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
@@ -66,33 +66,39 @@ resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range) ->
 	return symbols
 }
 
-resolve_entire_file :: proc(doc_ctx: documents.Document, flag := ResolveReferenceFlag.None) -> map[uintptr]analysis.SymbolAndNode {
-	// Build symbol cache for this request's packages
-	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
+load_document_packages :: proc(doc: documents.Document) {
+	analysis.load_package(doc.package_name)
+	for pkg in doc.imports {
+		analysis.load_package(pkg.name)
+	}
+}
+
+resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFlag.None) -> map[uintptr]analysis.SymbolAndNode {
+	load_document_packages(doc)
 
 	ast_context := make_ast_context(
-		doc_ctx.ast,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.uri.uri,
-		doc_ctx.fullpath,
+		doc.ast,
+		doc.imports,
+		doc.package_name,
+		doc.uri.uri,
+		doc.fullpath,
 	)
 
 	position_context: DocumentPositionContext
 	position_context.functions = make([dynamic]^ast.Proc_Lit)
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(doc.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	symbols := make(map[uintptr]analysis.SymbolAndNode, 10000)
 
-	for decl in doc_ctx.ast.decls {
+	for decl in doc.ast.decls {
 		if _, is_value := decl.derived.(^ast.Value_Decl); !is_value {
 			continue
 		}
 
-		resolve_decl(&position_context, &ast_context, doc_ctx, decl, &symbols, flag)
+		resolve_decl(&position_context, &ast_context, doc, decl, &symbols, flag)
 		clear(&ast_context.locals)
 	}
 

@@ -137,7 +137,10 @@ get_semantic_tokens :: proc(
 	symbols: map[uintptr]analysis.SymbolAndNode,
 ) -> []SemanticToken {
 	// Build symbol cache for this request's packages
-	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
+	analysis.load_package(doc_ctx.package_name)
+	for pkg in doc_ctx.imports {
+		analysis.load_package(pkg.name)
+	}
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

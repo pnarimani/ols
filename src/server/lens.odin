@@ -23,7 +23,7 @@ CodeLens :: struct {
 
 get_code_lenses :: proc(doc_ctx: documents.Document, position: common.Position) -> ([]CodeLens, bool) {
 	// Build symbol cache for this request's packages
-	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
+	load_document_packages(doc_ctx)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

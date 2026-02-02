@@ -33,7 +33,7 @@ make_request_context :: proc(d: ^documents.DocumentData, pos: common.Position, c
 	}
 
 	// Build symbol cache for this request's packages
-	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name, config)
+	load_document_packages(doc_ctx)
 
 	return RequestContext{doc_ctx = doc_ctx, config = config, position = pos}, true
 }
@@ -75,4 +75,3 @@ document_close :: documents.close
 get_fullpath_from_uri :: documents.get_fullpath_from_uri
 get_package_name_from_uri :: documents.get_package_name_from_uri
 parse_imports_from_ast :: documents.parse_imports_from_ast
-get_import_range :: documents.get_import_range

@@ -77,10 +77,8 @@ get_workspace_symbols :: proc(query: string) -> (workspace_symbols: []WorkspaceS
 	// Find all workspace packages
 	workspace_pkgs := find_workspace_packages()
 
-
-	// Load all workspace packages into the cache
 	for pkg in workspace_pkgs {
-		analysis.build_cache_for_request({}, pkg)
+		analysis.load_package(pkg)
 	}
 
 	limit :: 100
