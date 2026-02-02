@@ -8,6 +8,7 @@ import "core:strconv"
 
 import "src:common"
 
+@(private)
 When_Expr :: union {
 	int, //Integers types
 	bool, //Boolean types
@@ -32,6 +33,7 @@ convert_os_string: map[string]string = {
 	"orca"         = "Orca",
 }
 
+@(private)
 resolve_when_ident :: proc(when_expr_map: map[string]When_Expr, ident: string) -> (When_Expr, bool) {
 	switch ident {
 	case "ODIN_OS":
@@ -68,6 +70,7 @@ resolve_when_ident :: proc(when_expr_map: map[string]When_Expr, ident: string) -
 	return false, true
 }
 
+@(private)
 resolve_when_expr :: proc(
 	when_expr_map: map[string]When_Expr,
 	when_expr: When_Expr,

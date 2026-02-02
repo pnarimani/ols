@@ -23,7 +23,7 @@ g_symbol_cache: SymbolCollection
 // Initialize the global symbol cache. Called once at startup.
 init_symbol_cache :: proc(config: ^common.Config) {
 	g_symbol_cache = SymbolCollection {
-		allocator	   = context.allocator,
+		allocator      = context.allocator,
 		config         = config,
 		packages       = make(map[string]SymbolPackage, 64),
 		unique_strings = make(map[string]string, 256),
@@ -56,19 +56,6 @@ shutdown_symbol_cache :: proc() {
 	clear(&g_symbol_cache.unique_strings)
 }
 
-// Build symbols for a request, loading packages into the global cache as needed.
-// This is the main entry point for building symbols for a request.
-build_cache_for_request :: proc(imports: []doc.Package, current_package: string, config: ^common.Config = nil) {
-	context.allocator = g_symbol_cache.allocator
-	if current_package != "" && os.exists(current_package) {
-		load_package(current_package)
-	}
-
-	for imp in imports {
-		load_package(imp.name)
-	}
-}
-
 // Update the cache for a specific document.
 // This parses the document and collects its symbols into the global cache,
 // replacing any existing symbols from that file.
@@ -81,6 +68,7 @@ update_doc :: proc(uri: string, file: ast.File) {
 // Platform configuration
 // ============================================================================
 
+@(private)
 platform_os: map[string]struct{} = {
 	"windows" = {},
 	"linux"   = {},
@@ -114,6 +102,7 @@ os_enum_to_string: [runtime.Odin_OS_Type]string = {
 	.Unknown      = "unknown",
 }
 
+@(private)
 os_string_to_enum: map[string]runtime.Odin_OS_Type = {
 	"Windows"      = .Windows,
 	"windows"      = .Windows,
@@ -222,8 +211,12 @@ should_collect_file :: proc(file_tags: parser.File_Tags) -> bool {
 	return true
 }
 
-@(private = "package")
 load_package :: proc(pkg_name: string) {
+	context.allocator = g_symbol_cache.allocator
+	if pkg_name == "" || !os.exists(pkg_name) {
+		return
+	}
+
 	if pkg_name in g_symbol_cache.packages {
 		return
 	}

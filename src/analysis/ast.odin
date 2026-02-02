@@ -546,6 +546,7 @@ is_variable_declaration :: proc(expr: ^ast.Expr) -> bool {
 	}
 }
 
+@(private)
 collect_value_decl :: proc(
 	exprs: ^[dynamic]GlobalExpr,
 	file: ast.File,
@@ -627,6 +628,7 @@ collect_value_decl :: proc(
 	}
 }
 
+@(private)
 collect_when_stmt :: proc(
 	exprs: ^[dynamic]GlobalExpr,
 	file: ast.File,
@@ -672,6 +674,7 @@ get_when_block_stmt :: proc(when_decl: ^ast.When_Stmt) -> (^ast.Block_Stmt, bool
 	return nil, false
 }
 
+@(private)
 collect_when_body :: proc(
 	exprs: ^[dynamic]GlobalExpr,
 	file: ast.File,
@@ -730,6 +733,7 @@ COMMENT_DELIMITER_LENGTH :: len("//")
 #assert(COMMENT_DELIMITER_LENGTH == len("*/"))
 
 // Returns the minimum indentation across all non-empty lines
+@(private)
 get_min_indent :: proc(lines: []string) -> int {
 	min_indent := max(int)
 	for line in lines {
@@ -745,6 +749,7 @@ get_min_indent :: proc(lines: []string) -> int {
 }
 
 // Strips min_indent characters from each line and joins with newlines
+@(private)
 strip_indent_and_join :: proc(lines: []string, min_indent: int, allocator: mem.Allocator) -> string {
 	result := make([dynamic]string, context.temp_allocator)
 	for line in lines {

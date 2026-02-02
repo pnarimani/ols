@@ -347,6 +347,7 @@ collect_generic :: proc(
 	return value
 }
 
+@(private)
 add_comp_lit_fields :: proc(
 	collection: ^SymbolCollection,
 	generic: ^SymbolGenericValue,
@@ -374,6 +375,7 @@ add_comp_lit_fields :: proc(
 	This is used by the fake methods feature to hide individual procs
 	when the proc group should be shown instead.
 */
+@(private)
 record_proc_group_members :: proc(collection: ^SymbolCollection, group: ^ast.Proc_Group, pkg_name: string) {
 	pkg := get_or_create_package(collection, pkg_name)
 
@@ -400,6 +402,7 @@ get_proc_group_member_name :: proc(expr: ^ast.Expr) -> (name: string, ok: bool) 
 /*
 	Collects a procedure as a fake method if it's not part of a proc group.
 */
+@(private)
 collect_method :: proc(collection: ^SymbolCollection, symbol: Symbol) {
 	pkg := &collection.packages[symbol.pkg]
 
@@ -427,6 +430,7 @@ collect_method :: proc(collection: ^SymbolCollection, symbol: Symbol) {
 	The proc group is registered as a method for each distinct first-argument type
 	across all its members.
 */
+@(private)
 collect_proc_group_method :: proc(collection: ^SymbolCollection, symbol: Symbol) {
 	pkg := &collection.packages[symbol.pkg]
 
@@ -549,6 +553,7 @@ add_symbol_to_method :: proc(collection: ^SymbolCollection, pkg: ^SymbolPackage,
 	append(symbols, symbol)
 }
 
+@(private)
 collect_objc :: proc(collection: ^SymbolCollection, attributes: []^ast.Attribute, symbol: Symbol) {
 	pkg := &collection.packages[symbol.pkg]
 
@@ -584,6 +589,7 @@ collect_objc :: proc(collection: ^SymbolCollection, attributes: []^ast.Attribute
 	}
 }
 
+@(private)
 collect_imports :: proc(collection: ^SymbolCollection, file: ast.File, directory: string) {
 	_pkg := get_index_unique_string(collection, directory)
 
@@ -594,6 +600,7 @@ collect_imports :: proc(collection: ^SymbolCollection, file: ast.File, directory
 }
 
 
+@(private)
 collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: string) -> common.Error {
 	forward, _ := filepath.to_slash(file.fullpath, context.temp_allocator)
 	directory := path.dir(forward, context.temp_allocator)

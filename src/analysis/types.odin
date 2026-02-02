@@ -6,10 +6,6 @@ import "core:odin/tokenizer"
 
 import "src:common"
 
-// ============================================================================
-// SymbolCollection and related types
-// ============================================================================
-
 @(private = "package")
 SymbolCollection :: struct {
 	allocator:      mem.Allocator,

@@ -2,8 +2,8 @@ package server
 
 import "src:documents"
 
-import "src:analysis"
 import "base:runtime"
+import "src:analysis"
 
 import "core:log"
 import "core:mem"
@@ -60,7 +60,7 @@ prepare_references :: proc(
 		done_enum: for field in position_context.enum_type.fields {
 			if ident, ok := field.derived.(^ast.Ident); ok {
 				if position_in_node(ident, position_context.position) {
-					symbol = analysis.Symbol{
+					symbol = analysis.Symbol {
 						pkg   = ast_context.current_package,
 						range = common.get_token_range(ident, ast_context.file.src),
 					}
@@ -70,7 +70,7 @@ prepare_references :: proc(
 				}
 			} else if value, ok := field.derived.(^ast.Field_Value); ok {
 				if position_in_node(value.field, position_context.position) {
-					symbol = analysis.Symbol{
+					symbol = analysis.Symbol {
 						range = common.get_token_range(value.field, ast_context.file.src),
 						pkg   = ast_context.current_package,
 					}
@@ -128,7 +128,7 @@ prepare_references :: proc(
 		}
 
 	} else if position_context.field_value != nil &&
-		!analysis.is_expr_basic_lit(position_context.field_value.field) &&
+	   !analysis.is_expr_basic_lit(position_context.field_value.field) &&
 	   position_in_node(position_context.field_value.field, position_context.position) {
 		if position_context.comp_lit != nil {
 			symbol, ok = resolve_location_comp_lit_field(ast_context, position_context)
@@ -180,7 +180,7 @@ prepare_references :: proc(
 		if position_context.bit_field_type != nil {
 			for field in position_context.bit_field_type.fields {
 				if position_in_node(field.name, position_context.position) {
-					symbol = analysis.Symbol{
+					symbol = analysis.Symbol {
 						range = common.get_token_range(field.name, ast_context.file.src),
 						pkg   = ast_context.current_package,
 						uri   = doc_ctx.uri.uri,
@@ -200,7 +200,7 @@ prepare_references :: proc(
 			for field in position_context.struct_type.fields.list {
 				for name in field.names {
 					if position_in_node(name, position_context.position) {
-						symbol = analysis.Symbol{
+						symbol = analysis.Symbol {
 							range = common.get_token_range(name, ast_context.file.src),
 							pkg   = ast_context.current_package,
 							uri   = doc_ctx.uri.uri,
@@ -310,8 +310,8 @@ resolve_references :: proc(
 		}
 
 		p := parser.Parser {
-		err   = analysis.log_error_handler,
-		warn  = analysis.log_warning_handler,
+			err   = analysis.log_error_handler,
+			warn  = analysis.log_warning_handler,
 			flags = {.Optional_Semicolons},
 		}
 
@@ -395,7 +395,10 @@ get_references :: proc(
 	bool,
 ) {
 	// Build symbol cache for this request's packages
-	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name, &common.config)
+	analysis.load_package(doc_ctx.package_name)
+	for pkg in doc_ctx.imports {
+		analysis.load_package(pkg.name)
+	}
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,
