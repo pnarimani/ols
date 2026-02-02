@@ -319,13 +319,13 @@ collect_generic :: proc(
 	collection: ^SymbolCollection,
 	expr: ^ast.Expr,
 	package_map: map[string]string,
-	uri: string,
+	fullpath: string,
 ) -> SymbolGenericValue {
 	//Bit hacky right now, but it's hopefully a temporary solution.
 	//In the c package code it uses a documentation package(builtin).
 	if selector, ok := expr.derived.(^ast.Selector_Expr); ok {
 		if ident, ok := selector.expr.derived.(^ast.Ident); ok {
-			if ident.name == "builtin" && strings.contains(uri, "/core/c/c.odin") {
+			if ident.name == "builtin" && strings.contains(fullpath, "/core/c/c.odin") {
 				cloned := clone_type(selector.field, &collection.unique_strings)
 				replace_package_alias(cloned, package_map, collection)
 				value := SymbolGenericValue {
@@ -589,7 +589,7 @@ collect_objc :: proc(collection: ^SymbolCollection, attributes: []^ast.Attribute
 }
 
 @(private)
-collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: string) -> common.Error {
+collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File) -> common.Error {
 	forward, _ := filepath.to_slash(file.fullpath, context.temp_allocator)
 	directory := path.dir(forward, context.temp_allocator)
 	package_map := get_package_mapping(file, collection.config, directory)
@@ -620,9 +620,9 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: stri
 		}
 
 		// Compute pkg early so it's available inside the switch
-		if expr.builtin || strings.contains(uri, "builtin.odin") {
+		if expr.builtin || strings.contains(forward, "builtin.odin") {
 			symbol.pkg = "$builtin"
-		} else if strings.contains(uri, "intrinsics.odin") {
+		} else if strings.contains(forward, "intrinsics.odin") {
 			intrinsics_path := filepath.join(
 				elems = {common.config.collections["base"], "/intrinsics"},
 				allocator = context.temp_allocator,
@@ -744,14 +744,14 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: stri
 			ident := new_type(ast.Ident, v.pos, v.end)
 			ident.name = "typeid"
 
-			symbol.value = collect_generic(collection, ident, package_map, uri)
+			symbol.value = collect_generic(collection, ident, package_map, forward)
 		case ^ast.Basic_Lit:
 			token = v^
-			symbol.value = collect_generic(collection, col_expr, package_map, uri)
+			symbol.value = collect_generic(collection, col_expr, package_map, forward)
 			token_type = .Unresolved
 		case ^ast.Ident:
 			token = v^
-			symbol.value = collect_generic(collection, col_expr, package_map, uri)
+			symbol.value = collect_generic(collection, col_expr, package_map, forward)
 
 			if .Mutable in expr.flags {
 				token_type = .Variable
@@ -759,7 +759,7 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: stri
 				token_type = .Unresolved
 			}
 		case ^ast.Comp_Lit:
-			generic := collect_generic(collection, col_expr, package_map, uri)
+			generic := collect_generic(collection, col_expr, package_map, forward)
 
 			if .Mutable in expr.flags {
 				token_type = .Variable
@@ -773,7 +773,7 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: stri
 			symbol.value = generic
 		case:
 			// default
-			symbol.value = collect_generic(collection, col_expr, package_map, uri)
+			symbol.value = collect_generic(collection, col_expr, package_map, forward)
 
 			if .Mutable in expr.flags {
 				token_type = .Variable
@@ -789,7 +789,7 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: stri
 		symbol.name = get_index_unique_string(collection, name)
 		symbol.type = token_type
 		symbol.doc = get_comment(expr.docs)
-		symbol.uri = get_index_unique_string(collection, uri)
+		symbol.uri = get_index_unique_string(collection, common.make_encoded_path(forward, context.temp_allocator))
 		symbol.type_expr = clone_type(expr.type_expr, &collection.unique_strings)
 		symbol.value_expr = clone_type(expr.value_expr, &collection.unique_strings)
 		comment, _ := get_file_comment(file, symbol.range.start.line + 1)
@@ -846,7 +846,7 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: stri
 
 	// Second pass: collect fake methods after all symbols and proc group members are recorded
 	if collection.config != nil && collection.config.enable_fake_method {
-		collect_fake_methods(collection, exprs, directory, uri)
+		collect_fake_methods(collection, exprs, directory, forward)
 	}
 
 	return .None
@@ -858,13 +858,13 @@ collect_symbols :: proc(collection: ^SymbolCollection, file: ast.File, uri: stri
 	so that we know which procedures are part of proc groups.
 */
 @(private = "file")
-collect_fake_methods :: proc(collection: ^SymbolCollection, exprs: []GlobalExpr, directory: string, uri: string) {
+collect_fake_methods :: proc(collection: ^SymbolCollection, exprs: []GlobalExpr, directory: string, fullpath: string) {
 	for expr in exprs {
 		// Determine the package name (same logic as in collect_symbols)
 		pkg_name: string
-		if expr.builtin || strings.contains(uri, "builtin.odin") {
+		if expr.builtin || strings.contains(fullpath, "builtin.odin") {
 			pkg_name = "$builtin"
-		} else if strings.contains(uri, "intrinsics.odin") {
+		} else if strings.contains(fullpath, "intrinsics.odin") {
 			intrinsics_path := filepath.join(
 				elems = {common.config.collections["base"], "/intrinsics"},
 				allocator = context.temp_allocator,

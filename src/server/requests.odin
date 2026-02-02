@@ -1109,8 +1109,7 @@ notification_did_open :: proc(
 
 	if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
 		// Update the symbol cache with the document's symbols
-		encoded_path := common.make_encoded_path(doc_ctx.path, context.temp_allocator)
-		analysis.update_doc(encoded_path, doc_ctx.ast)
+		analysis.update_doc(doc_ctx.ast)
 
 		// Run lightweight diagnostics
 		check_unused_imports(doc_ctx, config)
@@ -1153,8 +1152,7 @@ notification_did_change :: proc(
 	document := document_get(change_params.textDocument.uri)
 	if document != nil {
 		if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
-			encoded_path := common.make_encoded_path(doc_ctx.path, context.temp_allocator)
-			analysis.update_doc(encoded_path, doc_ctx.ast)
+			analysis.update_doc(doc_ctx.ast)
 
 			// Run lightweight AST-based diagnostics on edit for immediate feedback
 			// (full odin check only runs on save as it's too expensive for every keystroke)

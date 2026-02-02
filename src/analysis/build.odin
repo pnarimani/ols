@@ -59,9 +59,9 @@ shutdown_symbol_cache :: proc() {
 // Update the cache for a specific document.
 // This parses the document and collects its symbols into the global cache,
 // replacing any existing symbols from that file.
-update_doc :: proc(uri: string, file: ast.File) {
+update_doc :: proc(file: ast.File) {
 	context.allocator = g_symbol_cache.allocator
-	collect_symbols(&g_symbol_cache, file, uri)
+	collect_symbols(&g_symbol_cache, file)
 }
 
 // ============================================================================
@@ -277,9 +277,7 @@ analyze_file :: proc(fullpath, text: string) {
 		return
 	}
 
-	encoded_path := common.make_encoded_path(fullpath, context.temp_allocator)
-
-	collect_symbols(&g_symbol_cache, file, encoded_path)
+	collect_symbols(&g_symbol_cache, file)
 }
 
 // Get the builtin package path

@@ -79,8 +79,7 @@ setup :: proc(src: ^Source) {
 	server.run_hint_diagnostics(src.doc_ctx, &src.config)
 
 	// Collect symbols from the main document into the cache
-	encoded_path := common.make_encoded_path(src.document.path, context.temp_allocator)
-	if ret := analysis.collect_symbols_to_cache(src.doc_ctx.ast, encoded_path); ret != .None {
+	if ret := analysis.collect_symbols_to_cache(src.doc_ctx.ast); ret != .None {
 		return
 	}
 
