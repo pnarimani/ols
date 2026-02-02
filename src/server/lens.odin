@@ -1,5 +1,6 @@
 package server
 
+import "src:documents"
 import "core:odin/ast"
 
 import "src:analysis"
@@ -20,7 +21,7 @@ CodeLens :: struct {
 	data:    string,
 }
 
-get_code_lenses :: proc(doc_ctx: DocumentContext, position: common.Position) -> ([]CodeLens, bool) {
+get_code_lenses :: proc(doc_ctx: documents.Document, position: common.Position) -> ([]CodeLens, bool) {
 	// Build symbol cache for this request's packages
 	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
 

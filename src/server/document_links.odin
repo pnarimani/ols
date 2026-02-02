@@ -1,23 +1,15 @@
 package server
 
+import "src:documents"
 import "core:fmt"
-import "core:log"
-import "core:mem"
 import "core:odin/ast"
-import "core:odin/parser"
 import "core:odin/tokenizer"
-import "core:os"
-import "core:path/filepath"
-import path "core:path/slashpath"
-import "core:slice"
-import "core:sort"
-import "core:strconv"
 import "core:strings"
 
 
 import "src:common"
 
-get_document_links :: proc(doc_ctx: DocumentContext) -> ([]DocumentLink, bool) {
+get_document_links :: proc(doc_ctx: documents.Document) -> ([]DocumentLink, bool) {
 	links := make([dynamic]DocumentLink, 0, context.temp_allocator)
 
 	for imp in doc_ctx.ast.imports {

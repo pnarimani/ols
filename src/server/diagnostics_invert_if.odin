@@ -1,6 +1,7 @@
 #+private file
 package server
 
+import "src:documents"
 import "core:odin/ast"
 
 import "src:common"
@@ -38,14 +39,14 @@ Diagnostic_Reason :: enum {
 }
 
 Invert_If_Visitor_Data :: struct {
-	doc_ctx:    DocumentContext,
+	doc_ctx:    documents.Document,
 	uri:        string,
 	collection: ^DiagnosticCollection,
 }
 
 // Check document for if statements that could benefit from inversion
 @(private = "package")
-check_invert_if_suggestions :: proc(doc_ctx: DocumentContext, config: ^common.Config, collection: ^DiagnosticCollection) {
+check_invert_if_suggestions :: proc(doc_ctx: documents.Document, config: ^common.Config, collection: ^DiagnosticCollection) {
 	if config == nil || !config.enable_invert_if_diagnostics {
 		return
 	}
@@ -233,7 +234,7 @@ is_early_exit :: proc(stmt: ^ast.Stmt) -> bool {
 }
 
 // Add a diagnostic for an if statement that should be inverted
-add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: DocumentContext, uri: string, reason: Diagnostic_Reason, collection: ^DiagnosticCollection) {
+add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Document, uri: string, reason: Diagnostic_Reason, collection: ^DiagnosticCollection) {
 	if if_stmt == nil {
 		return
 	}

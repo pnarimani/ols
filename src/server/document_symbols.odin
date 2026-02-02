@@ -1,12 +1,13 @@
 package server
 
+import "src:documents"
 
 import "src:analysis"
 import "core:odin/ast"
 
 import "src:common"
 
-get_document_symbols :: proc(doc_ctx: DocumentContext) -> []DocumentSymbol {
+get_document_symbols :: proc(doc_ctx: documents.Document) -> []DocumentSymbol {
 	// Build symbol cache for this request's packages
 	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
 

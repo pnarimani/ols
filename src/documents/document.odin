@@ -28,7 +28,7 @@ DocumentData :: struct {
 	text: []u8,
 }
 
-// DocumentContext holds parsed data for a document.
+// documents.Document holds parsed data for a document.
 Document :: struct {
 	uri:          common.Uri,
 	text:         []u8,

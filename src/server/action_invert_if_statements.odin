@@ -2,6 +2,7 @@
 
 package server
 
+import "src:documents"
 import "core:fmt"
 import "core:log"
 import "core:odin/ast"
@@ -45,7 +46,7 @@ Block_Text_Options :: struct {
 
 @(private = "package")
 add_invert_if_action :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	position: common.AbsolutePosition,
 	uri: string,
 	actions: ^[dynamic]CodeAction,

@@ -1,5 +1,6 @@
 package server
 
+import "src:documents"
 
 import "src:analysis"
 import "src:codeprint"
@@ -8,14 +9,14 @@ import "core:strings"
 
 // InferenceContext provides the necessary context for type inference.
 InferenceContext :: struct {
-	document:       ^Document,
+	document:       ^documents.DocumentData,
 	ast_context:    ^AstContext,
 	// Variable types that have been discovered during analysis
 	variable_types: map[string]string, // variable name -> type string
 }
 
 make_inference_context :: proc(
-	document: ^Document,
+	document: ^documents.DocumentData,
 	ast_context: ^AstContext,
 	allocator := context.temp_allocator,
 ) -> InferenceContext {

@@ -3,6 +3,7 @@
 
 package server
 
+import "src:documents"
 import "core:odin/ast"
 import "core:slice"
 import "core:strings"
@@ -13,7 +14,7 @@ INLINE_VARIABLE_ACTION_TITLE :: "Inline Variable"
 INLINE_VARIABLE_ACTION_KIND :: "refactor.inline"
 
 InlineVariableContext :: struct {
-	doc_ctx:          DocumentContext,
+	doc_ctx:          documents.Document,
 	ast_context:      ^AstContext,
 	position:         common.AbsolutePosition,
 	// The variable declaration containing the variable to inline
@@ -34,7 +35,7 @@ InlineVariableContext :: struct {
 
 @(private = "package")
 add_inline_variable_action :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
 	uri: string,
@@ -83,7 +84,7 @@ add_inline_variable_action :: proc(
 }
 
 create_inline_variable_context :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	position: common.Position,
 ) -> (

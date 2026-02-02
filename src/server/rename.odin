@@ -1,5 +1,6 @@
 package server
 
+import "src:documents"
 
 import "src:analysis"
 import "base:runtime"
@@ -11,7 +12,7 @@ import "core:strings"
 
 import "src:common"
 
-get_rename :: proc(doc_ctx: DocumentContext, new_text: string, position: common.Position) -> (WorkspaceEdit, bool) {
+get_rename :: proc(doc_ctx: documents.Document, new_text: string, position: common.Position) -> (WorkspaceEdit, bool) {
 	// Build symbol cache for this request's packages
 	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name, &common.config)
 
@@ -69,7 +70,7 @@ get_rename :: proc(doc_ctx: DocumentContext, new_text: string, position: common.
 }
 
 
-get_prepare_rename :: proc(doc_ctx: DocumentContext, position: common.Position) -> (common.Range, bool) {
+get_prepare_rename :: proc(doc_ctx: documents.Document, position: common.Position) -> (common.Range, bool) {
 	// Build symbol cache for this request's packages
 	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
 
@@ -129,7 +130,7 @@ get_struct_field_type_position :: proc(
 // For preparing the rename, we want to position of the token within the current file,
 // not the position of the declaration
 prepare_rename :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 ) -> (

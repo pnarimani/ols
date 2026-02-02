@@ -2,6 +2,7 @@
 #+feature using-stmt
 package server
 
+import "src:documents"
 import "src:codeprint"
 import "core:fmt"
 import "core:log"
@@ -54,10 +55,10 @@ AstContext :: struct {
 	// We should probably rework how this is handled in the future
 	resolve_specific_overload: bool,
 	call_expr_recursion_cache: map[rawptr]SymbolResult,
-	// Reference to the DocumentContext this AstContext was created from.
+	// Reference to the documents.Document this AstContext was created from.
 	// Fields above (file, imports, document_package, uri, fullpath) are populated from this.
 	// TODO: Remove duplicated fields and access through doc_ctx directly.
-	doc_ctx:                   ^DocumentContext,
+	doc_ctx:                   ^documents.Document,
 }
 
 SymbolResult :: struct {
@@ -78,9 +79,9 @@ make_ast_context_from_request :: proc(req_ctx: ^RequestContext, allocator := con
 	)
 }
 
-// Create AstContext from a DocumentContext pointer. This is the preferred method.
+// Create AstContext from a documents.Document pointer. This is the preferred method.
 make_ast_context_from_doc_ctx :: proc(
-	doc_ctx: ^DocumentContext,
+	doc_ctx: ^documents.Document,
 	allocator := context.temp_allocator,
 ) -> AstContext {
 	ast_context := AstContext {
@@ -4201,7 +4202,7 @@ field_exists_in_comp_lit :: proc(comp_lit: ^ast.Comp_Lit, name: string) -> bool 
 /*
 	Parser gives ranges of expression, but not actually where the commas are placed.
 */
-get_call_commas :: proc(position_context: ^DocumentPositionContext, doc_ctx: DocumentContext) {
+get_call_commas :: proc(position_context: ^DocumentPositionContext, doc_ctx: documents.Document) {
 	if position_context.call == nil {
 		return
 	}

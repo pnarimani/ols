@@ -1,5 +1,6 @@
 package server
 
+import "src:documents"
 import "core:fmt"
 import "core:log"
 import "core:mem"
@@ -18,7 +19,7 @@ import "src:analysis"
 import "src:common"
 
 get_all_package_file_locations :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	import_decl: ^ast.Import_Decl,
 	locations: ^[dynamic]common.Location,
 ) -> bool {

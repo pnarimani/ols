@@ -10,7 +10,7 @@ import "core:strings"
 
 import "src:common"
 
-// Get a DocumentContext for a given URI string. Parses AST and imports fresh.
+// Get a documents.Document for a given URI string. Parses AST and imports fresh.
 // All allocations use the provided allocator (typically context.temp_allocator).
 // Returns nil if document not found or parsing fails.
 get_context :: proc(uri_string: string, config: ^common.Config, allocator := context.temp_allocator) -> (ctx: Document, ok: bool) {
@@ -22,7 +22,7 @@ get_context :: proc(uri_string: string, config: ^common.Config, allocator := con
 	return create_context(document, config, allocator)
 }
 
-// Create a DocumentContext from a Document. Parses AST and imports fresh.
+// Create a documents.Document from a Document. Parses AST and imports fresh.
 // All allocations use the provided allocator (typically context.temp_allocator).
 // Caller is responsible for freeing allocator when done.
 create_context :: proc(document: ^DocumentData, config: ^common.Config, allocator := context.temp_allocator) -> (ctx: Document, ok: bool) {

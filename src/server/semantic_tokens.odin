@@ -9,6 +9,7 @@ https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/spe
 
 package server
 
+import "src:documents"
 import "core:fmt"
 import "core:log"
 import "core:odin/ast"
@@ -131,7 +132,7 @@ semantic_tokens_to_response_params :: proc(tokens: []SemanticToken) -> SemanticT
 }
 
 get_semantic_tokens :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	range: common.Range,
 	symbols: map[uintptr]analysis.SymbolAndNode,
 ) -> []SemanticToken {

@@ -1,10 +1,11 @@
 package server
 
+import "src:documents"
 import "core:mem"
 
 import "base:runtime"
 
-find_unused_imports :: proc(doc_ctx: DocumentContext, allocator := context.temp_allocator) -> []Package {
+find_unused_imports :: proc(doc_ctx: documents.Document, allocator := context.temp_allocator) -> []Package {
 	arena: runtime.Arena
 
 	_ = runtime.arena_init(&arena, mem.Megabyte * 40, runtime.default_allocator())

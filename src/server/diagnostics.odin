@@ -1,5 +1,6 @@
 package server
 
+import "src:documents"
 import "base:runtime"
 import "core:log"
 import "core:slice"
@@ -28,7 +29,7 @@ make_diagnostic_collection :: proc() -> DiagnosticCollection {
 }
 
 // Run hint diagnostics for a document (exported for testing)
-run_hint_diagnostics :: proc(doc_ctx: DocumentContext, config: ^common.Config, collection: ^DiagnosticCollection) {
+run_hint_diagnostics :: proc(doc_ctx: documents.Document, config: ^common.Config, collection: ^DiagnosticCollection) {
 	if config != nil && config.enable_invert_if_diagnostics {
 		check_invert_if_suggestions(doc_ctx, config, collection)
 	}

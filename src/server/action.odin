@@ -1,5 +1,6 @@
 package server
 
+import "src:documents"
 import "core:fmt"
 import "core:log"
 import "core:odin/ast"
@@ -37,7 +38,7 @@ CodeAction :: struct {
 }
 
 get_code_actions :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	range: common.Range,
 	config: ^common.Config,
 ) -> (
@@ -133,7 +134,7 @@ get_code_actions :: proc(
 }
 
 remove_unused_imports :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	uri: string,
 	config: ^common.Config,
 	actions: ^[dynamic]CodeAction,

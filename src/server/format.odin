@@ -1,5 +1,6 @@
 package server
 
+import "src:documents"
 import "core:path/filepath"
 import "src:common"
 import "src:odin/format"
@@ -20,7 +21,7 @@ DocumentFormattingParams :: struct {
 	options:      FormattingOptions,
 }
 
-get_complete_format :: proc(doc_ctx: DocumentContext, config: ^common.Config) -> ([]TextEdit, bool) {
+get_complete_format :: proc(doc_ctx: documents.Document, config: ^common.Config) -> ([]TextEdit, bool) {
 	if doc_ctx.ast.syntax_error_count > 0 {
 		return {}, true
 	}

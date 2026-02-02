@@ -22,7 +22,7 @@ Source :: struct {
 	main:         string,
 	packages:     []Package,
 	document:     ^server.Document,
-	doc_ctx:      server.DocumentContext, // Parsed document context
+	doc_ctx:      server.documents.Document, // Parsed document context
 	// Symbol access is through analysis cache helpers
 	diagnostics:  server.DiagnosticCollection, // Per-test diagnostic collection
 	collections:  map[string]string,
@@ -59,7 +59,7 @@ setup :: proc(src: ^Source) {
 	// This ensures each test starts with a fresh cache
 	analysis.init_symbol_cache(&src.config)
 
-	// Create DocumentContext for the test document
+	// Create documents.Document for the test document
 	src.doc_ctx, _ = server.create_document_context(src.document, &src.config)
 
 	// Create a fresh diagnostic collection for this test

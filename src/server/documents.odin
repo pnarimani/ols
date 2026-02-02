@@ -8,19 +8,17 @@ import "core:strings"
 
 import "src:analysis"
 import "src:common"
-import doc "src:documents"
+import "src:documents"
 
 // Type aliases for backwards compatibility - these will be removed once all code migrates to doc package
-ParserError :: doc.ParserError
-Package :: doc.Package
-Document :: doc.DocumentData
-DocumentContext :: doc.Document
+ParserError :: documents.ParserError
+Package :: documents.Package
 
 // RequestContext bundles together all data needed for handling a request.
-// Created fresh per-request with data from DocumentContext.
+// Created fresh per-request with data from documents.Document.
 // Symbol access is through the analysis package's cache helpers.
 RequestContext :: struct {
-	doc_ctx:  DocumentContext,
+	doc_ctx:  documents.Document,
 	config:   ^common.Config,
 	position: common.Position,
 }
@@ -28,7 +26,7 @@ RequestContext :: struct {
 // Creates a RequestContext for a document at a given position.
 // All data is allocated using context.temp_allocator.
 // Builds the symbol cache for the request's imports.
-make_request_context :: proc(d: ^Document, pos: common.Position, config: ^common.Config) -> (RequestContext, bool) {
+make_request_context :: proc(d: ^documents.DocumentData, pos: common.Position, config: ^common.Config) -> (RequestContext, bool) {
 	doc_ctx, ok := create_document_context(d, config)
 	if !ok {
 		return {}, false
@@ -41,12 +39,12 @@ make_request_context :: proc(d: ^Document, pos: common.Position, config: ^common
 }
 
 // Delegate to doc package
-document_storage_init :: doc.init
-document_storage_shutdown :: doc.shutdown
+document_storage_init :: documents.init
+document_storage_shutdown :: documents.shutdown
 
-document_get :: doc.get
+document_get :: documents.get
 
-create_document_context :: doc.create_context
+create_document_context :: documents.create_context
 
 document_apply_changes :: proc(
 	uri_string: string,
@@ -56,7 +54,7 @@ document_apply_changes :: proc(
 	writer: ^Writer,
 ) -> common.Error {
 	// Convert to doc.ContentChangeEvent slice
-	doc_changes := make([]doc.ContentChangeEvent, len(changes), context.temp_allocator)
+	doc_changes := make([]documents.ContentChangeEvent, len(changes), context.temp_allocator)
 	for change, i in changes {
 		// Extract the range from the union (if present)
 		change_range: union {
@@ -65,16 +63,16 @@ document_apply_changes :: proc(
 		if r, ok := change.range.(common.Range); ok {
 			change_range = r
 		}
-		doc_changes[i] = doc.ContentChangeEvent {
+		doc_changes[i] = documents.ContentChangeEvent {
 			range = change_range,
 			text  = change.text,
 		}
 	}
-	return doc.apply_changes(uri_string, doc_changes, version)
+	return documents.apply_changes(uri_string, doc_changes, version)
 }
 
-document_close :: doc.close
-get_fullpath_from_uri :: doc.get_fullpath_from_uri
-get_package_name_from_uri :: doc.get_package_name_from_uri
-parse_imports_from_ast :: doc.parse_imports_from_ast
-get_import_range :: doc.get_import_range
+document_close :: documents.close
+get_fullpath_from_uri :: documents.get_fullpath_from_uri
+get_package_name_from_uri :: documents.get_package_name_from_uri
+parse_imports_from_ast :: documents.parse_imports_from_ast
+get_import_range :: documents.get_import_range

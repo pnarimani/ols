@@ -5,6 +5,7 @@ package server
 
 import "core:odin/ast"
 import "core:strings"
+import "src:documents"
 
 import "src:codeprint"
 import "src:common"
@@ -14,14 +15,14 @@ EXTRACT_VARIABLE_ACTION_KIND :: "refactor.extract"
 DEFAULT_VARIABLE_NAME :: "extracted"
 
 ExtractVariableContext :: struct {
-	doc_ctx:         DocumentContext,
-	ast_context:     ^AstContext,
-	selection_start: common.AbsolutePosition,
-	selection_end:   common.AbsolutePosition,
-	containing_proc: ^ast.Proc_Lit,
-	selected_expr:   ^ast.Expr,
-	containing_stmt: ^ast.Stmt,
-	stmt_start_pos:  common.Position,
+	doc_ctx:           documents.Document,
+	ast_context:       ^AstContext,
+	selection_start:   common.AbsolutePosition,
+	selection_end:     common.AbsolutePosition,
+	containing_proc:   ^ast.Proc_Lit,
+	selected_expr:     ^ast.Expr,
+	containing_stmt:   ^ast.Stmt,
+	stmt_start_pos:    common.Position,
 	// Variables that would go out of scope if we extract to before containing_stmt
 	out_of_scope_vars: [dynamic]string,
 	// Index of the selected expression in the values/rhs array (for multi-value assignments)
@@ -30,7 +31,7 @@ ExtractVariableContext :: struct {
 
 @(private = "package")
 add_extract_variable_action :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
 	uri: string,
@@ -151,7 +152,7 @@ collect_identifiers_recursive :: proc(expr: ^ast.Expr, idents: ^[dynamic]string)
 
 	case ^ast.Selector_Expr:
 		collect_identifiers_recursive(e.expr, idents)
-		// Note: we don't collect the selector (field name) as it's not a variable reference
+	// Note: we don't collect the selector (field name) as it's not a variable reference
 
 	case ^ast.Ternary_If_Expr:
 		collect_identifiers_recursive(e.cond, idents)
@@ -188,7 +189,7 @@ collect_identifiers_recursive :: proc(expr: ^ast.Expr, idents: ^[dynamic]string)
 }
 
 create_extract_variable_context :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
 ) -> (
@@ -196,8 +197,8 @@ create_extract_variable_context :: proc(
 	bool,
 ) {
 	ctx := ExtractVariableContext {
-		doc_ctx = doc_ctx,
-		ast_context = ast_context,
+		doc_ctx           = doc_ctx,
+		ast_context       = ast_context,
 		out_of_scope_vars = make([dynamic]string),
 	}
 
@@ -590,14 +591,8 @@ generate_extract_variable_edit :: proc(
 	// Replace the statement's leading indentation with the variable declaration + restored indent
 	// This effectively inserts a new line while maintaining proper indentation
 	replace_range := common.Range {
-		start = common.Position {
-			line      = ctx.stmt_start_pos.line,
-			character = 0,
-		},
-		end = common.Position {
-			line      = ctx.stmt_start_pos.line,
-			character = ctx.stmt_start_pos.character,
-		},
+		start = common.Position{line = ctx.stmt_start_pos.line, character = 0},
+		end = common.Position{line = ctx.stmt_start_pos.line, character = ctx.stmt_start_pos.character},
 	}
 	append(&textEdits, TextEdit{range = replace_range, newText = var_decl})
 

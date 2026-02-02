@@ -1,17 +1,22 @@
 package server
 
+import "src:documents"
 
-import "src:analysis"
 import "core:fmt"
 import "core:log"
 import "core:mem"
 import "core:odin/ast"
 import "core:strings"
+import "src:analysis"
 
 import "src:common"
 
 @(private = "file")
-append_symbol_to_locations :: proc(locations: ^[dynamic]common.Location, doc_ctx: DocumentContext, symbol: analysis.Symbol) {
+append_symbol_to_locations :: proc(
+	locations: ^[dynamic]common.Location,
+	doc_ctx: documents.Document,
+	symbol: analysis.Symbol,
+) {
 	if symbol.range == {} {
 		return
 	}

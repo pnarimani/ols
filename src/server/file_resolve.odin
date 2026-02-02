@@ -1,6 +1,7 @@
 #+feature using-stmt
 package server
 
+import "src:documents"
 import "core:odin/ast"
 import "core:odin/tokenizer"
 import "core:strings"
@@ -27,7 +28,7 @@ reset_position_context :: proc(position_context: ^DocumentPositionContext) {
 	position_context.index = nil
 }
 
-resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> map[uintptr]analysis.SymbolAndNode {
+resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range) -> map[uintptr]analysis.SymbolAndNode {
 	// Build symbol cache for this request's packages
 	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
 
@@ -65,7 +66,7 @@ resolve_ranged_file :: proc(doc_ctx: DocumentContext, range: common.Range) -> ma
 	return symbols
 }
 
-resolve_entire_file :: proc(doc_ctx: DocumentContext, flag := ResolveReferenceFlag.None) -> map[uintptr]analysis.SymbolAndNode {
+resolve_entire_file :: proc(doc_ctx: documents.Document, flag := ResolveReferenceFlag.None) -> map[uintptr]analysis.SymbolAndNode {
 	// Build symbol cache for this request's packages
 	analysis.build_cache_for_request(doc_ctx.imports, doc_ctx.package_name)
 
@@ -102,7 +103,7 @@ FileResolveData :: struct {
 	ast_context:      ^AstContext,
 	symbols:          ^map[uintptr]analysis.SymbolAndNode,
 	id_counter:       int,
-	doc_ctx:          DocumentContext,
+	doc_ctx:          documents.Document,
 	position_context: ^DocumentPositionContext,
 	flag:             ResolveReferenceFlag,
 }
@@ -111,7 +112,7 @@ FileResolveData :: struct {
 resolve_decl :: proc(
 	position_context: ^DocumentPositionContext,
 	ast_context: ^AstContext,
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	decl: ^ast.Node,
 	symbols: ^map[uintptr]analysis.SymbolAndNode,
 	flag: ResolveReferenceFlag,

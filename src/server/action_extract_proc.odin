@@ -3,6 +3,7 @@
 
 package server
 
+import "src:documents"
 import "core:odin/ast"
 import "core:odin/tokenizer"
 import "core:slice"
@@ -36,7 +37,7 @@ ControlFlowType :: enum {
 
 ExtractProcContext :: struct {
 	using inference_context: InferenceContext,
-	doc_ctx:                 DocumentContext,
+	doc_ctx:                 documents.Document,
 	selection_start:         common.AbsolutePosition,
 	selection_end:           common.AbsolutePosition,
 	containing_proc:         ^ast.Proc_Lit,
@@ -64,7 +65,7 @@ ReturnInfo :: struct {
 
 @(private = "package")
 add_extract_proc_action :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
 	uri: string,
@@ -119,7 +120,7 @@ is_valid_selection :: proc(range: common.Range) -> bool {
 }
 
 create_extract_context :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
 ) -> (

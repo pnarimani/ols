@@ -1,5 +1,6 @@
 package server
 
+import "src:documents"
 
 import "src:analysis"
 import "base:runtime"
@@ -17,7 +18,7 @@ import "core:strings"
 import "src:common"
 
 WalkDirectoriesData :: struct {
-	doc_ctx:   ^DocumentContext,
+	doc_ctx:   ^documents.Document,
 	fullpaths: ^[dynamic]string,
 }
 
@@ -43,7 +44,7 @@ walk_directories :: proc(info: os.File_Info, in_err: os.Errno, user_data: rawptr
 }
 
 prepare_references :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 ) -> (
@@ -237,7 +238,7 @@ prepare_references :: proc(
 }
 
 resolve_references :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 	current_file_only := false,
@@ -341,8 +342,8 @@ resolve_references :: proc(
 
 		uri := common.create_uri(fullpath)
 
-		// Create a DocumentContext directly for this file
-		inner_doc_ctx := DocumentContext {
+		// Create a documents.Document directly for this file
+		inner_doc_ctx := documents.Document {
 			uri          = uri,
 			text         = data,
 			ast          = file,
@@ -386,7 +387,7 @@ resolve_references :: proc(
 }
 
 get_references :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	position: common.Position,
 	current_file_only := false,
 ) -> (

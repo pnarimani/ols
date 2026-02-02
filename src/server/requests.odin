@@ -23,6 +23,7 @@ import "core:time"
 
 import "src:analysis"
 import "src:common"
+import "src:documents"
 
 Header :: struct {
 	content_length: int,
@@ -32,7 +33,7 @@ Header :: struct {
 RequestInfo :: struct {
 	root:     json.Value,
 	params:   json.Value,
-	document: ^Document,
+	document: ^documents.DocumentData,
 	id:       RequestId,
 	config:   ^common.Config,
 	writer:   ^Writer,

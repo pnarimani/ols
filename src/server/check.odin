@@ -1,5 +1,6 @@
 package server
 
+import "src:documents"
 import "base:intrinsics"
 import "base:runtime"
 
@@ -65,7 +66,7 @@ fallback_find_odin_directories :: proc(config: ^common.Config) -> []string {
 	return data[:]
 }
 
-check_unused_imports :: proc(doc_ctx: DocumentContext, config: ^common.Config, collection: ^DiagnosticCollection) {
+check_unused_imports :: proc(doc_ctx: documents.Document, config: ^common.Config, collection: ^DiagnosticCollection) {
 	if !config.enable_unused_imports_reporting {
 		return
 	}

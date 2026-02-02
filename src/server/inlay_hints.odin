@@ -8,9 +8,10 @@ import "core:odin/ast"
 import "src:analysis"
 import "src:codeprint"
 import "src:common"
+import "src:documents"
 
 get_inlay_hints :: proc(
-	doc_ctx: DocumentContext,
+	doc_ctx: documents.Document,
 	range: common.Range,
 	symbols: map[uintptr]analysis.SymbolAndNode,
 	config: ^common.Config,
@@ -19,7 +20,7 @@ get_inlay_hints :: proc(
 	bool,
 ) {
 	Visitor_Data :: struct {
-		doc_ctx:  DocumentContext,
+		doc_ctx:  documents.Document,
 		range:    common.Range,
 		symbols:  map[uintptr]analysis.SymbolAndNode,
 		config:   ^common.Config,
