@@ -31,7 +31,7 @@ DocumentData :: struct {
 // documents.Document holds parsed data for a document.
 Document :: struct {
 	text:         []u8,
-	ast:          ast.File,
+	syntaxTree:   ast.File,
 	imports:      []Package,
 	package_name: string,
 	filepath:     string,

@@ -33,7 +33,7 @@ resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range, al
 	load_document_packages(doc_ctx)
 
 	ast_context := make_ast_context(
-		doc_ctx.ast,
+		doc_ctx.syntaxTree,
 		doc_ctx.imports,
 		doc_ctx.package_name,
 		doc_ctx.filepath,
@@ -43,7 +43,7 @@ resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range, al
 	position_context: DocumentPositionContext
 	position_context.functions = make([dynamic]^ast.Proc_Lit, allocator)
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(doc_ctx.syntaxTree, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
@@ -51,7 +51,7 @@ resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range, al
 
 	margin := 20
 
-	for decl in doc_ctx.ast.decls {
+	for decl in doc_ctx.syntaxTree.decls {
 		if _, is_value := decl.derived.(^ast.Value_Decl); !is_value {
 			continue
 		}
@@ -77,7 +77,7 @@ resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFla
 	load_document_packages(doc)
 
 	ast_context := make_ast_context(
-		doc.ast,
+		doc.syntaxTree,
 		doc.imports,
 		doc.package_name,
 		doc.filepath,
@@ -87,13 +87,13 @@ resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFla
 	position_context: DocumentPositionContext
 	position_context.functions = make([dynamic]^ast.Proc_Lit, allocator)
 
-	get_globals(doc.ast, &ast_context)
+	get_globals(doc.syntaxTree, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	symbols := make(map[uintptr]analysis.SymbolAndNode, 10000, allocator)
 
-	for decl in doc.ast.decls {
+	for decl in doc.syntaxTree.decls {
 		if _, is_value := decl.derived.(^ast.Value_Decl); !is_value {
 			continue
 		}
@@ -154,11 +154,11 @@ local_scope :: proc(data: ^FileResolveData, stmt: ^ast.Stmt) {
 
 	data.ast_context.non_mutable_only = true
 
-	get_locals_stmt(data.ast_context.file, stmt, data.ast_context, data.position_context)
+	get_locals_stmt(data.ast_context.syntaxTree, stmt, data.ast_context, data.position_context)
 
 	data.ast_context.non_mutable_only = false
 
-	get_locals_stmt(data.ast_context.file, stmt, data.ast_context, data.position_context)
+	get_locals_stmt(data.ast_context.syntaxTree, stmt, data.ast_context, data.position_context)
 }
 
 @(private = "file")
@@ -278,7 +278,7 @@ resolve_node :: proc(node: ^ast.Node, data: ^FileResolveData) {
 	case ^Proc_Lit:
 		local_scope(data, n.body)
 
-		get_locals_proc_param_and_results(data.ast_context.file, n^, data.ast_context, data.position_context)
+		get_locals_proc_param_and_results(data.ast_context.syntaxTree, n^, data.ast_context, data.position_context)
 
 		resolve_node(n.type, data)
 

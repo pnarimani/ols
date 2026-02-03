@@ -48,7 +48,7 @@ check_invert_if_suggestions :: proc(doc_ctx: documents.Document, config: ^common
 		return
 	}
 
-	if doc_ctx.ast.decls == nil {
+	if doc_ctx.syntaxTree.decls == nil {
 		return
 	}
 
@@ -67,7 +67,7 @@ check_invert_if_suggestions :: proc(doc_ctx: documents.Document, config: ^common
 		encoded_path = encoded_path,
 	}
 
-	visit_ast_nodes(doc_ctx.ast.decls[:], invert_if_visitor, &visitor_data)
+	visit_ast_nodes(doc_ctx.syntaxTree.decls[:], invert_if_visitor, &visitor_data)
 }
 
 invert_if_visitor :: proc(node: ^ast.Node, ctx: ^AST_Visitor_Context, user_data: rawptr) -> bool {
@@ -242,7 +242,7 @@ add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Docum
 		return
 	}
 
-	if doc_ctx.ast.src == "" {
+	if doc_ctx.syntaxTree.src == "" {
 		return
 	}
 
@@ -252,7 +252,7 @@ add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Docum
 		.Hint,
 		encoded_path,
 		Diagnostic {
-			range = common.get_token_range(if_stmt.cond^, doc_ctx.ast.src),
+			range = common.get_token_range(if_stmt.cond^, doc_ctx.syntaxTree.src),
 			severity = DiagnosticSeverity.Hint,
 			code = INVERT_IF_DIAGNOSTIC_CODE,
 			message = message,

@@ -53,7 +53,7 @@ get_code_actions :: proc(
 	encoded_path := common.path_to_uri(doc_ctx.filepath, context.temp_allocator)
 
 	ast_context := make_ast_context(
-		doc_ctx.ast,
+		doc_ctx.syntaxTree,
 		doc_ctx.imports,
 		doc_ctx.package_name,
 		doc_ctx.filepath,
@@ -68,12 +68,12 @@ get_code_actions :: proc(
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(doc_ctx.syntaxTree, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	if position_context.function != nil {
-		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
 	actions := make([dynamic]CodeAction, 0, context.temp_allocator)
@@ -161,7 +161,7 @@ remove_unused_imports :: proc(
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 
 	for imp in unused_imports {
-		range := common.get_token_range(imp.import_decl, doc_ctx.ast.src)
+		range := common.get_token_range(imp.import_decl, doc_ctx.syntaxTree.src)
 
 		import_edit := TextEdit {
 			range   = range,
@@ -225,7 +225,7 @@ add_missing_imports :: proc(
 				}
 
 				if pkg == name.name {
-					pkg_decl := ast_context.file.pkg_decl
+					pkg_decl := ast_context.syntaxTree.pkg_decl
 					import_edit := TextEdit {
 						range = {
 							start = {line = pkg_decl.end.line + 1, character = 0},

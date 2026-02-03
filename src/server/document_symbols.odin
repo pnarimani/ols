@@ -12,26 +12,26 @@ get_document_symbols :: proc(doc_ctx: documents.Document) -> []DocumentSymbol {
 	load_document_packages(doc_ctx)
 
 	ast_context := make_ast_context(
-		doc_ctx.ast,
+		doc_ctx.syntaxTree,
 		doc_ctx.imports,
 		doc_ctx.package_name,
 		doc_ctx.filepath,
 	)
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(doc_ctx.syntaxTree, &ast_context)
 
 	doc_symbols := make([dynamic]DocumentSymbol, context.temp_allocator)
 
 	package_symbol: DocumentSymbol
 
-	if len(doc_ctx.ast.decls) == 0 {
+	if len(doc_ctx.syntaxTree.decls) == 0 {
 		return {}
 	}
 
 	for k, global in ast_context.globals {
 		symbol: DocumentSymbol
-		symbol.selectionRange = common.get_token_range(global.name_expr, ast_context.file.src)
-		symbol.range = common.get_token_range(global.expr, ast_context.file.src)
+		symbol.selectionRange = common.get_token_range(global.name_expr, ast_context.syntaxTree.src)
+		symbol.range = common.get_token_range(global.expr, ast_context.syntaxTree.src)
 		ensure_selection_range_contained(&symbol.range, symbol.selectionRange)
 		symbol.name = k
 
@@ -85,8 +85,8 @@ get_document_symbols :: proc(doc_ctx: documents.Document) -> []DocumentSymbol {
 				for elem in v.elems {
 					if field_value, ok := elem.derived.(^ast.Field_Value); ok {
 						if name, ok := field_value.field.derived.(^ast.Ident); ok {
-							selection_range := common.get_token_range(name, ast_context.file.src)
-							range := common.get_token_range(field_value, ast_context.file.src)
+				selection_range := common.get_token_range(name, ast_context.syntaxTree.src)
+				range := common.get_token_range(field_value, ast_context.syntaxTree.src)
 							ensure_selection_range_contained(&range, selection_range)
 							name_map[name.name] = {
 								range = range,

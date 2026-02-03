@@ -42,10 +42,10 @@ get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Loc
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(req_ctx.doc_ctx.ast, &ast_context)
+	get_globals(req_ctx.doc_ctx.syntaxTree, &ast_context)
 
 	if position_context.function != nil {
-		get_locals(req_ctx.doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(req_ctx.doc_ctx.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
 	if position_context.import_stmt != nil {

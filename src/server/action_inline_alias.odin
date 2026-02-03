@@ -130,7 +130,7 @@ create_inline_alias_context :: proc(
 	ctx.position = abs_pos
 
 	// First, try to find an alias declaration at the cursor position
-	ctx.alias_decl, ctx.alias_name, ctx.target_type = find_alias_at_position(doc_ctx.ast.decls[:], abs_pos)
+	ctx.alias_decl, ctx.alias_name, ctx.target_type = find_alias_at_position(doc_ctx.syntaxTree.decls[:], abs_pos)
 
 	if ctx.alias_decl != nil && ctx.alias_name != "" && ctx.target_type != nil {
 		// Check if this is a distinct type - if so, block the action
@@ -152,14 +152,14 @@ create_inline_alias_context :: proc(
 	}
 
 	// Try to find if cursor is on an alias usage (identifier in type context)
-	ctx.target_usage = find_ident_at_position_in_type_context(doc_ctx.ast.decls[:], abs_pos)
+	ctx.target_usage = find_ident_at_position_in_type_context(doc_ctx.syntaxTree.decls[:], abs_pos)
 	if ctx.target_usage == nil {
 		return ctx, false
 	}
 
 	// Find the declaration for this identifier
 	ctx.alias_name = ctx.target_usage.name
-	ctx.alias_decl, ctx.target_type = find_alias_decl_by_name(doc_ctx.ast.decls[:], ast_context, ctx.alias_name)
+	ctx.alias_decl, ctx.target_type = find_alias_decl_by_name(doc_ctx.syntaxTree.decls[:], ast_context, ctx.alias_name)
 
 	if ctx.alias_decl == nil || ctx.target_type == nil {
 		return ctx, false
@@ -275,21 +275,21 @@ find_cross_file_usages :: proc(ctx: ^InlineAliasContext) {
 		doc, _ := documents.get_context(source.fullpath, ctx.config)
 
 		// Check if this file is in the same package
-		is_same_package := doc.ast.pkg_name == ctx.doc.ast.pkg_name
+		is_same_package := doc.syntaxTree.pkg_name == ctx.doc.syntaxTree.pkg_name
 
 		usage := CrossFileUsage {
 			fullpath         = source.fullpath,
 			source           = source.text,
 			selector_usages  = make([dynamic]^ast.Selector_Expr, context.temp_allocator),
 			ident_usages     = make([dynamic]^ast.Ident, context.temp_allocator),
-			file             = doc.ast,
+			file             = doc.syntaxTree,
 			existing_imports = doc.imports,
 			is_same_package  = is_same_package,
 		}
 
 		if is_same_package {
 			// Same package - look for direct ident usages of AliasName
-			find_ident_usages_in_stmts(doc.ast.decls[:], ctx.alias_name, &usage.ident_usages)
+			find_ident_usages_in_stmts(doc.syntaxTree.decls[:], ctx.alias_name, &usage.ident_usages)
 
 			if len(usage.ident_usages) > 0 {
 				// Need to add import for target package since the alias will be replaced
@@ -325,7 +325,7 @@ find_cross_file_usages :: proc(ctx: ^InlineAliasContext) {
 			}
 
 			// Find selector expressions like pkg_alias.AliasName
-			find_selector_usages_in_stmts(doc.ast.decls[:], pkg_alias, ctx.alias_name, &usage.selector_usages)
+			find_selector_usages_in_stmts(doc.syntaxTree.decls[:], pkg_alias, ctx.alias_name, &usage.selector_usages)
 
 			if len(usage.selector_usages) > 0 {
 				// Determine if we need to add an import for the target package
@@ -538,7 +538,7 @@ find_all_alias_usages_in_workspace :: proc(
 	usages: ^[dynamic]^ast.Ident,
 ) {
 	// Search in the current file's AST
-	find_all_alias_usages_in_node(ctx.doc.ast.decls[:], alias_name, usages)
+	find_all_alias_usages_in_node(ctx.doc.syntaxTree.decls[:], alias_name, usages)
 }
 
 // Find all usages of an alias in AST nodes
@@ -902,7 +902,7 @@ generate_inline_alias_edit :: proc(ctx: ^InlineAliasContext, uri: common.FileUri
 	decl_range.start.character = 0
 
 	// Extend to include the newline at the end of the line
-	src := ctx.doc.ast.src
+	src := ctx.doc.syntaxTree.src
 	end_offset, _ := common.get_absolute_position(decl_range.end, transmute([]u8)source)
 	if end_offset < len(src) && src[end_offset] == '\n' {
 		// Move end position to the start of the next line

@@ -123,7 +123,7 @@ collect_methods :: proc(
 	method_symbols := analysis.get_all_methods(method, context.temp_allocator)
 
 	for &symbol in method_symbols {
-		if should_skip_private_symbol(symbol, ast_context.current_package, ast_context.fullpath) {
+		if should_skip_private_symbol(symbol, ast_context.current_package, ast_context.filepath) {
 			continue
 		}
 		resolve_unresolved_symbol(ast_context, &symbol)

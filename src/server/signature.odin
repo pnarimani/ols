@@ -83,10 +83,10 @@ get_signature_information :: proc(req_ctx: ^RequestContext) -> (SignatureHelp, b
 		return signature_help, true
 	}
 
-	get_globals(req_ctx.doc_ctx.ast, &ast_context)
+	get_globals(ast_context.syntaxTree, &ast_context)
 
 	if position_context.function != nil {
-		get_locals(req_ctx.doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(ast_context.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 	signature_information := make([dynamic]SignatureInformation, context.temp_allocator)
 

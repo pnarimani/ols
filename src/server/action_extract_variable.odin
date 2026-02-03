@@ -212,7 +212,7 @@ create_extract_variable_context :: proc(
 	ctx.selection_end = end_pos
 
 	// Use shared utility from action_utils.odin
-	ctx.containing_proc = find_containing_proc(doc_ctx.ast.decls[:], ctx.selection_start)
+	ctx.containing_proc = find_containing_proc(doc_ctx.syntaxTree.decls[:], ctx.selection_start)
 	if ctx.containing_proc == nil {
 		return ctx, false
 	}
@@ -235,7 +235,7 @@ find_selected_expression :: proc(ctx: ^ExtractVariableContext) {
 
 	ctx.selected_expr, ctx.containing_stmt = find_expression_in_stmts(body.stmts[:], ctx)
 	if ctx.containing_stmt != nil {
-		ctx.stmt_start_pos = common.token_pos_to_position(ctx.containing_stmt.pos, ctx.doc_ctx.ast.src)
+		ctx.stmt_start_pos = common.token_pos_to_position(ctx.containing_stmt.pos, ctx.doc_ctx.syntaxTree.src)
 	}
 }
 
@@ -559,7 +559,7 @@ generate_extract_variable_edit :: proc(
 	WorkspaceEdit,
 	bool,
 ) {
-	src := ctx.doc_ctx.ast.src
+	src := ctx.doc_ctx.syntaxTree.src
 
 	// Get the original expression text from source
 	expr_text := string(src[ctx.selection_start:ctx.selection_end])

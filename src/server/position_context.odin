@@ -122,7 +122,7 @@ get_document_position_context :: proc(
 	position_context: DocumentPositionContext
 
 	position_context.hint = hint
-	position_context.file = doc_ctx.ast
+	position_context.file = doc_ctx.syntaxTree
 	position_context.line = position.line
 
 	position_context.functions = make([dynamic]^ast.Proc_Lit, context.temp_allocator)
@@ -136,9 +136,9 @@ get_document_position_context :: proc(
 
 	position_context.position = absolute_position
 
-	exists_in_decl := get_document_position_decls(doc_ctx.ast.decls[:], &position_context)
+	exists_in_decl := get_document_position_decls(doc_ctx.syntaxTree.decls[:], &position_context)
 
-	for import_stmt in doc_ctx.ast.imports {
+	for import_stmt in doc_ctx.syntaxTree.imports {
 		if position_in_node(import_stmt, position_context.position) {
 			position_context.import_stmt = import_stmt
 			break

@@ -62,10 +62,10 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(req_ctx.doc_ctx.ast, &ast_context)
+	get_globals(req_ctx.doc_ctx.syntaxTree, &ast_context)
 
 	if position_context.function != nil {
-		get_locals(req_ctx.doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(req_ctx.doc_ctx.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
 	if position_context.import_stmt != nil {
@@ -213,9 +213,9 @@ try_resolve_proc_group_overload :: proc(
 	if resolved, ok := resolve_function_overload(ast_context, proc_group_value.group.derived.(^ast.Proc_Group)); ok {
 		if resolved.name != "" {
 			if global, ok := ast_context.globals[resolved.name]; ok {
-				resolved.range = common.get_token_range(global.name_expr, ast_context.file.src)
+				resolved.range = common.get_token_range(global.name_expr, ast_context.syntaxTree.src)
 				resolved.filepath = global.name_expr.pos.file
-			} else if indexed_symbol, ok := lookup(resolved.name, resolved.pkg, ast_context.fullpath); ok {
+			} else if indexed_symbol, ok := lookup(resolved.name, resolved.pkg, ast_context.filepath); ok {
 				resolved.range = indexed_symbol.range
 				resolved.filepath = indexed_symbol.filepath
 			}
@@ -245,7 +245,7 @@ get_full_symbol_from_selector :: proc(
 
 	ident := selector.field.derived.(^ast.Ident) or_return
 
-	return lookup(ident.name, symbol.pkg, ast_context.fullpath)
+				return lookup(ident.name, symbol.pkg, ast_context.filepath)
 }
 
 get_full_symbol_from_identifier :: proc(
@@ -264,7 +264,7 @@ get_full_symbol_from_identifier :: proc(
 
 	pkg := symbol.pkg if symbol.pkg != "" else ast_context.document_package
 
-	if pkg_symbol, ok := lookup(ident.name, pkg, ast_context.fullpath); ok {
+	if pkg_symbol, ok := lookup(ident.name, pkg, ast_context.filepath); ok {
 		return pkg_symbol, true
 	}
 

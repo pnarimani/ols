@@ -41,11 +41,11 @@ create_context :: proc(document: ^DocumentData, config: ^common.Config, allocato
 	ctx.text = document.text
 	ctx.filepath = get_fullpath_from_path(document.filepath, allocator)
 	ctx.package_name = get_package_name_from_path(document.filepath, allocator)
-	ctx.ast, ctx.errors, ok = parse_document_text(ctx.filepath, document.text, allocator)
+	ctx.syntaxTree, ctx.errors, ok = parse_document_text(ctx.filepath, document.text, allocator)
 	if !ok {
 		return {}, false
 	}
-	ctx.imports = parse_imports_from_ast(ctx.ast, ctx.package_name, document.text, config, allocator)
+	ctx.imports = parse_imports_from_ast(ctx.syntaxTree, ctx.package_name, document.text, config, allocator)
 
 	assert(ctx.filepath != "", "Document filepath should not be empty")
 	assert(urilib.is_file_uri(ctx.filepath) == false, "Expected filesystem path, got URI")

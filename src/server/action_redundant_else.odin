@@ -67,7 +67,7 @@ add_redundant_else_action :: proc(
 	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,
 ) {
-	context_info := find_if_with_redundant_else(doc_ctx.ast.decls[:], position)
+	context_info := find_if_with_redundant_else(doc_ctx.syntaxTree.decls[:], position)
 	if context_info.if_stmt == nil {
 		return
 	}
@@ -77,7 +77,7 @@ add_redundant_else_action :: proc(
 		return
 	}
 
-	range := common.get_token_range(context_info.if_stmt^, doc_ctx.ast.src)
+	range := common.get_token_range(context_info.if_stmt^, doc_ctx.syntaxTree.src)
 
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 	append(&textEdits, TextEdit{range = range, newText = new_text})
@@ -298,7 +298,7 @@ is_valid_branch_stmt :: proc(branch: ^ast.Branch_Stmt, ctx: IfContextInfo) -> bo
 
 // Generate the transformed code with else removed
 generate_else_removed :: proc(doc_ctx: documents.Document, if_stmt: ^ast.If_Stmt) -> (string, bool) {
-	src := doc_ctx.ast.src
+	src := doc_ctx.syntaxTree.src
 	indent := get_line_indentation(src, if_stmt.pos.offset)
 
 	sb := strings.builder_make(context.temp_allocator)

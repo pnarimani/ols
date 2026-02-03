@@ -17,7 +17,7 @@ get_rename :: proc(doc_ctx: documents.Document, new_text: string, position: comm
 	load_document_packages(doc_ctx)
 
 	ast_context := make_ast_context(
-		doc_ctx.ast,
+		doc_ctx.syntaxTree,
 		doc_ctx.imports,
 		doc_ctx.package_name,
 		doc_ctx.filepath,
@@ -31,12 +31,12 @@ get_rename :: proc(doc_ctx: documents.Document, new_text: string, position: comm
 	}
 	ast_context.position_hint = position_context.hint
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(doc_ctx.syntaxTree, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	if position_context.function != nil {
-		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
 	locations, ok2 := resolve_references(doc_ctx, &ast_context, &position_context)
@@ -74,7 +74,7 @@ get_prepare_rename :: proc(doc_ctx: documents.Document, position: common.Positio
 	load_document_packages(doc_ctx)
 
 	ast_context := make_ast_context(
-		doc_ctx.ast,
+		doc_ctx.syntaxTree,
 		doc_ctx.imports,
 		doc_ctx.package_name,
 		doc_ctx.filepath,
@@ -88,12 +88,12 @@ get_prepare_rename :: proc(doc_ctx: documents.Document, position: common.Positio
 	}
 	ast_context.position_hint = position_context.hint
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(doc_ctx.syntaxTree, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	if position_context.function != nil {
-		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
 	symbol, ok2 := prepare_rename(doc_ctx, &ast_context, &position_context)
@@ -111,12 +111,12 @@ get_struct_field_type_position :: proc(
 	#partial switch v in node.derived {
 	case ^ast.Ident:
 		symbol := analysis.Symbol{
-			range = common.get_token_range(node, ast_context.file.src),
+			range = common.get_token_range(node, ast_context.syntaxTree.src),
 		}
 		return symbol, true
 	case ^ast.Selector_Expr:
 		symbol := analysis.Symbol{
-			range = common.get_token_range(v.field, ast_context.file.src),
+			range = common.get_token_range(v.field, ast_context.syntaxTree.src),
 		}
 		return symbol, true
 	case ^ast.Pointer_Type:
@@ -144,7 +144,7 @@ prepare_rename :: proc(
 			for name in field.names {
 				if position_in_node(name, position_context.position) {
 					symbol = analysis.Symbol{
-						range = common.get_token_range(name, ast_context.file.src),
+						range = common.get_token_range(name, ast_context.syntaxTree.src),
 					}
 					found = true
 					break done_struct
@@ -170,7 +170,7 @@ prepare_rename :: proc(
 			if ident, ok := field.derived.(^ast.Ident); ok {
 				if position_in_node(ident, position_context.position) {
 					symbol = analysis.Symbol{
-						range = common.get_token_range(ident, ast_context.file.src),
+						range = common.get_token_range(ident, ast_context.syntaxTree.src),
 					}
 					found = true
 					break done_enum
@@ -178,13 +178,13 @@ prepare_rename :: proc(
 			} else if value, ok := field.derived.(^ast.Field_Value); ok {
 				if position_in_node(value.field, position_context.position) {
 					symbol = analysis.Symbol{
-						range = common.get_token_range(value.field, ast_context.file.src),
+						range = common.get_token_range(value.field, ast_context.syntaxTree.src),
 					}
 					found = true
 					break done_enum
 				} else if position_in_node(value.value, position_context.position) {
 					symbol = analysis.Symbol{
-						range = common.get_token_range(value.value, ast_context.file.src),
+						range = common.get_token_range(value.value, ast_context.syntaxTree.src),
 					}
 					found = true
 					break done_enum
@@ -197,7 +197,7 @@ prepare_rename :: proc(
 	} else if position_context.bitset_type != nil {
 		if position_in_node(position_context.bitset_type.elem, position_context.position) {
 			symbol = analysis.Symbol{
-				range = common.get_token_range(position_context.bitset_type.elem, ast_context.file.src),
+				range = common.get_token_range(position_context.bitset_type.elem, ast_context.syntaxTree.src),
 			}
 			return symbol, true
 		}
@@ -207,7 +207,7 @@ prepare_rename :: proc(
 		for variant in position_context.union_type.variants {
 			if position_in_node(variant, position_context.position) {
 				symbol = analysis.Symbol{
-					range = common.get_token_range(variant, ast_context.file.src),
+					range = common.get_token_range(variant, ast_context.syntaxTree.src),
 				}
 				found = true
 				break
@@ -218,7 +218,7 @@ prepare_rename :: proc(
 		}
 
 	} else if position_context.implicit {
-		range := common.get_token_range(position_context.implicit_selector_expr, ast_context.file.src)
+		range := common.get_token_range(position_context.implicit_selector_expr, ast_context.syntaxTree.src)
 		// Skip the `.`
 		range.start.character += 1
 		symbol = analysis.Symbol{
@@ -229,7 +229,7 @@ prepare_rename :: proc(
 		!analysis.is_expr_basic_lit(position_context.field_value.field) &&
 	   position_in_node(position_context.field_value.field, position_context.position) {
 		symbol = analysis.Symbol{
-			range = common.get_token_range(position_context.field_value.field, ast_context.file.src),
+			range = common.get_token_range(position_context.field_value.field, ast_context.syntaxTree.src),
 		}
 	} else if position_context.selector_expr != nil {
 		if position_in_node(position_context.selector, position_context.position) &&
@@ -244,14 +244,14 @@ prepare_rename :: proc(
 		} else {
 			symbol, ok = resolve_location_selector(ast_context, position_context.selector_expr)
 			if selector, ok := position_context.selector_expr.derived.(^ast.Selector_Expr); ok {
-				symbol.range = common.get_token_range(selector.field.expr_base, ast_context.file.src)
+				symbol.range = common.get_token_range(selector.field.expr_base, ast_context.syntaxTree.src)
 			}
 		}
 	} else if position_context.identifier != nil {
 		ident := position_context.identifier.derived.(^ast.Ident)
 
 		symbol = analysis.Symbol{
-			range = common.get_token_range(position_context.identifier^, ast_context.file.src),
+			range = common.get_token_range(position_context.identifier^, ast_context.syntaxTree.src),
 		}
 	} else {
 		return

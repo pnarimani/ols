@@ -143,7 +143,7 @@ get_semantic_tokens :: proc(
 	}
 
 	ast_context := make_ast_context(
-		doc_ctx.ast,
+		doc_ctx.syntaxTree,
 		doc_ctx.imports,
 		doc_ctx.package_name,
 		doc_ctx.filepath,
@@ -153,12 +153,12 @@ get_semantic_tokens :: proc(
 	builder: SemanticTokenBuilder = {
 		tokens  = make([dynamic]SemanticToken, 0, 2000, context.temp_allocator),
 		symbols = symbols,
-		src     = ast_context.file.src,
+		src     = ast_context.syntaxTree.src,
 	}
 
 	margin := 20
 
-	for decl in doc_ctx.ast.decls {
+	for decl in doc_ctx.syntaxTree.decls {
 		//Look for declarations that overlap with range
 		if range.start.line - margin <= decl.end.line && decl.pos.line <= range.end.line + margin {
 			visit_node(decl, &builder)

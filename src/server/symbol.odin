@@ -20,7 +20,7 @@ write_struct_type :: proc(
 	b.poly = v.poly_params
 	// We clone this so we don't override docs and comments with temp allocated docs and comments
 	v := cast(^ast.Struct_Type)analysis.clone_node(v)
-	construct_struct_field_docs(ast_context.file, v)
+	construct_struct_field_docs(ast_context.syntaxTree, v)
 	for field in v.fields.list {
 		for n in field.names {
 			if identifier, ok := n.derived.(^ast.Ident); ok && field.type != nil {
@@ -36,7 +36,7 @@ write_struct_type :: proc(
 					append(&b.types, field.type)
 				}
 
-				append(&b.ranges, common.get_token_range(n, ast_context.file.src))
+				append(&b.ranges, common.get_token_range(n, ast_context.syntaxTree.src))
 				append(&b.docs, field.docs)
 				append(&b.comments, field.comment)
 				append(&b.from_usings, base_using_index)

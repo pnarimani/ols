@@ -62,7 +62,7 @@ prepare_references :: proc(
 				if position_in_node(ident, position_context.position) {
 					symbol = analysis.Symbol {
 						pkg   = ast_context.current_package,
-						range = common.get_token_range(ident, ast_context.file.src),
+						range = common.get_token_range(ident, ast_context.syntaxTree.src),
 					}
 					found = true
 					resolve_flag = .Field
@@ -71,7 +71,7 @@ prepare_references :: proc(
 			} else if value, ok := field.derived.(^ast.Field_Value); ok {
 				if position_in_node(value.field, position_context.position) {
 					symbol = analysis.Symbol {
-						range = common.get_token_range(value.field, ast_context.file.src),
+						range = common.get_token_range(value.field, ast_context.syntaxTree.src),
 						pkg   = ast_context.current_package,
 					}
 					found = true
@@ -181,7 +181,7 @@ prepare_references :: proc(
 			for field in position_context.bit_field_type.fields {
 				if position_in_node(field.name, position_context.position) {
 					symbol = analysis.Symbol {
-						range    = common.get_token_range(field.name, ast_context.file.src),
+						range    = common.get_token_range(field.name, ast_context.syntaxTree.src),
 						pkg      = ast_context.current_package,
 						filepath = doc_ctx.filepath,
 					}
@@ -201,7 +201,7 @@ prepare_references :: proc(
 				for name in field.names {
 					if position_in_node(name, position_context.position) {
 						symbol = analysis.Symbol {
-							range    = common.get_token_range(name, ast_context.file.src),
+							range    = common.get_token_range(name, ast_context.syntaxTree.src),
 							pkg      = ast_context.current_package,
 							filepath = doc_ctx.filepath,
 						}
@@ -261,7 +261,7 @@ resolve_references :: proc(
 		if strings.equal_fold(v.symbol.filepath, symbol.filepath) && v.symbol.range == symbol.range {
 			node_encoded_path := common.path_to_uri(v.node.pos.file, context.temp_allocator)
 
-			range := common.get_token_range(v.node^, ast_context.file.src)
+			range := common.get_token_range(v.node^, ast_context.syntaxTree.src)
 
 			//We don't have to have the `.` with, otherwise it renames the dot.
 			if _, ok := v.node.derived.(^ast.Implicit_Selector_Expr); ok {
@@ -350,7 +350,7 @@ get_references :: proc(
 	}
 
 	ast_context := make_ast_context(
-		doc_ctx.ast,
+		doc_ctx.syntaxTree,
 		doc_ctx.imports,
 		doc_ctx.package_name,
 		doc_ctx.filepath,
@@ -364,12 +364,12 @@ get_references :: proc(
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(doc_ctx.syntaxTree, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	if position_context.function != nil {
-		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(doc_ctx.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
 	locations, ok2 := resolve_references(doc_ctx, &ast_context, &position_context, current_file_only, allocator)

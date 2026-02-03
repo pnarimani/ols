@@ -501,7 +501,7 @@ resolve_generic_function_ast :: proc(
 		results = proc_lit.type.results.list
 	}
 
-	range := common.get_token_range(proc_lit, ast_context.file.src)
+	range := common.get_token_range(proc_lit, ast_context.syntaxTree.src)
 	encoded_path := common.path_to_uri(proc_lit.pos.file, ast_context.allocator)
 	return resolve_generic_function_symbol(ast_context, params, results, proc_lit.inlining, proc_symbol)
 }

@@ -47,7 +47,7 @@ try_hover_keyword_or_directive :: proc(
 		if str, ok := keywords_docs[position_context.type_cast.tok.text]; ok {
 			hover.contents.kind = "markdown"
 			hover.contents.value = str
-			hover.range = common.get_token_range(position_context.type_cast, ast_context.file.src)
+			hover.range = common.get_token_range(position_context.type_cast, ast_context.syntaxTree.src)
 			return hover, true
 		}
 	}
@@ -56,7 +56,7 @@ try_hover_keyword_or_directive :: proc(
 		if str, ok := directive_docs[position_context.directive.name]; ok {
 			hover.contents.kind = "markdown"
 			hover.contents.value = str
-			hover.range = common.get_token_range(position_context.directive, ast_context.file.src)
+			hover.range = common.get_token_range(position_context.directive, ast_context.syntaxTree.src)
 			return hover, true
 		}
 	}
@@ -66,7 +66,7 @@ try_hover_keyword_or_directive :: proc(
 			if str, ok := keywords_docs[ident.name]; ok {
 				hover.contents.kind = "markdown"
 				hover.contents.value = str
-				hover.range = common.get_token_range(position_context.identifier^, ast_context.file.src)
+				hover.range = common.get_token_range(position_context.identifier^, ast_context.syntaxTree.src)
 				return hover, true
 			}
 		}
@@ -76,7 +76,7 @@ try_hover_keyword_or_directive :: proc(
 		if str, ok := keywords_docs[position_context.implicit_context.tok.text]; ok {
 			hover.contents.kind = "markdown"
 			hover.contents.value = str
-			hover.range = common.get_token_range(position_context.implicit_context^, ast_context.file.src)
+			hover.range = common.get_token_range(position_context.implicit_context^, ast_context.syntaxTree.src)
 			return hover, true
 		}
 	}
@@ -248,7 +248,7 @@ try_hover_field_value :: proc(
 		return hover, false
 	}
 
-	hover.range = common.get_token_range(position_context.field_value.field^, req_ctx.doc_ctx.ast.src)
+hover.range = common.get_token_range(position_context.field_value.field^, ast_context.syntaxTree.src)
 
 	if position_context.comp_lit != nil {
 		comp_symbol, ok := resolve_comp_literal(ast_context, position_context)
@@ -319,7 +319,7 @@ try_hover_selector :: proc(
 		return hover, false, false
 	}
 
-	hover.range = common.get_token_range(position_context.identifier^, ast_context.file.src)
+	hover.range = common.get_token_range(position_context.identifier^, ast_context.syntaxTree.src)
 
 	reset_ast_context(ast_context)
 	ast_context.current_package = ast_context.document_package
@@ -403,7 +403,7 @@ try_hover_selector :: proc(
 
 				if resolved, ok := resolve_symbol_return(
 					ast_context,
-					lookup(ident.name, selector.pkg, ast_context.fullpath),
+						lookup(ident.name, selector.pkg, ast_context.filepath),
 				); ok {
 					build_documentation(ast_context, &resolved, false)
 					resolved.name = ident.name
@@ -472,7 +472,7 @@ try_hover_implicit_selector :: proc(
 	}
 
 	implicit_selector := position_context.implicit_selector_expr
-	hover.range = common.get_token_range(implicit_selector, req_ctx.doc_ctx.ast.src)
+	hover.range = common.get_token_range(implicit_selector, ast_context.syntaxTree.src)
 
 	symbol, ok := resolve_implicit_selector(ast_context, position_context)
 	if !ok {
@@ -548,7 +548,7 @@ try_hover_identifier :: proc(
 		ident.end = position_context.value_decl.end
 	}
 
-	hover.range = common.get_token_range(position_context.identifier^, req_ctx.doc_ctx.ast.src)
+	hover.range = common.get_token_range(position_context.identifier^, ast_context.syntaxTree.src)
 
 	if position_context.call != nil {
 		if call, ok := position_context.call.derived.(^ast.Call_Expr); ok {
@@ -583,10 +583,10 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(req_ctx.doc_ctx.ast, &ast_context)
+	get_globals(ast_context.syntaxTree, &ast_context)
 
 	if position_context.function != nil {
-		get_locals(req_ctx.doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(ast_context.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
 	if position_context.import_stmt != nil {

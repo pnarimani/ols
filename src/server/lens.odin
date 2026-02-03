@@ -26,17 +26,17 @@ get_code_lenses :: proc(doc_ctx: documents.Document, position: common.Position) 
 	load_document_packages(doc_ctx)
 
 	ast_context := make_ast_context(
-		doc_ctx.ast,
+		doc_ctx.syntaxTree,
 		doc_ctx.imports,
 		doc_ctx.package_name,
 		doc_ctx.filepath,
 	)
 
-	get_globals(doc_ctx.ast, &ast_context)
+	get_globals(doc_ctx.syntaxTree, &ast_context)
 
 	symbols := make([dynamic]CodeLens, context.temp_allocator)
 
-	if len(doc_ctx.ast.decls) == 0 {
+	if len(doc_ctx.syntaxTree.decls) == 0 {
 		return {}, true
 	}
 

@@ -72,7 +72,7 @@ get_inlay_hints :: proc(
 		},
 	}
 
-	for decl in doc_ctx.ast.decls {
+	for decl in doc_ctx.syntaxTree.decls {
 		ast.walk(&visitor, decl)
 	}
 

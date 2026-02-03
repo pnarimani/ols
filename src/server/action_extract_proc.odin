@@ -143,7 +143,7 @@ create_extract_context :: proc(
 	ctx.selection_start = start_pos
 	ctx.selection_end = end_pos
 
-	ctx.containing_proc = find_containing_proc(doc_ctx.ast.decls[:], ctx.selection_start)
+	ctx.containing_proc = find_containing_proc(doc_ctx.syntaxTree.decls[:], ctx.selection_start)
 	if ctx.containing_proc == nil {
 		return ctx, false
 	}
@@ -1375,7 +1375,7 @@ generate_extract_edit :: proc(
 	WorkspaceEdit,
 	bool,
 ) {
-	src := ctx.doc_ctx.ast.src
+	src := ctx.doc_ctx.syntaxTree.src
 
 	params := build_parameter_list(ctx)
 	returns := build_return_list(ctx)
@@ -1405,7 +1405,7 @@ generate_extract_edit :: proc(
 	// Find the top-level declaration containing the procedure and insert after it
 	// This ensures extracted procedures are placed at package scope, not inside nested procedures
 	insert_range: common.Range
-	top_level_decl := find_top_level_decl(ctx.doc_ctx.ast.decls[:], ctx.containing_proc)
+	top_level_decl := find_top_level_decl(ctx.doc_ctx.syntaxTree.decls[:], ctx.containing_proc)
 	if top_level_decl != nil {
 		insert_pos := common.token_pos_to_position(top_level_decl.end, src)
 		// Move to the start of the next line (after the closing brace)

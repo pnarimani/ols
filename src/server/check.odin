@@ -25,7 +25,7 @@ check_unused_imports :: proc(doc_ctx: documents.Document, config: ^common.Config
 	unused_imports := find_unused_imports(doc_ctx, context.temp_allocator)
 
 	for imp in unused_imports {
-		diagnostics.add_unused_import_diagnostic(encoded_path, imp, doc_ctx.ast.src)
+		diagnostics.add_unused_import_diagnostic(encoded_path, imp, doc_ctx.syntaxTree.src)
 	}
 }
 

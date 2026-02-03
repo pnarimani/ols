@@ -22,7 +22,7 @@ DocumentFormattingParams :: struct {
 }
 
 get_complete_format :: proc(doc_ctx: documents.Document, config: ^common.Config) -> ([]TextEdit, bool) {
-	if doc_ctx.ast.syntax_error_count > 0 {
+	if doc_ctx.syntaxTree.syntax_error_count > 0 {
 		return {}, true
 	}
 
@@ -34,7 +34,7 @@ get_complete_format :: proc(doc_ctx: documents.Document, config: ^common.Config)
 	prnt := printer.make_printer(style, context.temp_allocator)
 
 	// Copy the ast to take a pointer to it
-	ast_copy := doc_ctx.ast
+	ast_copy := doc_ctx.syntaxTree
 	src := printer.print(&prnt, &ast_copy)
 
 	if prnt.errored_out {

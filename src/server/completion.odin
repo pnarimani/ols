@@ -66,13 +66,13 @@ get_completion_list :: proc(req_ctx: ^RequestContext, cmp_ctx: CompletionContext
 	ast_context := make_ast_context(req_ctx)
 	ast_context.position_hint = position_context.hint
 
-	get_globals(req_ctx.doc_ctx.ast, &ast_context)
+	get_globals(ast_context.syntaxTree, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 	ast_context.value_decl = position_context.value_decl
 
 	if position_context.function != nil {
-		get_locals(req_ctx.doc_ctx.ast, position_context.function, &ast_context, &position_context)
+		get_locals(ast_context.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
 	completion_type: Completion_Type = .Identifier
@@ -964,7 +964,7 @@ get_selector_completion :: proc(
 
 		pkg := selector.pkg
 
-		if searched, ok := fuzzy_search(field, {pkg}, ast_context.fullpath); ok {
+		if searched, ok := fuzzy_search(field, {pkg}, ast_context.filepath); ok {
 			for search in searched {
 				symbol := search.symbol
 
@@ -1697,12 +1697,12 @@ get_identifier_completion :: proc(
 	append(&pkgs, ast_context.document_package)
 	append(&pkgs, "$builtin")
 
-	if fuzzy_results, ok := fuzzy_search(lookup_name, pkgs[:], ast_context.fullpath); ok {
+	if fuzzy_results, ok := fuzzy_search(lookup_name, pkgs[:], ast_context.filepath); ok {
 		for r in fuzzy_results {
 			r := r
 			resolve_unresolved_symbol(ast_context, &r.symbol)
 			path, _ := common.uri_to_path(r.symbol.filepath, context.temp_allocator)
-			if path != ast_context.fullpath {
+			if path != ast_context.filepath {
 				append(results, CompletionResult{score = r.score, symbol = r.symbol})
 			}
 		}
@@ -2031,8 +2031,8 @@ get_core_insert_package_if_non_existent :: proc(ast_context: ^AstContext, pkg: s
 	return {
 			newText = strings.to_string(builder),
 			range = {
-				start = {line = ast_context.file.pkg_decl.end.line + 1, character = 0},
-				end = {line = ast_context.file.pkg_decl.end.line + 1, character = 0},
+				start = {line = ast_context.syntaxTree.pkg_decl.end.line + 1, character = 0},
+				end = {line = ast_context.syntaxTree.pkg_decl.end.line + 1, character = 0},
 			},
 		},
 		true
@@ -2074,7 +2074,7 @@ append_non_imported_packages :: proc(
 			}
 
 			if !found {
-				pkg_decl := ast_context.file.pkg_decl
+				pkg_decl := ast_context.syntaxTree.pkg_decl
 
 				import_edit := TextEdit {
 					range = {

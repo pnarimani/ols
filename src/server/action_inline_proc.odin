@@ -101,7 +101,7 @@ create_inline_proc_context :: proc(
 	ctx.position = abs_pos
 
 	// First try to find if we're on a call expression
-	ctx.call_expr = find_call_at_position(doc_ctx.ast.decls[:], abs_pos)
+	ctx.call_expr = find_call_at_position(doc_ctx.syntaxTree.decls[:], abs_pos)
 
 	if ctx.call_expr != nil {
 		proc_name := get_call_proc_name(ctx.call_expr)
@@ -117,11 +117,11 @@ create_inline_proc_context :: proc(
 	}
 
 	// Try to find if we're on a procedure definition
-	ctx.proc_decl, ctx.proc_lit, ctx.proc_name = find_proc_decl_at_position(doc_ctx.ast.decls[:], abs_pos)
+	ctx.proc_decl, ctx.proc_lit, ctx.proc_name = find_proc_decl_at_position(doc_ctx.syntaxTree.decls[:], abs_pos)
 
 	if ctx.proc_decl != nil && ctx.proc_lit != nil && ctx.proc_name != "" {
 		// Find all calls to this procedure in the file
-		find_all_calls_to_proc(doc_ctx.ast.decls[:], ctx.proc_name, &ctx.all_calls)
+		find_all_calls_to_proc(doc_ctx.syntaxTree.decls[:], ctx.proc_name, &ctx.all_calls)
 		return ctx, len(ctx.all_calls) > 0
 	}
 
@@ -315,7 +315,7 @@ find_proc_definition :: proc(
 	ast_context: ^AstContext,
 	name: string,
 ) -> (^ast.Value_Decl, ^ast.Proc_Lit) {
-	for stmt in doc_ctx.ast.decls {
+	for stmt in doc_ctx.syntaxTree.decls {
 		if decl, proc_lit, found := get_proc_from_decl(stmt, name); found {
 			return decl, proc_lit
 		}
@@ -719,7 +719,7 @@ generate_single_inline_edit :: proc(ctx: ^InlineProcContext, call: ^ast.Call_Exp
 		return {}, false
 	}
 
-	src := ctx.doc_ctx.ast.src
+	src := ctx.doc_ctx.syntaxTree.src
 
 	// Build parameter name to argument mapping
 	param_to_arg := make(map[string]string, context.temp_allocator)
@@ -743,7 +743,7 @@ generate_single_inline_edit :: proc(ctx: ^InlineProcContext, call: ^ast.Call_Exp
 	}
 
 	// Find the containing statement for this call to determine context
-	containing_stmt := find_containing_stmt_for_call(ctx.doc_ctx.ast.decls[:], call)
+	containing_stmt := find_containing_stmt_for_call(ctx.doc_ctx.syntaxTree.decls[:], call)
 
 	body, body_ok := ctx.proc_lit.body.derived.(^ast.Block_Stmt)
 	if !body_ok {
@@ -898,7 +898,7 @@ generate_inlined_body :: proc(
 		return ""
 	}
 
-	src := ctx.doc_ctx.ast.src
+	src := ctx.doc_ctx.syntaxTree.src
 
 	// Determine if this is a simple expression context or a statement context
 	is_expr_context := !is_standalone_call(containing_stmt, call)
@@ -979,7 +979,7 @@ generate_multi_stmt_inline :: proc(
 		return ""
 	}
 
-	src := ctx.doc_ctx.ast.src
+	src := ctx.doc_ctx.syntaxTree.src
 	sb := strings.builder_make(context.temp_allocator)
 
 	// Get local variable names from the procedure body that might conflict
@@ -1240,7 +1240,7 @@ collect_call_site_vars :: proc(doc_ctx: documents.Document, containing_stmt: ^as
 	vars := make(map[string]bool, allocator)
 	
 	// Find the block containing the call and collect all variables declared before it
-	for decl in doc_ctx.ast.decls {
+	for decl in doc_ctx.syntaxTree.decls {
 		collect_vars_before_stmt(decl, containing_stmt, &vars)
 	}
 	
@@ -1430,7 +1430,7 @@ needs_parentheses :: proc(expr: string) -> bool {
 
 // Generate the edit to delete the procedure definition
 generate_proc_delete_edit :: proc(ctx: ^InlineProcContext) -> TextEdit {
-	src := ctx.doc_ctx.ast.src
+	src := ctx.doc_ctx.syntaxTree.src
 
 	// Get the range of the entire procedure declaration
 	decl_range := common.get_token_range(ctx.proc_decl, src)
