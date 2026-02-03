@@ -45,6 +45,8 @@ get_code_actions :: proc(
 	[]CodeAction,
 	bool,
 ) {
+	assert(doc_ctx.filepath != "", "Document filepath cannot be empty")
+
 	// Build symbol cache for this request's packages
 	load_document_packages(doc_ctx)
 

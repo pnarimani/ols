@@ -2,6 +2,7 @@ package ols_testing
 
 import "core:fmt"
 import "core:log"
+import "core:math/rand"
 import "core:odin/ast"
 import "core:strings"
 import "src:analysis"
@@ -12,7 +13,8 @@ import "src:workspace"
 
 FileInPackage :: struct {
 	pkg:               string,
-	filepath:          string,
+	filename:          string,
+	fullpath:          string,
 	source:            string,
 	position:          common.Position,
 	end_position:      common.Position, // For range selection tests
@@ -27,6 +29,7 @@ Source :: struct {
 	extra_files: []FileInPackage,
 	collections: map[string]string,
 	config:      common.Config,
+	test_name:   string,
 }
 
 // Helper to create a RequestContext from a Source for testing
@@ -36,16 +39,10 @@ make_test_request_context :: proc(src: ^Source) -> server.RequestContext {
 
 @(private)
 setup :: proc(src: ^Source) {
-	// Use temp allocator for all allocations in this test to avoid leak reports
-	// The parser internally uses context.allocator so we need to redirect it
-	context.allocator = context.temp_allocator
-
-	// Initialize the config storage - this is needed for initialize_default_collections
-	// which uses common.config_storage.allocator for its allocations
 	// log.info("Setting up config")
-	common.config_storage.allocator = context.temp_allocator
-	src.config.collections = make(map[string]string, context.temp_allocator)
-	server.initialize_default_collections(&src.config, "")
+	common.config_storage.allocator = context.allocator
+	src.config.collections = make(map[string]string)
+	server.initialize_default_collections(&src.config)
 
 	// Initialize the documents module for cross-file operations
 	// log.info("Initializing documents module")
@@ -53,37 +50,54 @@ setup :: proc(src: ^Source) {
 	analysis.init_symbol_cache(&src.config)
 	server.init_diagnostic_store()
 
-	// Default main filename if not specified
-	if src.main.filepath == "" {
-		src.main.filepath = "test.odin"
-	}
-	main_filepath := fmt.aprintf("test/%v", src.main.filepath)
-
-	// Initialize the config.collections map before calling initialize_default_collections
-	// log.info("parsing main source")
-	parse_position_markers(&src.main, main_filepath)
-
-	// log.infof("Source after marker parsing:\n%v", src.main.source)
-	workspace.register_mock_file(main_filepath, src.main.source)
-	src.main.document = documents.get(main_filepath)
-
-	// Create documents.Document for the test document
-	src.main.doc_ctx, _ = server.create_document_context(src.main.document, &src.config)
-
-	// Run diagnostics checks if enabled in config
-	server.run_hint_diagnostics(src.main.doc_ctx, &src.config)
-
-	// Collect symbols from the main document into the cache
-	if ret := analysis.collect_symbols_to_cache(src.main.doc_ctx.ast); ret != .None {
-		return
+	files := make([dynamic]^FileInPackage, context.temp_allocator)
+	append(&files, &src.main)
+	for &src_pkg in src.extra_files {
+		append(&files, &src_pkg)
 	}
 
-	for src_pkg in src.extra_files {
-		filename := src_pkg.filepath if src_pkg.filepath != "" else "package"
-		fullpath := fmt.aprintf("test/%v/%v.odin", src_pkg.pkg, filename)
-		workspace.register_mock_file(fullpath, src_pkg.source)
-		documents.open(fullpath, src_pkg.source)
-		analysis.analyze_file(fullpath, src_pkg.source)
+	if src.test_name == "" {
+		// generate random name to avoid conflicts
+		sb := strings.builder_make(context.temp_allocator)
+		strings.write_string(&sb, "test_")
+		for i := 0; i < 8; i += 1 {
+			strings.write_byte(&sb, byte('a' + rand.uint32() % 26))
+		}
+		src.test_name = strings.to_string(sb)
+	}
+
+	for &file in files {
+		if file.filename == "" {
+			sb := strings.builder_make(context.temp_allocator)
+			// strings.write_string(&sb, src.test_name)
+			// strings.write_string(&sb, "_file")
+			strings.write_string(&sb, "test")
+			file.filename = strings.to_string(sb)
+		}
+
+		if file.pkg == "" {
+			file.pkg = "test"
+		}
+
+		sb := strings.builder_make(context.temp_allocator)
+		// strings.write_string(&sb, src.test_name)
+		strings.write_string(&sb, "test/")
+		if file.pkg != "test" {
+			strings.write_string(&sb, file.pkg)
+			strings.write_string(&sb, "/")
+		}
+		strings.write_string(&sb, file.filename)
+		strings.write_string(&sb, ".odin")
+		file.fullpath = strings.to_string(sb)
+
+		// log.debugf("Storing file %s at %s", file.filename, file.fullpath)
+
+		parse_position_markers(file, file.fullpath)
+		workspace.register_mock_file(file.fullpath, file.source)
+		file.document, _ = documents.open(file.fullpath, file.source)
+		file.doc_ctx, _ = documents.get_context(file.fullpath, &src.config)
+		analysis.analyze_file(file.fullpath, file.source)
+		server.run_hint_diagnostics(file.doc_ctx, &src.config)
 	}
 }
 

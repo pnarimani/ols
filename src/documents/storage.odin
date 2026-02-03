@@ -1,10 +1,10 @@
 package documents
 
-import "src:workspace"
 import "core:log"
 import "core:mem"
 import "core:os"
 import "core:strings"
+import "src:workspace"
 
 import "src:common"
 
@@ -67,48 +67,42 @@ load_from_disk :: proc(file_path: string) -> ^DocumentData {
 
 // Open a document with transferred text from the client.
 // Returns pointer to the stored document and error status.
-open :: proc(path_or_encoded: string, text: string) -> (^DocumentData, common.Error) {
-	// Try to parse as encoded path first
-	path, parsed_ok := common.make_path(path_or_encoded, context.temp_allocator)
-	if !parsed_ok {
-		// If parsing fails, assume it's already a plain path
-		path = path_or_encoded
-	}
+open :: proc(filepath: string, text: string) -> (^DocumentData, common.Error) {
+	assert(filepath != "", "Document filepath cannot be empty")
 
-	if document, ok := &storage.documents[path]; ok {
+	if document, ok := &storage.documents[filepath]; ok {
 		// Document already exists, update it
 		// Free old data with persistent allocator
 		delete(document.filepath, storage.allocator)
 		delete(document.text, storage.allocator)
 
 		// Clone new data to persistent storage
-		document.filepath = strings.clone(path, storage.allocator)
+		document.filepath = strings.clone(filepath, storage.allocator)
 		document.text = transmute([]u8)strings.clone(text, storage.allocator)
 		return document, .None
 	}
 
+	key := strings.clone(filepath, storage.allocator)
+
 	// New document - clone data to persistent storage
 	document := DocumentData {
-		filepath = strings.clone(path, storage.allocator),
-		text = transmute([]u8)strings.clone(text, storage.allocator),
+		filepath = key,
+		text     = transmute([]u8)strings.clone(text, storage.allocator),
 	}
 
-	key := strings.clone(path, storage.allocator)
 	storage.documents[key] = document
 
 	return &storage.documents[key], .None
 }
 
 // Apply incremental changes to a document.
-apply_changes :: proc(
-	path: string,
-	changes: []ContentChangeEvent,
-	version: Maybe(int) = nil,
-) -> common.Error {
-	document := &storage.documents[path]
+apply_changes :: proc(filepath: string, changes: []ContentChangeEvent, version: Maybe(int) = nil) -> common.Error {
+	assert(filepath != "", "Document filepath cannot be empty")
+
+	document := &storage.documents[filepath]
 
 	if document == nil {
-		log.errorf("Client called change on an document not opened: %v ", path)
+		log.errorf("Client called change on an document not opened: %v ", filepath)
 		return .InvalidRequest
 	}
 

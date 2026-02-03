@@ -601,8 +601,8 @@ get_odin_directory :: proc() -> string {
 	return ""
 }
 
-initialize_default_collections :: proc(config: ^common.Config, forward_path: string) {
-	forward_path := forward_path
+initialize_default_collections :: proc(config: ^common.Config, collections_dir: string = "") {
+	forward_path := collections_dir
 	forward_path = forward_path if forward_path != "" else get_odin_directory()
 
 	// base

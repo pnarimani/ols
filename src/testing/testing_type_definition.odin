@@ -5,9 +5,19 @@ import "core:testing"
 import "src:common"
 import "src:server"
 
-expect_type_definition_locations :: proc(t: ^testing.T, src: ^Source, expect_locations: []common.Location) {
+expect_type_definition_locations :: proc(t: ^testing.T, src: ^Source) {
 	setup(src)
 	defer teardown(src)
+
+	expect_locations := make([dynamic]common.Location, 0, context.temp_allocator)
+	for loc in src.main.encoded_locations {
+		append(&expect_locations, loc)
+	}
+	for file in src.extra_files {
+		for loc in file.encoded_locations {
+			append(&expect_locations, loc)
+		}
+	}
 
 	req_ctx := make_test_request_context(src)
 	locations, ok := server.get_type_definition_locations(&req_ctx)
@@ -36,11 +46,7 @@ expect_type_definition_locations :: proc(t: ^testing.T, src: ^Source, expect_loc
 
 	for flag, i in flags {
 		if flag != 1 {
-			if expect_locations[i].uri == "" {
-				log.errorf("Expected location %v, but received %v", expect_locations[i].range, locations)
-			} else {
-				log.errorf("Expected location %v, but received %v", expect_locations[i], locations)
-			}
+			log.errorf("\nExpected location \n%v\n but received \n%v\n", expect_locations[i], locations)
 		}
 	}
 }

@@ -47,9 +47,20 @@ get_files :: proc(allocator := context.allocator) -> []FileInfo {
 
 read_file_content :: proc(fullpath: string, allocator := context.allocator) -> (string, bool) {
 	when ODIN_TEST {
+
+
 		for mock_file in mock_files {
 			if mock_file.fullpath == fullpath {
 				return strings.clone(mock_file.text, allocator), true
+			}
+		}
+
+		if strings.contains(fullpath, "builtin") ||
+		   strings.contains(fullpath, "base/runtime") ||
+		   strings.contains(fullpath, "core") {
+			data, ok := os.read_entire_file(fullpath, allocator)
+			if ok {
+				return string(data), true
 			}
 		}
 

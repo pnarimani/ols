@@ -1,6 +1,8 @@
 #+feature dynamic-literals
 package analysis
 
+import "core:os"
+import "src:workspace"
 import "base:runtime"
 
 import "core:fmt"
@@ -9,7 +11,6 @@ import "core:mem"
 import "core:odin/ast"
 import "core:odin/parser"
 import "core:odin/tokenizer"
-import "core:os"
 import "core:path/filepath"
 import path "core:path/slashpath"
 import "core:strings"
@@ -234,7 +235,7 @@ load_package :: proc(pkg_name: string) {
 			continue
 		}
 
-		data, ok := os.read_entire_file(fullpath, context.temp_allocator)
+		data, ok := workspace.read_file_content(fullpath, context.temp_allocator)
 
 		if !ok {
 			log.errorf("failed to read entire file for indexing %v", fullpath)
