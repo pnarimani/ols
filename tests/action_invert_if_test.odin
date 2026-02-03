@@ -10,6 +10,7 @@ INVERT_IF_ACTION :: "Invert if"
 action_invert_if_simple :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -23,7 +24,6 @@ main :: proc() {
 +	foo()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -31,6 +31,7 @@ main :: proc() {
 action_invert_if_with_else :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -47,7 +48,6 @@ main :: proc() {
 +	}
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -55,6 +55,7 @@ main :: proc() {
 action_invert_if_with_init :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -67,7 +68,6 @@ main :: proc() {
 +	bar()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -109,6 +109,7 @@ main :: proc() {
 action_invert_if_not_eq :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -121,7 +122,6 @@ main :: proc() {
 +	foo()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -129,6 +129,7 @@ main :: proc() {
 action_invert_if_lt :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -141,7 +142,6 @@ main :: proc() {
 +	foo()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -149,6 +149,7 @@ main :: proc() {
 action_invert_if_gt :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -161,7 +162,6 @@ main :: proc() {
 +	foo()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -169,6 +169,7 @@ main :: proc() {
 action_invert_if_le :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -181,7 +182,6 @@ main :: proc() {
 +	foo()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -189,6 +189,7 @@ main :: proc() {
 action_invert_if_negated :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -201,7 +202,6 @@ main :: proc() {
 +	foo()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -209,6 +209,7 @@ main :: proc() {
 action_invert_if_boolean :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -221,7 +222,6 @@ main :: proc() {
 +	foo()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -229,6 +229,7 @@ main :: proc() {
 action_invert_if_else_if_chain :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -251,7 +252,6 @@ main :: proc() {
 +	}
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -302,6 +302,7 @@ main :: proc() {
 action_invert_if_nested_in_else_if_body :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -321,7 +322,6 @@ main :: proc() {
 	}
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -329,6 +329,7 @@ main :: proc() {
 action_invert_if_nested_in_else_if_body_with_trailing_stmt :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -347,7 +348,6 @@ main :: proc() {
 	statement3()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -355,6 +355,7 @@ main :: proc() {
 action_invert_if_with_else_and_return_in_body :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -370,7 +371,6 @@ main :: proc() {
 +	foo()
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -378,6 +378,7 @@ main :: proc() {
 action_invert_if_in_loop_with_continue :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -392,13 +393,13 @@ main :: proc() {
 	}
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 @(test)
 action_invert_if_with_ok_pattern_to_or_continue :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -411,7 +412,6 @@ main :: proc() {
 	}
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -419,6 +419,7 @@ main :: proc() {
 action_invert_if_with_ok_pattern_multiple_statements :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -435,7 +436,6 @@ main :: proc() {
 	}
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -443,6 +443,7 @@ main :: proc() {
 action_invert_if_with_ok_pattern_to_or_return :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -453,7 +454,6 @@ main :: proc() {
 +	process(value)
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -461,6 +461,7 @@ main :: proc() {
 action_invert_if_with_ok_pattern_to_or_return_multiple_statements :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 main :: proc() {
@@ -475,7 +476,6 @@ main :: proc() {
 +	save(data)
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -483,6 +483,7 @@ main :: proc() {
 action_invert_if_real_code_1 :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 get_hover_information :: proc(document: ^Document, position: common.Position) -> (Hover, bool, bool) {
@@ -529,7 +530,6 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 	return hover, false, true
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -537,6 +537,7 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 action_invert_if_real_code_2 :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 get_hover_information :: proc(document: ^Document, position: common.Position) -> (Hover, bool, bool) {
@@ -585,7 +586,6 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 	return hover, false, true
 }
 `,
-		INVERT_IF_ACTION,
 	)
 }
 
@@ -593,6 +593,7 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 action_invert_if_real_code_3 :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INVERT_IF_ACTION,
 		`package test
 
 search_block_stmts :: proc(
@@ -624,6 +625,5 @@ search_block_stmts :: proc(
 }
 
 `,
-		INVERT_IF_ACTION,
 	)
 }

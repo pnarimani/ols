@@ -258,7 +258,7 @@ resolve_references :: proc(
 
 	for k, v in symbols_and_nodes {
 		if strings.equal_fold(v.symbol.filepath, symbol.filepath) && v.symbol.range == symbol.range {
-			node_encoded_path := common.make_encoded_path(v.node.pos.file, context.temp_allocator)
+			node_encoded_path := common.path_to_uri(v.node.pos.file, context.temp_allocator)
 
 			range := common.get_token_range(v.node^, ast_context.file.src)
 
@@ -288,7 +288,7 @@ resolve_references :: proc(
 			fullpaths = &fullpaths,
 		}
 		for workspace in common.config.workspace_folders {
-			path, _ := common.make_path(workspace.uri, context.temp_allocator)
+			path, _ := common.uri_to_path(workspace.uri, context.temp_allocator)
 			filepath.walk(path, walk_directories, &walk_data)
 		}
 	}
@@ -298,7 +298,7 @@ resolve_references :: proc(
 	unique_fullpaths := slice.unique(fullpaths[:])
 
 	for fullpath in unique_fullpaths {
-		encoded_path := common.make_encoded_path(fullpath, context.temp_allocator)
+		encoded_path := common.path_to_uri(fullpath, context.temp_allocator)
 		inner_doc_ctx := documents.get_context(fullpath)
 
 		in_pkg := false
@@ -314,7 +314,7 @@ resolve_references :: proc(
 			symbols_and_nodes := resolve_entire_file(inner_doc_ctx, resolve_flag)
 			for k, v in symbols_and_nodes {
 				if strings.equal_fold(v.symbol.filepath, symbol.filepath) && v.symbol.range == symbol.range {
-					node_encoded_path := common.make_encoded_path(v.node.pos.file, context.temp_allocator)
+					node_encoded_path := common.path_to_uri(v.node.pos.file, context.temp_allocator)
 					range := common.get_token_range(v.node^, string(inner_doc_ctx.text))
 					//We don't have to have the `.` with, otherwise it renames the dot.
 					if _, ok := v.node.derived.(^ast.Implicit_Selector_Expr); ok {

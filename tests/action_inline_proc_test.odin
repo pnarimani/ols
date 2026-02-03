@@ -14,7 +14,7 @@ INLINE_PROC_ACTION :: "Inline Proc"
 action_inline_proc_simple_call :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 add :: proc(a, b: int) -> int {
 	return a + b
@@ -25,7 +25,7 @@ main :: proc() {
 +	x := 1 + 2
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 
@@ -33,7 +33,7 @@ main :: proc() {
 action_inline_proc_call_with_complex_args :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 compute :: proc(n: int) -> int {
 	return n * 2
@@ -45,7 +45,7 @@ main :: proc() {
 +	y := (x + 5) * 2
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 
@@ -53,7 +53,7 @@ main :: proc() {
 action_inline_proc_void_call :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 do_nothing :: proc() {
 }
@@ -63,7 +63,7 @@ main :: proc() {
 +
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 
@@ -71,7 +71,7 @@ main :: proc() {
 action_inline_proc_call_as_argument :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 square :: proc(n: int) -> int {
 	return n * n
@@ -85,7 +85,7 @@ main :: proc() {
 +	print_int(4 * 4)
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 
@@ -97,7 +97,7 @@ main :: proc() {
 action_inline_proc_multi_statement_body :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 compute_sum :: proc(a, b: int) -> int {
 	sum := a + b
@@ -110,7 +110,7 @@ main :: proc() {
 +	x := sum
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 
@@ -118,7 +118,7 @@ main :: proc() {
 action_inline_proc_multi_statement_body_void :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 log_message :: proc(msg: string) {
 	prefix := "[LOG]: "
@@ -133,7 +133,7 @@ main :: proc() {
 +	println(full_msg)
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 
@@ -141,7 +141,7 @@ main :: proc() {
 action_inline_proc_multi_statement_body_call_as_argument :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 compute :: proc(n: int) -> int {
 	calc := n * 2
@@ -157,7 +157,7 @@ main :: proc() {
 +	print_int(calc + 3)
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 
@@ -165,7 +165,7 @@ main :: proc() {
 action_inline_proc_multi_statement_body_name_conflict :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 something :: proc(n: int) -> int {
 	temp := n * 2
@@ -179,7 +179,7 @@ main :: proc() {
 +	x := _something_temp + 1
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 
@@ -187,7 +187,7 @@ main :: proc() {
 action_inline_proc_multi_statement_body_with_defer :: proc(t: ^testing.T) {
     test.expect_code_action_diff(
         t,
-        `package test
+        INLINE_PROC_ACTION, `package test
 cleanup :: proc() {
     println("Cleaning up")
 }
@@ -213,7 +213,7 @@ main :: proc() {
     after()
 }
 `,
-        INLINE_PROC_ACTION,
+        
     )
 }
 
@@ -221,7 +221,7 @@ main :: proc() {
 action_inline_proc_multi_statement_body_with_double_nested_defer :: proc(t: ^testing.T) {
     test.expect_code_action_diff(
         t,
-        `package test
+        INLINE_PROC_ACTION, `package test
 cleanup :: proc() {
     println("Cleaning up")
 }
@@ -255,7 +255,7 @@ main :: proc() {
     after()
 }
 `,
-        INLINE_PROC_ACTION,
+        
     )
 }
 
@@ -264,7 +264,7 @@ main :: proc() {
 action_inline_proc_multi_statement_body_with_nested_defer :: proc(t: ^testing.T) {
     test.expect_code_action_diff(
         t,
-        `package test
+        INLINE_PROC_ACTION, `package test
 cleanup :: proc() {
     println("Cleaning up")
 }
@@ -294,7 +294,7 @@ main :: proc() {
     after()
 }
 `,
-        INLINE_PROC_ACTION,
+        
     )
 }
 
@@ -306,7 +306,7 @@ main :: proc() {
 action_inline_proc_from_definition_single_call :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 -{*}helper :: proc(n: int) -> int {
 -	return n + 1
@@ -317,7 +317,7 @@ main :: proc() {
 +	x := 10 + 1
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 
@@ -325,7 +325,7 @@ main :: proc() {
 action_inline_proc_from_definition_multiple_calls :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_PROC_ACTION, `package test
 
 -{*}double :: proc(n: int) -> int {
 -	return n * 2
@@ -340,7 +340,7 @@ main :: proc() {
 +	c := a * 2
 }
 `,
-		INLINE_PROC_ACTION,
+		
 	)
 }
 

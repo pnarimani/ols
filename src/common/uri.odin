@@ -9,8 +9,8 @@ import "core:unicode/utf8"
 
 // Decode an encoded path string (e.g., "file:///C%3A/path/to/file.odin") to a filesystem path
 // Returns the decoded path using forward slashes as separator
-make_path :: proc(encoded_value: string, allocator: mem.Allocator) -> (string, bool) {
-	decoded, ok := decode_percent(encoded_value, allocator)
+uri_to_path :: proc(uri: string, allocator: mem.Allocator) -> (string, bool) {
+	decoded, ok := decode_percent(uri, allocator)
 	if !ok {
 		return "", false
 	}
@@ -36,7 +36,7 @@ make_path :: proc(encoded_value: string, allocator: mem.Allocator) -> (string, b
 // Encode a filesystem path for LSP protocol responses
 // Input: filesystem path (e.g., "C:/path/to/file.odin" or "C:\path\to\file.odin")
 // Output: encoded path string (e.g., "file:///C%3A/path/to/file.odin")
-make_encoded_path :: proc(path: string, allocator := context.allocator) -> string {
+path_to_uri :: proc(path: string, allocator := context.allocator) -> string {
 	path_forward, _ := filepath.to_slash(path, context.temp_allocator)
 
 	builder := strings.builder_make(allocator)

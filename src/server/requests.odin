@@ -719,7 +719,7 @@ request_initialize :: proc(
 		encoded_project_path = initialize_params.rootUri
 	}
 
-	if project_path, ok := common.make_path(encoded_project_path, context.temp_allocator); ok {
+	if project_path, ok := common.uri_to_path(encoded_project_path, context.temp_allocator); ok {
 		// Apply the global ols config.
 		global_ols_config_path := path.join(
 			elems = {filepath.dir(os.args[0], context.temp_allocator), "ols.json"},
@@ -1212,7 +1212,7 @@ notification_did_save :: proc(
 
 	path: string
 
-	if path, ok = common.make_path(save_params.textDocument.uri, context.temp_allocator); !ok {
+	if path, ok = common.uri_to_path(save_params.textDocument.uri, context.temp_allocator); !ok {
 		return .ParseError
 	}
 
@@ -1223,7 +1223,7 @@ notification_did_save :: proc(
 		fullpath, _ = filepath.to_slash(correct, context.temp_allocator)
 	}
 
-	corrected_encoded_path := common.make_encoded_path(fullpath, context.temp_allocator)
+	corrected_encoded_path := common.path_to_uri(fullpath, context.temp_allocator)
 
 	// Run odin check - this clears old .Check diagnostics and adds new ones
 	check(config.profile.checker_path[:], corrected_encoded_path, config)
@@ -1755,7 +1755,7 @@ notification_workspace_did_change_configuration :: proc(
 
 	ols_config := workspace_config_params.settings
 
-	if project_path, ok := common.make_path(config.workspace_folders[0].uri, context.temp_allocator); ok {
+	if project_path, ok := common.uri_to_path(config.workspace_folders[0].uri, context.temp_allocator); ok {
 		read_ols_initialize_options(config, ols_config, project_path)
 	}
 

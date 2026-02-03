@@ -1699,7 +1699,7 @@ get_identifier_completion :: proc(
 		for r in fuzzy_results {
 			r := r
 			resolve_unresolved_symbol(ast_context, &r.symbol)
-			path, _ := common.make_path(r.symbol.filepath, context.temp_allocator)
+			path, _ := common.uri_to_path(r.symbol.filepath, context.temp_allocator)
 			if path != ast_context.fullpath {
 				append(results, CompletionResult{score = r.score, symbol = r.symbol})
 			}

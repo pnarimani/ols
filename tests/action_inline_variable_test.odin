@@ -14,7 +14,7 @@ INLINE_VARIABLE_ACTION :: "Inline Variable"
 action_inline_variable_simple :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 -	{*}x := 10
@@ -22,7 +22,7 @@ main :: proc() {
 +	y := 10 + 5
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -30,7 +30,7 @@ main :: proc() {
 action_inline_variable_expression :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 	a := 1
@@ -40,7 +40,7 @@ main :: proc() {
 +	result := (a + b) * 2
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -48,7 +48,7 @@ main :: proc() {
 action_inline_variable_multiple_usages :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 -	{*}x := 5
@@ -60,7 +60,7 @@ main :: proc() {
 +	c := 5 * 2
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -68,7 +68,7 @@ main :: proc() {
 action_inline_variable_call_expr :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 get_value :: proc() -> int { return 42 }
 
@@ -80,7 +80,7 @@ main :: proc() {
 +	result2 := get_value() + 2
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -88,7 +88,7 @@ main :: proc() {
 action_inline_variable_in_function_call :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 print :: proc(n: int) {}
 
@@ -98,7 +98,7 @@ main :: proc() {
 +	print(10)
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -106,7 +106,7 @@ main :: proc() {
 action_inline_variable_binary_expr_no_parens_needed :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 	a := 1
@@ -115,7 +115,7 @@ main :: proc() {
 +	y := a + 2
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -123,7 +123,7 @@ main :: proc() {
 action_inline_variable_in_return :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 compute :: proc() -> int {
 -	{*}result := 42
@@ -131,7 +131,7 @@ compute :: proc() -> int {
 +	return 42
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -139,7 +139,7 @@ compute :: proc() -> int {
 action_inline_variable_in_condition :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 -	{*}flag := true
@@ -149,7 +149,7 @@ main :: proc() {
 	}
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -157,7 +157,7 @@ main :: proc() {
 action_inline_variable_in_loop :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 -	{*}limit := 10
@@ -167,7 +167,7 @@ main :: proc() {
 	}
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -180,7 +180,7 @@ action_inline_variable_from_usage_single :: proc(t: ^testing.T) {
 	// When cursor is on the only usage, inline it and delete the declaration
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 -	x := 10
@@ -188,7 +188,7 @@ main :: proc() {
 +	y := 10 + 5
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -197,7 +197,7 @@ action_inline_variable_from_usage_multiple_first :: proc(t: ^testing.T) {
 	// When cursor is on one of multiple usages, only inline that usage
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 	x := 5
@@ -207,7 +207,7 @@ main :: proc() {
 	c := x * 2
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -216,7 +216,7 @@ action_inline_variable_from_usage_multiple_last :: proc(t: ^testing.T) {
 	// Inline only the last usage
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 	x := 5
@@ -226,7 +226,7 @@ main :: proc() {
 +	c := 5 * 2
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -235,7 +235,7 @@ action_inline_variable_from_usage_with_parens :: proc(t: ^testing.T) {
 	// Inline from usage site with parentheses needed
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 	a := 1
@@ -246,7 +246,7 @@ main :: proc() {
 +	other := (a + b) / 3
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -255,7 +255,7 @@ action_inline_variable_from_usage_in_condition :: proc(t: ^testing.T) {
 	// Inline from usage in a condition
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 main :: proc() {
 	flag := true
@@ -266,7 +266,7 @@ main :: proc() {
 	other := flag
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 
@@ -275,7 +275,7 @@ action_inline_variable_from_usage_in_call :: proc(t: ^testing.T) {
 	// Inline from usage in a function call
 	test.expect_code_action_diff(
 		t,
-		`package test
+		INLINE_VARIABLE_ACTION, `package test
 
 print :: proc(n: int) {}
 
@@ -286,7 +286,7 @@ main :: proc() {
 	y := x + 1
 }
 `,
-		INLINE_VARIABLE_ACTION,
+		
 	)
 }
 

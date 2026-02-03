@@ -1029,7 +1029,7 @@ generate_inline_alias_edit :: proc(ctx: ^InlineAliasContext, uri: string) -> (Wo
 		}
 
 		if len(cross_edits) > 0 {
-			uri := common.make_encoded_path(cross_usage.fullpath)
+			uri := common.path_to_uri(cross_usage.fullpath)
 			edit.changes[uri] = cross_edits[:]
 		}
 	}

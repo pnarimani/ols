@@ -50,7 +50,7 @@ get_code_actions :: proc(
 	// Build symbol cache for this request's packages
 	load_document_packages(doc_ctx)
 
-	encoded_path := common.make_encoded_path(doc_ctx.filepath, context.temp_allocator)
+	encoded_path := common.path_to_uri(doc_ctx.filepath, context.temp_allocator)
 
 	ast_context := make_ast_context(
 		doc_ctx.ast,

@@ -17,7 +17,7 @@ check_unused_imports :: proc(doc_ctx: documents.Document, config: ^common.Config
 		path = common.get_case_sensitive_path(path, context.temp_allocator)
 	}
 
-	encoded_path := common.make_encoded_path(path, context.temp_allocator)
+	encoded_path := common.path_to_uri(path, context.temp_allocator)
 
 	// Clear existing .Unused diagnostics for this path before adding new ones
 	diagnostics.begin_diagnostic_update(encoded_path, .Unused)

@@ -49,7 +49,7 @@ fallback_find_odin_directories :: proc(config: ^common.Config) -> []string {
 	data := make([dynamic]string, context.temp_allocator)
 
 	if len(config.workspace_folders) > 0 {
-		if path, ok := common.make_path(config.workspace_folders[0].uri, context.temp_allocator); ok {
+		if path, ok := common.uri_to_path(config.workspace_folders[0].uri, context.temp_allocator); ok {
 			filepath.walk(path, walk_proc, &data)
 		}
 	}
@@ -62,7 +62,7 @@ check :: proc(paths: []string, encoded_path: string, config: ^common.Config) {
 
 	if len(paths) == 0 {
 		if config.enable_checker_only_saved {
-			file_path, _ := common.make_path(encoded_path, context.temp_allocator)
+			file_path, _ := common.uri_to_path(encoded_path, context.temp_allocator)
 			paths = {path.dir(file_path, context.temp_allocator)}
 		} else {
 			paths = fallback_find_odin_directories(config)
@@ -152,7 +152,7 @@ check :: proc(paths: []string, encoded_path: string, config: ^common.Config) {
 				error_path = common.get_case_sensitive_path(error_path, context.temp_allocator)
 			}
 
-			error_encoded_path := common.make_encoded_path(error_path, context.temp_allocator)
+			error_encoded_path := common.path_to_uri(error_path, context.temp_allocator)
 
 			// If this path wasn't in the previous list and we haven't seen it yet,
 			// begin an update for it (to ensure clean slate)

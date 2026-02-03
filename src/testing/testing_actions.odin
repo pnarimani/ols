@@ -105,7 +105,7 @@ expect_action_with_edit :: proc(t: ^testing.T, src: ^Source, action_name: string
 	for action in actions {
 		if action.title == action_name {
 			// Get the text edits for the document
-			encoded_path := common.make_encoded_path(src.main.doc_ctx.filepath, context.temp_allocator)
+			encoded_path := common.path_to_uri(src.main.doc_ctx.filepath, context.temp_allocator)
 			if edits, found := action.edit.changes[encoded_path]; found {
 				if len(edits) != len(expected_texts) {
 					log.errorf("Expected %d edits but got %d", len(expected_texts), len(edits))
@@ -156,7 +156,7 @@ expect_action_with_edit_at_line :: proc(
 	for action in actions {
 		if action.title == action_name {
 			// Get the text edits for the document
-			encoded_path := common.make_encoded_path(src.main.doc_ctx.filepath, context.temp_allocator)
+			encoded_path := common.path_to_uri(src.main.doc_ctx.filepath, context.temp_allocator)
 			if edits, found := action.edit.changes[encoded_path]; found {
 				if len(edits) != len(expected_texts) {
 					testing.expectf(t, false, "Expected %d edits but got %d", len(expected_texts), len(edits))

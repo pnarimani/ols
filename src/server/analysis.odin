@@ -3909,7 +3909,7 @@ make_symbol_bit_field_from_ast :: proc(
 		type  = .Struct,
 		pkg   = get_package_from_node(v.node),
 		name  = name,
-		filepath   = common.make_encoded_path(v.pos.file),
+		filepath   = common.path_to_uri(v.pos.file),
 	}
 
 	if inlined {

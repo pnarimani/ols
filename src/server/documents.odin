@@ -70,7 +70,7 @@ document_apply_changes :: proc(
 		}
 	}
 
-	path, parsed_ok := common.make_path(uri_string, context.temp_allocator)
+	path, parsed_ok := common.uri_to_path(uri_string, context.temp_allocator)
 	if !parsed_ok {
 		log.errorf("document_apply_changes: failed to parse URI string: %v", uri_string)
 		return .ParseError

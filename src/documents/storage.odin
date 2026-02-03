@@ -152,7 +152,7 @@ apply_changes :: proc(filepath: string, changes: []ContentChangeEvent, version: 
 close :: proc(encoded_path: string) -> common.Error {
 	log.infof("document close: %v", encoded_path)
 
-	path, parsed_ok := common.make_path(encoded_path, context.temp_allocator)
+	path, parsed_ok := common.uri_to_path(encoded_path, context.temp_allocator)
 
 	if !parsed_ok {
 		return .ParseError

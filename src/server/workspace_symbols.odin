@@ -36,7 +36,7 @@ find_workspace_packages :: proc(allocator := context.temp_allocator) -> []string
 	workspace_pkgs := make([dynamic]string, 0, allocator)
 
 	for workspace in common.config.workspace_folders {
-		path := common.make_path(workspace.uri, context.temp_allocator) or_continue
+		path := common.uri_to_path(workspace.uri, context.temp_allocator) or_continue
 		pkgs := make([dynamic]string, 0, context.temp_allocator)
 
 		filepath.walk(path, walk_dir, &pkgs)

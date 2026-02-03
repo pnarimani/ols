@@ -14,6 +14,7 @@ INLINE_ALIAS_ACTION :: "Inline Alias"
 action_inline_alias_simple_on_usage :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 MyAlias :: int
@@ -23,7 +24,6 @@ main :: proc() {
 +	x: int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -31,6 +31,7 @@ main :: proc() {
 action_inline_alias_on_definition_removes_declaration :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -MyAlias {*}:: int
@@ -40,7 +41,6 @@ main :: proc() {
 +	x: int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -48,6 +48,7 @@ main :: proc() {
 action_inline_alias_multiple_usages :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -MyAlias {*}:: int
@@ -61,7 +62,6 @@ main :: proc() {
 +	z: int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -69,6 +69,7 @@ main :: proc() {
 action_inline_alias_pointer_type :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -PtrAlias {*}:: ^int
@@ -78,7 +79,6 @@ main :: proc() {
 +	x: ^int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -86,6 +86,7 @@ main :: proc() {
 action_inline_alias_array_type :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -ArrAlias {*}:: [10]int
@@ -95,7 +96,6 @@ main :: proc() {
 +	x: [10]int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -103,6 +103,7 @@ main :: proc() {
 action_inline_alias_dynamic_array :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -DynAlias {*}:: [dynamic]int
@@ -112,7 +113,6 @@ main :: proc() {
 +	x: [dynamic]int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -120,6 +120,7 @@ main :: proc() {
 action_inline_alias_slice :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -SliceAlias {*}:: []int
@@ -129,7 +130,6 @@ main :: proc() {
 +	x: []int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -137,6 +137,7 @@ main :: proc() {
 action_inline_alias_map_type :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -MapAlias {*}:: map[string]int
@@ -146,7 +147,6 @@ main :: proc() {
 +	x: map[string]int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -158,13 +158,13 @@ main :: proc() {
 action_inline_alias_cross_package_simple :: proc(t: ^testing.T) {
 	test.expect_code_action_diff_multi_file(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 import "core:mem"
 
 -MyAre{*}na :: mem.Arena
 `,
-		INLINE_ALIAS_ACTION,
 		{
 			{
 				pkg = "another",
@@ -185,6 +185,7 @@ import "core:mem"
 action_inline_alias_cross_package_multiple_usages :: proc(t: ^testing.T) {
 	test.expect_code_action_diff_multi_file(
 		t,
+		INLINE_ALIAS_ACTION,
 		// Main file (where action is triggered)
 		`package test
 
@@ -192,7 +193,6 @@ import "core:mem"
 
 -MyArena {*}:: mem.Arena
 `,
-		INLINE_ALIAS_ACTION,
 		// Additional files (same package, different file)
 		{
 			{
@@ -216,6 +216,7 @@ import "core:mem"
 action_inline_alias_existing_import_same_alias :: proc(t: ^testing.T) {
 	test.expect_code_action_diff_multi_file(
 		t,
+		INLINE_ALIAS_ACTION,
 		// Main file (where action is triggered)
 		`package test
 
@@ -223,7 +224,6 @@ import "core:mem"
 
 -MyArena {*}:: mem.Arena
 `,
-		INLINE_ALIAS_ACTION,
 		// Additional files (same package, different file)
 		{
 			{
@@ -245,6 +245,7 @@ import "core:mem"
 action_inline_alias_existing_import_different_alias :: proc(t: ^testing.T) {
 	test.expect_code_action_diff_multi_file(
 		t,
+		INLINE_ALIAS_ACTION,
 		// Main file (where action is triggered)
 		`package test
 
@@ -252,7 +253,6 @@ import "core:mem"
 
 -MyArena {*}:: mem.Arena
 `,
-		INLINE_ALIAS_ACTION,
 		// Additional files (same package, different file)
 		{
 			{
@@ -274,6 +274,7 @@ import something "core:mem"
 action_inline_alias_builtin_type :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -Number {*}:: int
@@ -283,7 +284,6 @@ main :: proc() {
 +	x: int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -295,6 +295,7 @@ main :: proc() {
 action_inline_alias_nested_one_layer :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 B :: int
@@ -305,7 +306,6 @@ main :: proc() {
 +	x: B
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -313,6 +313,7 @@ main :: proc() {
 action_inline_alias_nested_two_layers :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 C :: int
@@ -324,7 +325,6 @@ main :: proc() {
 +	x: B
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -332,6 +332,7 @@ main :: proc() {
 action_inline_alias_nested_cross_package :: proc(t: ^testing.T) {
 	test.expect_code_action_diff_multi_file(
 		t,
+		INLINE_ALIAS_ACTION,
 		// Main file (where action is triggered)
 		`package test
 
@@ -340,7 +341,6 @@ import "core:mem"
 B :: mem.Arena
 -A {*}:: B
 `,
-		INLINE_ALIAS_ACTION,
 		// Additional files (same package, different file)
 		{
 			{
@@ -381,6 +381,7 @@ main :: proc() {
 action_inline_alias_proc_alias :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -MyProc {*}:: proc(int) -> int
@@ -390,7 +391,6 @@ main :: proc() {
 +	f: proc(int) -> int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -398,6 +398,7 @@ main :: proc() {
 action_inline_alias_struct_field :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -MyInt {*}:: int
@@ -407,7 +408,6 @@ MyStruct :: struct {
 +	field: int,
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -415,6 +415,7 @@ MyStruct :: struct {
 action_inline_alias_in_proc_signature :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -MyInt {*}:: int
@@ -424,7 +425,6 @@ action_inline_alias_in_proc_signature :: proc(t: ^testing.T) {
 	return x
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -432,6 +432,7 @@ action_inline_alias_in_proc_signature :: proc(t: ^testing.T) {
 action_inline_alias_single_usage_only :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 MyAlias :: int
@@ -442,7 +443,6 @@ main :: proc() {
 	y: MyAlias
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -450,6 +450,7 @@ main :: proc() {
 action_inline_alias_preserves_comments :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -MyAlias {*}:: int
@@ -460,7 +461,6 @@ main :: proc() {
 +	x: int
 }
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }
 
@@ -468,6 +468,7 @@ main :: proc() {
 action_inline_alias_multiline_type :: proc(t: ^testing.T) {
 	test.expect_code_action_diff(
 		t,
+		INLINE_ALIAS_ACTION,
 		`package test
 
 -MyProc {*}:: proc(
@@ -481,6 +482,5 @@ action_inline_alias_multiline_type :: proc(t: ^testing.T) {
 +	y: int,
 +) -> int
 `,
-		INLINE_ALIAS_ACTION,
 	)
 }

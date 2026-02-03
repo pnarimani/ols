@@ -57,12 +57,16 @@ os_write :: proc(handle: rawptr, data: []byte) -> (int, int) {
 request_thread: ^thread.Thread
 
 run :: proc(reader: ^server.Reader, writer: ^server.Writer) {
+	log.info("Initializing Configs")
 	common.config_storage_init()
 	defer common.config_storage_shutdown()
+	log.info("Initializing Document Storage")
 	server.document_storage_init()
 	defer server.document_storage_shutdown()
+	log.info("Initializing Analysis")
 	analysis.init_symbol_cache(&common.config)
 	defer analysis.shutdown_symbol_cache()
+	log.info("Initializing Diagnostics")
 	diagnostics.init()
 	defer diagnostics.shutdown()
 

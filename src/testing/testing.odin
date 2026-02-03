@@ -206,7 +206,7 @@ parse_position_markers :: proc(file: ^FileInPackage, filepath: string) {
 		locations := make([dynamic]common.Location, context.temp_allocator)
 		for i := 0; i + 1 < len(location_positions); i += 2 {
 			loc := common.Location {
-				uri = common.make_encoded_path(filepath),
+				uri = common.path_to_uri(filepath),
 				range = {start = location_positions[i], end = location_positions[i + 1]},
 			}
 			append(&locations, loc)

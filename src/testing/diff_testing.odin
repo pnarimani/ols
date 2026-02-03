@@ -47,8 +47,8 @@ import "src:server"
 //   - Lines starting with " " or no prefix: common to both
 expect_code_action_diff :: proc(
 	t: ^testing.T,
-	diff_source: string,
 	action_name: string,
+	diff_source: string,
 	packages: []FileInPackage = {},
 ) {
 	before_code, expected_after, parse_ok := parse_diff_source(diff_source)
@@ -76,7 +76,7 @@ expect_code_action_diff :: proc(
 	// Find the requested action
 	for action in actions {
 		if action.title != action_name do continue
-		encoded_path := common.make_encoded_path(src.main.doc_ctx.filepath, context.temp_allocator)
+		encoded_path := common.path_to_uri(src.main.doc_ctx.filepath, context.temp_allocator)
 		edits, found := action.edit.changes[encoded_path]
 		if !found {
 			testing.expect(t, false, "Action found but has no edits")
@@ -292,8 +292,8 @@ normalize_source :: proc(source: string) -> string {
 // package_diffs contains additional files as Package_Diff structs
 expect_code_action_diff_multi_file :: proc(
 	t: ^testing.T,
-	main_diff: string,
 	action_name: string,
+	main_diff: string,
 	extra_files: []FileInPackage = {},
 ) {
 	// Parse main file diff
@@ -342,7 +342,7 @@ expect_code_action_diff_multi_file :: proc(
 
 		// Check main file edits
 		all_match := true
-		main_encoded_path := common.make_encoded_path(src.main.fullpath, context.temp_allocator)
+		main_encoded_path := common.path_to_uri(src.main.fullpath, context.temp_allocator)
 
 		edits, found := action.edit.changes[main_encoded_path]
 		if found {
@@ -390,7 +390,7 @@ expect_code_action_diff_multi_file :: proc(
 
 			// Build expected path for this file
 			filename := file_before.filename
-			encoded_path := common.make_encoded_path(file_before.fullpath, context.temp_allocator)
+			encoded_path := common.path_to_uri(file_before.fullpath, context.temp_allocator)
 
 			file_edits, file_found := action.edit.changes[encoded_path]
 			if file_found {

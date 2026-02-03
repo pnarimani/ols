@@ -131,7 +131,7 @@ iterate_real_files :: #force_inline proc(config: ^common.Config, allocator := co
 		fullpaths = &fullpaths,
 	}
 	for workspace in common.config.workspace_folders {
-		path, _ := common.make_path(workspace.uri, context.temp_allocator)
+		path, _ := common.uri_to_path(workspace.uri, context.temp_allocator)
 		filepath.walk(path, walk_directories, &walk_data)
 	}
 
