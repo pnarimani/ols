@@ -413,6 +413,11 @@ file_uri_to_path :: proc(uri: string, allocator := context.allocator) -> (string
 	return decoded, true
 }
 
+// is_file_uri checks if a string is a file:// URI.
+is_file_uri :: proc(uri: string) -> bool {
+	return strings.has_prefix(uri, "file://")
+}
+
 // to_upper_hex converts a hex digit to uppercase
 @(private)
 to_upper_hex :: proc(b: u8) -> u8 {
