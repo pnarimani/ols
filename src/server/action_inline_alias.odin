@@ -64,7 +64,7 @@ add_inline_alias_action :: proc(
 	ast_context: ^AstContext,
 	config: ^common.Config,
 	range: common.Range,
-	uri: string,
+	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,
 ) {
 	// Only available for point selections (cursor), not range selections
@@ -862,9 +862,9 @@ find_alias_decl_by_name :: proc(
 }
 
 // Generate the workspace edit for inlining the alias
-generate_inline_alias_edit :: proc(ctx: ^InlineAliasContext, uri: string) -> (WorkspaceEdit, bool) {
+generate_inline_alias_edit :: proc(ctx: ^InlineAliasContext, uri: common.FileUri) -> (WorkspaceEdit, bool) {
 	edit := WorkspaceEdit {
-		changes = make(map[string][]TextEdit, context.temp_allocator),
+		changes = make(map[common.FileUri][]TextEdit, context.temp_allocator),
 	}
 
 	source := string(ctx.doc.text)

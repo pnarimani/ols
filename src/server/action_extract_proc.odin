@@ -68,7 +68,7 @@ add_extract_proc_action :: proc(
 	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
-	uri: string,
+	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,
 ) {
 	if !is_valid_selection(range) {
@@ -1369,7 +1369,7 @@ is_builtin_identifier :: proc(name: string) -> bool {
 
 generate_extract_edit :: proc(
 	ctx: ^ExtractProcContext,
-	uri: string,
+	uri: common.FileUri,
 	selection_range: common.Range,
 ) -> (
 	WorkspaceEdit,

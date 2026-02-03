@@ -38,7 +38,7 @@ add_inline_variable_action :: proc(
 	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
-	uri: string,
+	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,
 ) {
 	// Only available for point selections (cursor), not range selections
@@ -772,7 +772,7 @@ check_reassignment_in_stmt :: proc(stmt: ^ast.Stmt, var_name: string, var_decl: 
 }
 
 // Generate the workspace edit for inlining the variable
-generate_inline_variable_edit :: proc(ctx: ^InlineVariableContext, uri: string) -> (WorkspaceEdit, bool) {
+generate_inline_variable_edit :: proc(ctx: ^InlineVariableContext, uri: FileUri) -> (WorkspaceEdit, bool) {
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 	src := ctx.doc_ctx.ast.src
 

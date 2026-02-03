@@ -20,7 +20,7 @@ Error :: enum {
 
 WorkspaceFolder :: struct {
 	name: string,
-	uri:  string,
+	uri:  FileUri,
 }
 
 parser_warning_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {

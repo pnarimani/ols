@@ -24,7 +24,7 @@ Range :: struct {
 }
 
 Location :: struct {
-	uri:   string,
+	uri:   FileUri,
 	range: Range,
 }
 

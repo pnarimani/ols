@@ -34,7 +34,7 @@ add_extract_variable_action :: proc(
 	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
-	uri: string,
+	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,
 ) {
 	if !has_valid_selection(range) {
@@ -553,7 +553,7 @@ find_matching_expression :: proc(expr: ^ast.Expr, ctx: ^ExtractVariableContext) 
 
 generate_extract_variable_edit :: proc(
 	ctx: ^ExtractVariableContext,
-	uri: string,
+	uri: FileUri,
 	selection_range: common.Range,
 ) -> (
 	WorkspaceEdit,

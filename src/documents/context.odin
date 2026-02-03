@@ -1,5 +1,6 @@
 package documents
 
+import "src:urilib"
 import "core:fmt"
 import "core:odin/ast"
 import "core:odin/parser"
@@ -14,6 +15,8 @@ import "src:common"
 // All allocations use the provided allocator (typically context.temp_allocator).
 // Returns nil if document not found or parsing fails.
 get_context :: proc(file_path: string, config: ^common.Config = nil, allocator := context.temp_allocator) -> (ctx: Document, ok: bool) #optional_ok {
+	assert(urilib.is_file_uri(file_path) == false, "Expected filesystem path, got URI")
+
 	config := config
 	if config == nil {
 		config = &common.config
@@ -44,6 +47,9 @@ create_context :: proc(document: ^DocumentData, config: ^common.Config, allocato
 	}
 	ctx.imports = parse_imports_from_ast(ctx.ast, ctx.package_name, document.text, config, allocator)
 
+	assert(ctx.filepath != "", "Document filepath should not be empty")
+	assert(urilib.is_file_uri(ctx.filepath) == false, "Expected filesystem path, got URI")
+
 	return ctx, true
 }
 
@@ -63,8 +69,6 @@ parser_error_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {
 	append(&current_errors, error)
 }
 
-// Parse document text into AST. Returns AST and errors. All allocations use provided allocator.
-// Caller is responsible for freeing allocator when done.
 parse_document_text :: proc(
 	path: string,
 	text: []u8,
@@ -85,6 +89,7 @@ parse_document_text :: proc(
 	current_errors = make([dynamic]ParserError, allocator)
 
 	fullpath := get_fullpath_from_path(path, allocator)
+	assert(urilib.is_file_uri(fullpath) == false, "Expected filesystem path, got URI")
 
 	pkg := new(ast.Package, allocator)
 	pkg.kind = .Normal

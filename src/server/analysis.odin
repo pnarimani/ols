@@ -2,8 +2,6 @@
 #+feature using-stmt
 package server
 
-import "src:documents"
-import "src:codeprint"
 import "core:fmt"
 import "core:log"
 import "core:mem"
@@ -14,6 +12,8 @@ import path "core:path/slashpath"
 import "core:reflect"
 import "core:strconv"
 import "core:strings"
+import "src:codeprint"
+import "src:documents"
 
 import "src:analysis"
 import "src:common"
@@ -72,10 +72,7 @@ make_ast_context :: proc {
 }
 
 make_ast_context_from_request :: proc(req_ctx: ^RequestContext, allocator := context.temp_allocator) -> AstContext {
-	return make_ast_context_from_doc_ctx(
-		&req_ctx.doc_ctx,
-		allocator,
-	)
+	return make_ast_context_from_doc_ctx(&req_ctx.doc_ctx, allocator)
 }
 
 // Create AstContext from a documents.Document pointer. This is the preferred method.
@@ -414,7 +411,10 @@ is_valid_nil_symbol :: proc(symbol: analysis.Symbol) -> bool {
 	}
 
 	#partial switch v in symbol.value {
-	case analysis.SymbolMapValue, analysis.SymbolSliceValue, analysis.SymbolProcedureValue, analysis.SymbolDynamicArrayValue:
+	case analysis.SymbolMapValue,
+	     analysis.SymbolSliceValue,
+	     analysis.SymbolProcedureValue,
+	     analysis.SymbolDynamicArrayValue:
 		return true
 	case analysis.SymbolUnionValue:
 		return v.kind != .no_nil
@@ -965,7 +965,7 @@ resolve_function_overload :: proc(ast_context: ^AstContext, group: ^ast.Proc_Gro
 				for c in candidates {
 					append(&symbols, c.symbol)
 				}
-				return analysis.Symbol{
+				return analysis.Symbol {
 						type = candidate.symbol.type,
 						name = candidate.symbol.name,
 						pkg = candidate.symbol.pkg,
@@ -1423,7 +1423,7 @@ resolve_call_directive :: proc(ast_context: ^AstContext, call: ^ast.Call_Expr) -
 			value := analysis.SymbolSliceValue {
 				expr = ident,
 			}
-			symbol := analysis.Symbol{
+			symbol := analysis.Symbol {
 				name  = "#load",
 				pkg   = ast_context.current_package,
 				value = value,
@@ -1450,7 +1450,7 @@ resolve_call_directive :: proc(ast_context: ^AstContext, call: ^ast.Call_Expr) -
 		value := analysis.SymbolSliceValue {
 			expr = selector,
 		}
-		symbol := analysis.Symbol{
+		symbol := analysis.Symbol {
 			name  = "#load_directory",
 			pkg   = ast_context.current_package,
 			value = value,
@@ -1461,7 +1461,14 @@ resolve_call_directive :: proc(ast_context: ^AstContext, call: ^ast.Call_Expr) -
 	return {}, false
 }
 
-resolve_index_expr :: proc(ast_context: ^AstContext, index_expr: ^ast.Index_Expr, expr: ^ast.Expr) -> (analysis.Symbol, bool) {
+resolve_index_expr :: proc(
+	ast_context: ^AstContext,
+	index_expr: ^ast.Index_Expr,
+	expr: ^ast.Expr,
+) -> (
+	analysis.Symbol,
+	bool,
+) {
 	indexed := analysis.Symbol{}
 	ok := internal_resolve_type_expression(ast_context, expr, &indexed)
 
@@ -1685,7 +1692,11 @@ resolve_selector_expression :: proc(ast_context: ^AstContext, node: ^ast.Selecto
 			}
 		case analysis.SymbolProcedureValue:
 			if len(s.return_types) == 1 {
-				selector_expr := analysis.new_type(ast.Selector_Expr, s.return_types[0].node.pos, s.return_types[0].node.end)
+				selector_expr := analysis.new_type(
+					ast.Selector_Expr,
+					s.return_types[0].node.pos,
+					s.return_types[0].node.end,
+				)
 				selector_expr.expr = s.return_types[0].type
 				selector_expr.field = node.field
 				ok := internal_resolve_type_expression(ast_context, selector_expr, &symbol)
@@ -1714,10 +1725,7 @@ resolve_selector_expression :: proc(ast_context: ^AstContext, node: ^ast.Selecto
 			}
 		case analysis.SymbolPackageValue:
 			if node.field != nil {
-				return resolve_symbol_return(
-					ast_context,
-					lookup(node.field.name, selector.pkg, node.pos.file),
-				)
+				return resolve_symbol_return(ast_context, lookup(node.field.name, selector.pkg, node.pos.file))
 			} else {
 				return analysis.Symbol{}, false
 			}
@@ -1743,7 +1751,13 @@ resolve_selector_expression :: proc(ast_context: ^AstContext, node: ^ast.Selecto
 }
 
 // returns the symbol of the first return type of a proc
-resolve_symbol_proc_first_return_symbol :: proc(ast_context: ^AstContext, symbol: analysis.Symbol) -> (analysis.Symbol, bool) {
+resolve_symbol_proc_first_return_symbol :: proc(
+	ast_context: ^AstContext,
+	symbol: analysis.Symbol,
+) -> (
+	analysis.Symbol,
+	bool,
+) {
 	if v, ok := symbol.value.(analysis.SymbolProcedureValue); ok {
 		if len(v.return_types) > 0 {
 			if ast_context.current_package != symbol.pkg {
@@ -1835,7 +1849,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 		}
 
 		if strings.compare(imp.base, node.name) == 0 {
-			symbol := analysis.Symbol{
+			symbol := analysis.Symbol {
 				type  = .Package,
 				pkg   = imp.name,
 				value = analysis.SymbolPackageValue{},
@@ -1848,7 +1862,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 	//This could also be the runtime package, which is not required to be imported, but itself is used with selector expression in runtime functions: `my_runtime_proc :proc(a: runtime.*)`
 	if node.name == "runtime" {
 		runtime_path := analysis.get_runtime_path()
-		symbol := analysis.Symbol{
+		symbol := analysis.Symbol {
 			type  = .Package,
 			pkg   = runtime_path,
 			value = analysis.SymbolPackageValue{},
@@ -1882,7 +1896,7 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 
 	//right now we replace the package ident with the absolute directory name, so it should have '/' which is not a valid ident character
 	if strings.contains(node.name, "/") {
-		symbol := analysis.Symbol{
+		symbol := analysis.Symbol {
 			type  = .Package,
 			pkg   = node.name,
 			value = analysis.SymbolPackageValue{},
@@ -1921,13 +1935,20 @@ internal_resolve_type_identifier :: proc(ast_context: ^AstContext, node: ast.Ide
 	return analysis.Symbol{}, false
 }
 
-resolve_local_identifier :: proc(ast_context: ^AstContext, node: ast.Ident, local: ^DocumentLocal) -> (analysis.Symbol, bool) {
+resolve_local_identifier :: proc(
+	ast_context: ^AstContext,
+	node: ast.Ident,
+	local: ^DocumentLocal,
+) -> (
+	analysis.Symbol,
+	bool,
+) {
 	is_distinct := false
 
 	if local.parameter {
 		for imp in ast_context.imports {
 			if strings.compare(imp.base, node.name) == 0 {
-				symbol := analysis.Symbol{
+				symbol := analysis.Symbol {
 					type  = .Package,
 					pkg   = imp.name,
 					value = analysis.SymbolPackageValue{},
@@ -2028,7 +2049,14 @@ resolve_local_identifier :: proc(ast_context: ^AstContext, node: ast.Ident, loca
 	return return_symbol, ok
 }
 
-resolve_global_identifier :: proc(ast_context: ^AstContext, node: ast.Ident, global: ^analysis.GlobalExpr) -> (analysis.Symbol, bool) {
+resolve_global_identifier :: proc(
+	ast_context: ^AstContext,
+	node: ast.Ident,
+	global: ^analysis.GlobalExpr,
+) -> (
+	analysis.Symbol,
+	bool,
+) {
 	is_distinct := false
 	ast_context.use_locals = false
 
@@ -2662,7 +2690,14 @@ resolve_implicit_selector :: proc(
 	return {}, false
 }
 
-resolve_symbol_return :: proc(ast_context: ^AstContext, symbol: analysis.Symbol, ok := true) -> (analysis.Symbol, bool) {
+resolve_symbol_return :: proc(
+	ast_context: ^AstContext,
+	symbol: analysis.Symbol,
+	ok := true,
+) -> (
+	analysis.Symbol,
+	bool,
+) {
 	if !ok {
 		return symbol, ok
 	}
@@ -2860,7 +2895,7 @@ resolve_location_identifier :: proc(ast_context: ^AstContext, node: ast.Ident) -
 		}
 
 		if strings.compare(imp.base, node.name) == 0 {
-			symbol := analysis.Symbol{
+			symbol := analysis.Symbol {
 				type  = .Package,
 				pkg   = imp.name,
 				value = analysis.SymbolPackageValue{},
@@ -3094,7 +3129,13 @@ resolve_container_allocator :: proc(ast_context: ^AstContext, container_name: st
 	return {}, false
 }
 
-resolve_container_allocator_location :: proc(ast_context: ^AstContext, container_name: string) -> (analysis.Symbol, bool) {
+resolve_container_allocator_location :: proc(
+	ast_context: ^AstContext,
+	container_name: string,
+) -> (
+	analysis.Symbol,
+	bool,
+) {
 	// Try $builtin first
 	if symbol, ok := lookup(container_name, "$builtin", ast_context.fullpath); ok {
 		if v, ok := symbol.value.(analysis.SymbolStructValue); ok {
@@ -3127,7 +3168,13 @@ resolve_container_allocator_location :: proc(ast_context: ^AstContext, container
 	return {}, false
 }
 
-resolve_location_selector :: proc(ast_context: ^AstContext, selector_expr: ^ast.Node) -> (symbol: analysis.Symbol, ok: bool) {
+resolve_location_selector :: proc(
+	ast_context: ^AstContext,
+	selector_expr: ^ast.Node,
+) -> (
+	symbol: analysis.Symbol,
+	ok: bool,
+) {
 	reset_ast_context(ast_context)
 
 	set_ast_package_set_scoped(ast_context, ast_context.document_package)
@@ -3542,11 +3589,11 @@ make_symbol_procedure_from_ast :: proc(
 	if n != nil {
 		pkg = get_package_from_node(n^)
 	}
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v, ast_context.file.src),
-		type  = .Function if !type else .Type_Function,
-		pkg   = pkg,
-		name  = name,
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v, ast_context.file.src),
+		type     = .Function if !type else .Type_Function,
+		pkg      = pkg,
+		name     = name,
 		filepath = v.pos.file,
 	}
 
@@ -3596,11 +3643,11 @@ make_symbol_procedure_from_ast :: proc(
 }
 
 make_symbol_array_from_ast :: proc(ast_context: ^AstContext, v: ast.Array_Type, name: ast.Ident) -> analysis.Symbol {
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v.node, ast_context.file.src),
-		type  = .Type,
-		pkg   = get_package_from_node(v.node),
-		name  = name.name,
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v.node, ast_context.file.src),
+		type     = .Type,
+		pkg      = get_package_from_node(v.node),
+		name     = name.name,
 		filepath = v.pos.file,
 	}
 
@@ -3630,11 +3677,11 @@ make_symbol_dynamic_array_from_ast :: proc(
 	v: ast.Dynamic_Array_Type,
 	name: ast.Ident,
 ) -> analysis.Symbol {
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v.node, ast_context.file.src),
-		type  = .Type,
-		pkg   = get_package_from_node(v.node),
-		name  = name.name,
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v.node, ast_context.file.src),
+		type     = .Type,
+		pkg      = get_package_from_node(v.node),
+		name     = name.name,
 		filepath = v.pos.file,
 	}
 
@@ -3652,11 +3699,11 @@ make_symbol_dynamic_array_from_ast :: proc(
 }
 
 make_symbol_matrix_from_ast :: proc(ast_context: ^AstContext, v: ast.Matrix_Type, name: ast.Ident) -> analysis.Symbol {
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v.node, ast_context.file.src),
-		type  = .Type,
-		pkg   = get_package_from_node(v.node),
-		name  = name.name,
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v.node, ast_context.file.src),
+		type     = .Type,
+		pkg      = get_package_from_node(v.node),
+		name     = name.name,
 		filepath = v.pos.file,
 	}
 
@@ -3675,11 +3722,11 @@ make_symbol_multi_pointer_from_ast :: proc(
 	v: ast.Multi_Pointer_Type,
 	name: ast.Ident,
 ) -> analysis.Symbol {
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v.node, ast_context.file.src),
-		type  = .Type,
-		pkg   = get_package_from_node(v.node),
-		name  = name.name,
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v.node, ast_context.file.src),
+		type     = .Type,
+		pkg      = get_package_from_node(v.node),
+		name     = name.name,
 		filepath = v.pos.file,
 	}
 
@@ -3691,11 +3738,11 @@ make_symbol_multi_pointer_from_ast :: proc(
 }
 
 make_symbol_map_from_ast :: proc(ast_context: ^AstContext, v: ast.Map_Type, name: ast.Ident) -> analysis.Symbol {
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v.node, ast_context.file.src),
-		type  = .Type,
-		pkg   = get_package_from_node(v.node),
-		name  = name.name,
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v.node, ast_context.file.src),
+		type     = .Type,
+		pkg      = get_package_from_node(v.node),
+		name     = name.name,
 		filepath = v.pos.file,
 	}
 
@@ -3708,7 +3755,7 @@ make_symbol_map_from_ast :: proc(ast_context: ^AstContext, v: ast.Map_Type, name
 }
 
 make_symbol_basic_type_from_ast :: proc(ast_context: ^AstContext, n: ^ast.Ident) -> analysis.Symbol {
-	symbol := analysis.Symbol{
+	symbol := analysis.Symbol {
 		range = common.get_token_range(n^, ast_context.file.src),
 		type  = .Variable,
 		pkg   = get_package_from_node(n^),
@@ -3722,7 +3769,7 @@ make_symbol_basic_type_from_ast :: proc(ast_context: ^AstContext, n: ^ast.Ident)
 }
 
 make_symbol_poly_type_from_ast :: proc(ast_context: ^AstContext, n: ^ast.Ident) -> analysis.Symbol {
-	symbol := analysis.Symbol{
+	symbol := analysis.Symbol {
 		range = common.get_token_range(n^, ast_context.file.src),
 		type  = .Variable,
 		pkg   = get_package_from_node(n^),
@@ -3741,11 +3788,11 @@ make_symbol_union_from_ast :: proc(
 	name: string,
 	inlined := false,
 ) -> analysis.Symbol {
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v, ast_context.file.src),
-		type  = .Union,
-		pkg   = get_package_from_node(v.node),
-		name  = name,
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v, ast_context.file.src),
+		type     = .Union,
+		pkg      = get_package_from_node(v.node),
+		name     = name,
 		filepath = v.pos.file,
 	}
 
@@ -3789,11 +3836,11 @@ make_symbol_enum_from_ast :: proc(
 	name: string,
 	inlined := false,
 ) -> analysis.Symbol {
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v, ast_context.file.src),
-		type  = .Enum,
-		name  = name,
-		pkg   = get_package_from_node(v.node),
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v, ast_context.file.src),
+		type     = .Enum,
+		name     = name,
+		pkg      = get_package_from_node(v.node),
 		filepath = v.pos.file,
 	}
 
@@ -3848,11 +3895,11 @@ make_symbol_bitset_from_ast :: proc(
 	ident: ast.Ident,
 	inlined := false,
 ) -> analysis.Symbol {
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v, ast_context.file.src),
-		type  = .Enum,
-		name  = ident.name,
-		pkg   = get_package_from_node(v.node),
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v, ast_context.file.src),
+		type     = .Enum,
+		name     = ident.name,
+		pkg      = get_package_from_node(v.node),
 		filepath = v.pos.file,
 	}
 
@@ -3876,11 +3923,11 @@ make_symbol_struct_from_ast :: proc(
 	inlined := false,
 ) -> analysis.Symbol {
 	node := v.node
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v, ast_context.file.src),
-		type  = .Struct,
-		pkg   = get_package_from_node(v.node),
-		name  = name,
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v, ast_context.file.src),
+		type     = .Struct,
+		pkg      = get_package_from_node(v.node),
+		name     = name,
 		filepath = v.pos.file,
 	}
 
@@ -3904,12 +3951,12 @@ make_symbol_bit_field_from_ast :: proc(
 	// We clone this so we don't override docs and comments with temp allocated docs and comments
 	v := cast(^ast.Bit_Field_Type)analysis.clone_node(v)
 	analysis.construct_bit_field_field_docs(ast_context.file, v)
-	symbol := analysis.Symbol{
-		range = common.get_token_range(v, ast_context.file.src),
-		type  = .Struct,
-		pkg   = get_package_from_node(v.node),
-		name  = name,
-		filepath   = common.path_to_uri(v.pos.file),
+	symbol := analysis.Symbol {
+		range    = common.get_token_range(v, ast_context.file.src),
+		type     = .Struct,
+		pkg      = get_package_from_node(v.node),
+		name     = name,
+		filepath = v.pos.file,
 	}
 
 	if inlined {

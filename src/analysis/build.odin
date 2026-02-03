@@ -1,6 +1,7 @@
 #+feature dynamic-literals
 package analysis
 
+import "src:urilib"
 import "core:os"
 import "src:workspace"
 import "base:runtime"
@@ -247,6 +248,8 @@ load_package :: proc(pkg_name: string) {
 }
 
 analyze_file :: proc(fullpath, text: string) {
+	assert(urilib.is_file_uri(fullpath) == false, "Expected filesystem path, got URI")
+
 	p := parser.Parser {
 		flags = {.Optional_Semicolons},
 	}

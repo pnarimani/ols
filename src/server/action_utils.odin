@@ -6,9 +6,9 @@ import "src:common"
 
 // Create a WorkspaceEdit with text edits for a single URI.
 // This is the standard pattern used by all code actions.
-make_workspace_edit :: proc(uri: string, edits: []TextEdit) -> WorkspaceEdit {
+make_workspace_edit :: proc(uri: common.FileUri, edits: []TextEdit) -> WorkspaceEdit {
 	edit: WorkspaceEdit
-	edit.changes = make(map[string][]TextEdit, 0, context.temp_allocator)
+	edit.changes = make(map[common.FileUri][]TextEdit, 0, context.temp_allocator)
 	edit.changes[uri] = edits
 	return edit
 }

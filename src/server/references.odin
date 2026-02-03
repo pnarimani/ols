@@ -269,7 +269,7 @@ resolve_references :: proc(
 
 			location := common.Location {
 				range = range,
-				uri   = strings.clone(node_encoded_path),
+				uri   = common.clone_uri(node_encoded_path),
 			}
 
 			append(&locations, location)
@@ -322,7 +322,7 @@ resolve_references :: proc(
 					}
 					location := common.Location {
 						range = range,
-						uri   = strings.clone(node_encoded_path),
+						uri   = common.clone_uri(node_encoded_path),
 					}
 					append(&locations, location)
 				}
@@ -377,7 +377,7 @@ get_references :: proc(
 	for location in locations {
 		temp_location := common.Location {
 			range = location.range,
-			uri   = strings.clone(location.uri, context.temp_allocator),
+			uri   = common.clone_uri(location.uri, context.temp_allocator),
 		}
 		append(&temp_locations, temp_location)
 	}

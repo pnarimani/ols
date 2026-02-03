@@ -78,58 +78,60 @@ get_code_actions :: proc(
 
 	actions := make([dynamic]CodeAction, 0, context.temp_allocator)
 
+	encoded_path_cloned := common.clone_uri(encoded_path, context.temp_allocator)
+
 	if position_context.selector_expr != nil {
 		if selector, ok := position_context.selector_expr.derived.(^ast.Selector_Expr); ok {
 			add_missing_imports(
 				&ast_context,
 				selector,
-				strings.clone(encoded_path, context.temp_allocator),
+				encoded_path_cloned,
 				config,
 				&actions,
 			)
 		}
 	} else if position_context.import_stmt != nil {
-		remove_unused_imports(doc_ctx, strings.clone(encoded_path, context.temp_allocator), config, &actions)
+		remove_unused_imports(doc_ctx, encoded_path_cloned, config, &actions)
 	}
 
 	add_invert_if_action(
 		doc_ctx,
 		position_context.position,
-		strings.clone(encoded_path, context.temp_allocator),
+		encoded_path_cloned,
 		&actions,
 	)
 	add_redundant_else_action(
 		doc_ctx,
 		position_context.position,
-		strings.clone(encoded_path, context.temp_allocator),
+		encoded_path_cloned,
 		&actions,
 	)
 	add_extract_proc_action(
 		doc_ctx,
 		&ast_context,
 		range,
-		strings.clone(encoded_path, context.temp_allocator),
+		encoded_path_cloned,
 		&actions,
 	)
 	add_extract_variable_action(
 		doc_ctx,
 		&ast_context,
 		range,
-		strings.clone(encoded_path, context.temp_allocator),
+		encoded_path_cloned,
 		&actions,
 	)
 	add_inline_proc_action(
 		doc_ctx,
 		&ast_context,
 		range,
-		strings.clone(encoded_path, context.temp_allocator),
+		encoded_path_cloned,
 		&actions,
 	)
 	add_inline_variable_action(
 		doc_ctx,
 		&ast_context,
 		range,
-		strings.clone(encoded_path, context.temp_allocator),
+		encoded_path_cloned,
 		&actions,
 	)
 	add_inline_alias_action(
@@ -137,7 +139,7 @@ get_code_actions :: proc(
 		&ast_context,
 		config,
 		range,
-		strings.clone(encoded_path, context.temp_allocator),
+		encoded_path_cloned,
 		&actions,
 	)
 
@@ -146,7 +148,7 @@ get_code_actions :: proc(
 
 remove_unused_imports :: proc(
 	doc_ctx: documents.Document,
-	uri: string,
+	uri: common.FileUri,
 	config: ^common.Config,
 	actions: ^[dynamic]CodeAction,
 ) {
@@ -179,7 +181,7 @@ remove_unused_imports :: proc(
 	}
 
 	workspaceEdit: WorkspaceEdit
-	workspaceEdit.changes = make(map[string][]TextEdit, 0, context.temp_allocator)
+	workspaceEdit.changes = make(map[common.FileUri][]TextEdit, 0, context.temp_allocator)
 	workspaceEdit.changes[uri] = textEdits[:]
 
 	append(
@@ -197,7 +199,7 @@ remove_unused_imports :: proc(
 add_missing_imports :: proc(
 	ast_context: ^AstContext,
 	selector: ^ast.Selector_Expr,
-	uri: string,
+	uri: common.FileUri,
 	config: ^common.Config,
 	actions: ^[dynamic]CodeAction,
 ) {
@@ -235,8 +237,8 @@ add_missing_imports :: proc(
 					append(&textEdits, import_edit)
 
 					workspaceEdit: WorkspaceEdit
-					workspaceEdit.changes = make(map[string][]TextEdit, 0, context.temp_allocator)
-					workspaceEdit.changes[uri] = textEdits[:]
+					workspaceEdit.changes = make(map[common.FileUri][]TextEdit, 0, context.temp_allocator)
+				workspaceEdit.changes[uri] = textEdits[:]
 					append(
 						actions,
 						CodeAction {

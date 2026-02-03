@@ -662,7 +662,7 @@ request_initialize :: proc(
 
 	for s in initialize_params.workspaceFolders {
 		workspace: common.WorkspaceFolder
-		workspace.uri = strings.clone(s.uri, common.config_storage.allocator)
+		workspace.uri = common.clone_uri(s.uri, common.config_storage.allocator)
 		append(&config.workspace_folders, workspace)
 	}
 
@@ -711,12 +711,12 @@ request_initialize :: proc(
 		}
 	}
 
-	encoded_project_path := ""
+	encoded_project_path := common.FileUri("")
 
 	if len(config.workspace_folders) > 0 {
 		encoded_project_path = config.workspace_folders[0].uri
 	} else if initialize_params.rootUri != "" {
-		encoded_project_path = initialize_params.rootUri
+		encoded_project_path = common.path_to_uri(initialize_params.rootUri, common.config_storage.allocator)
 	}
 
 	if project_path, ok := common.uri_to_path(encoded_project_path, context.temp_allocator); ok {
@@ -870,7 +870,8 @@ request_definition :: proc(
 		return .ParseError
 	}
 
-	document := document_get(definition_params.textDocument.uri)
+	filepath := common.uri_to_path(definition_params.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -916,7 +917,8 @@ request_type_definition :: proc(
 		return .ParseError
 	}
 
-	document := document_get(definition_params.textDocument.uri)
+	filepath := common.uri_to_path(definition_params.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -962,7 +964,8 @@ request_completion :: proc(
 		return .ParseError
 	}
 
-	document := document_get(completition_params.textDocument.uri)
+	filepath := common.uri_to_path(completition_params.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -1005,7 +1008,8 @@ request_signature_help :: proc(
 		return .ParseError
 	}
 
-	document := document_get(signature_params.textDocument.uri)
+	filepath := common.uri_to_path(signature_params.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -1053,7 +1057,8 @@ request_format_document :: proc(
 		return .ParseError
 	}
 
-	document := document_get(format_params.textDocument.uri)
+	filepath := common.uri_to_path(format_params.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -1103,9 +1108,10 @@ notification_did_open :: proc(
 		return .ParseError
 	}
 
-	defer delete(open_params.textDocument.uri)
+	defer delete(string(open_params.textDocument.uri))
 
-	document := doc.open(open_params.textDocument.uri, open_params.textDocument.text) or_return
+	filepath := common.uri_to_path(open_params.textDocument.uri, context.temp_allocator)
+	document := doc.open(filepath, open_params.textDocument.text) or_return
 
 	if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
 		// Update the symbol cache with the document's symbols
@@ -1140,8 +1146,9 @@ notification_did_change :: proc(
 		return .ParseError
 	}
 
+	filepath := common.uri_to_path(change_params.textDocument.uri, context.temp_allocator)
 	document_apply_changes(
-		change_params.textDocument.uri,
+		filepath,
 		change_params.contentChanges,
 		change_params.textDocument.version,
 		config,
@@ -1149,7 +1156,7 @@ notification_did_change :: proc(
 	)
 
 	// Update the symbol cache and run lightweight diagnostics
-	document := document_get(change_params.textDocument.uri)
+	document := document_get(filepath)
 	if document != nil {
 		if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
 			analysis.update_doc(doc_ctx.ast)
@@ -1185,7 +1192,8 @@ notification_did_close :: proc(
 		return .ParseError
 	}
 
-	if n := document_close(close_params.textDocument.uri); n != nil {
+	filepath := common.uri_to_path(close_params.textDocument.uri, context.temp_allocator)
+	if n := document_close(filepath); n != nil {
 		return .InternalError
 	}
 
@@ -1226,9 +1234,10 @@ notification_did_save :: proc(
 	corrected_encoded_path := common.path_to_uri(fullpath, context.temp_allocator)
 
 	// Run odin check - this clears old .Check diagnostics and adds new ones
+	filepath_for_get := common.uri_to_path(save_params.textDocument.uri, context.temp_allocator)
 	check(config.profile.checker_path[:], corrected_encoded_path, config)
 
-	document := document_get(save_params.textDocument.uri)
+	document := document_get(filepath_for_get)
 	if document != nil {
 		if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
 			// Run lightweight diagnostics for the current document
@@ -1261,7 +1270,8 @@ request_semantic_token_full :: proc(
 		return .ParseError
 	}
 
-	document := document_get(semantic_params.textDocument.uri)
+	filepath := common.uri_to_path(semantic_params.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -1310,7 +1320,8 @@ request_semantic_token_range :: proc(
 		return .None
 	}
 
-	document := document_get(semantic_params.textDocument.uri)
+	fullpath := common.uri_to_path(semantic_params.textDocument.uri, context.temp_allocator)
+	document := document_get(fullpath)
 
 	if document == nil {
 		return .InternalError
@@ -1354,7 +1365,8 @@ request_document_symbols :: proc(
 		return .ParseError
 	}
 
-	document := document_get(symbol_params.textDocument.uri)
+	fullpath := common.uri_to_path(symbol_params.textDocument.uri, context.temp_allocator)
+	document := document_get(fullpath)
 
 	if document == nil {
 		return .InternalError
@@ -1387,7 +1399,8 @@ request_hover :: proc(params: json.Value, id: RequestId, config: ^common.Config,
 		return .ParseError
 	}
 
-	document := document_get(hover_params.textDocument.uri)
+	fullpath := common.uri_to_path(hover_params.textDocument.uri, context.temp_allocator)
+	document := document_get(fullpath)
 
 	if document == nil {
 		return .InternalError
@@ -1432,7 +1445,8 @@ request_inlay_hint :: proc(
 		return .ParseError
 	}
 
-	document := document_get(inlay_params.textDocument.uri)
+	filepath := common.uri_to_path(inlay_params.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 	if document == nil do return .InternalError
 
 	doc_ctx, ctx_ok := create_document_context(document, config)
@@ -1477,7 +1491,8 @@ request_document_links :: proc(
 		return .ParseError
 	}
 
-	document := document_get(link_params.textDocument.uri)
+	filepath := common.uri_to_path(link_params.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -1520,7 +1535,8 @@ request_prepare_rename :: proc(
 		return .ParseError
 	}
 
-	document := document_get(rename_param.textDocument.uri)
+	filepath := common.uri_to_path(rename_param.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -1555,7 +1571,8 @@ request_rename :: proc(params: json.Value, id: RequestId, config: ^common.Config
 		return .ParseError
 	}
 
-	document := document_get(rename_param.textDocument.uri)
+	filepath := common.uri_to_path(rename_param.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -1598,7 +1615,8 @@ request_references :: proc(
 		return .ParseError
 	}
 
-	document := document_get(reference_param.textDocument.uri)
+	filepath := common.uri_to_path(reference_param.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -1641,7 +1659,8 @@ request_highlights :: proc(
 		return .ParseError
 	}
 
-	document := document_get(highlight_param.textDocument.uri)
+	filepath := common.uri_to_path(highlight_param.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError
@@ -1689,7 +1708,8 @@ request_code_action :: proc(
 		return .ParseError
 	}
 
-	document := document_get(code_action_params.textDocument.uri)
+	filepath := common.uri_to_path(code_action_params.textDocument.uri, context.temp_allocator)
+	document := document_get(filepath)
 
 	if document == nil {
 		return .InternalError

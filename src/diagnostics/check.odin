@@ -57,7 +57,7 @@ fallback_find_odin_directories :: proc(config: ^common.Config) -> []string {
 	return data[:]
 }
 
-check :: proc(paths: []string, encoded_path: string, config: ^common.Config) {
+check :: proc(paths: []string, encoded_path: common.FileUri, config: ^common.Config) {
 	paths := paths
 
 	if len(paths) == 0 {
@@ -77,7 +77,7 @@ check :: proc(paths: []string, encoded_path: string, config: ^common.Config) {
 	}
 
 	// Track which URIs we add diagnostics to (for those not in previous list)
-	checked_uris := make(map[string]bool, 32, context.temp_allocator)
+	checked_uris := make(map[common.FileUri]bool, 32, context.temp_allocator)
 
 	data := make([]byte, mem.Kilobyte * 200, context.temp_allocator)
 
@@ -146,34 +146,28 @@ check :: proc(paths: []string, encoded_path: string, config: ^common.Config) {
 				continue
 			}
 
-			error_path := error.pos.file
-
-			when ODIN_OS == .Windows {
-				error_path = common.get_case_sensitive_path(error_path, context.temp_allocator)
-			}
-
-			error_encoded_path := common.path_to_uri(error_path, context.temp_allocator)
+			error_uri := common.path_to_uri(error.pos.file, context.temp_allocator)
 
 			// If this path wasn't in the previous list and we haven't seen it yet,
 			// begin an update for it (to ensure clean slate)
-			if error_encoded_path not_in checked_uris {
-				checked_uris[error_encoded_path] = true
+			if error_uri not_in checked_uris {
+				checked_uris[error_uri] = true
 				// Only call begin_diagnostic_update if not already cleared above
 				has_previous := false
 				for prev_path in previous_check_uris {
-					if prev_path == error_encoded_path {
+					if prev_path == error_uri {
 						has_previous = true
 						break
 					}
 				}
 				if !has_previous {
-					begin_diagnostic_update(error_encoded_path, .Check)
+					begin_diagnostic_update(error_uri, .Check)
 				}
 			}
 
 			add_diagnostic(
 				.Check,
-				error_encoded_path,
+				error_uri,
 				Diagnostic {
 					code = "checker",
 					severity = .Error,

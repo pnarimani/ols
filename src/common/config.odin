@@ -78,7 +78,7 @@ config_storage_shutdown :: proc() {
 	delete(config.collections)
 	
 	for ws in config.workspace_folders {
-		delete(ws.uri, config_storage.allocator)
+		delete_string(string(ws.uri), config_storage.allocator)
 	}
 
 	delete(config.workspace_folders)

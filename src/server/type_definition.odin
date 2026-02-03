@@ -28,7 +28,7 @@ append_symbol_to_locations :: proc(
 }
 
 get_type_definition_locations :: proc(req_ctx: ^RequestContext) -> ([]common.Location, bool) {
-	uri: string
+	uri: FileUri
 	locations := make([dynamic]common.Location, context.temp_allocator)
 
 	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .TypeDefinition)

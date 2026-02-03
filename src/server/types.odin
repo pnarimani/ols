@@ -1,6 +1,7 @@
 package server
 
 import "core:encoding/json"
+import "core:strings"
 
 import "src:analysis"
 import "src:common"
@@ -68,7 +69,7 @@ NotificationLoggingParams :: struct {
 }
 
 NotificationPublishDiagnosticsParams :: struct {
-	uri:         string,
+	uri:         FileUri,
 	diagnostics: []Diagnostic,
 }
 
@@ -247,16 +248,18 @@ Version :: union {
 }
 
 VersionedTextDocumentIdentifier :: struct {
-	uri:     string,
+	uri:     FileUri,
 	version: int,
 }
 
 TextDocumentIdentifier :: struct {
-	uri: string,
+	uri: FileUri,
 }
 
+FileUri :: common.FileUri
+
 TextDocumentItem :: struct {
-	uri:  string,
+	uri:  FileUri,
 	text: string,
 }
 
@@ -555,7 +558,7 @@ HighlightParams :: struct {
 }
 
 OptionalVersionedTextDocumentIdentifier :: struct {
-	uri:     string,
+	uri:     FileUri,
 	version: Maybe(int),
 }
 
@@ -565,7 +568,7 @@ TextDocumentEdit :: struct {
 }
 
 WorkspaceEdit :: struct {
-	changes: map[string][]TextEdit,
+	changes: map[FileUri][]TextEdit,
 }
 
 WorkspaceSymbolParams :: struct {
@@ -592,3 +595,5 @@ DocumentHighlightKind :: enum {
 	Read  = 2,
 	Write = 3,
 }
+
+clone_uri :: common.clone_uri

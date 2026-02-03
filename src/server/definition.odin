@@ -49,8 +49,7 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 
 	location: common.Location
 
-
-	uri: string
+	uri: FileUri
 
 	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .Definition)
 
@@ -84,7 +83,7 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 				if resolved.filepath == "" {
 					location.uri = common.path_to_uri(req_ctx.doc_ctx.filepath, context.temp_allocator)
 				} else {
-					location.uri = resolved.filepath
+					location.uri = common.path_to_uri(resolved.filepath, context.temp_allocator)
 				}
 
 				append(&locations, location)
@@ -105,7 +104,7 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 				)
 			}
 			location.range = resolved.range
-			uri = resolved.filepath
+			uri = common.path_to_uri(resolved.filepath)
 		} else {
 			return {}, false
 		}
@@ -115,14 +114,14 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 		if position_context.comp_lit != nil {
 			if resolved, ok := resolve_location_comp_lit_field(&ast_context, &position_context); ok {
 				location.range = resolved.range
-				uri = resolved.filepath
+				uri = common.path_to_uri(resolved.filepath)
 			} else {
 				return {}, false
 			}
 		} else if position_context.call != nil {
 			if resolved, ok := resolve_location_proc_param_name(&ast_context, &position_context); ok {
 				location.range = resolved.range
-				uri = resolved.filepath
+				uri = common.path_to_uri(resolved.filepath)
 			} else {
 				return {}, false
 			}
@@ -134,7 +133,7 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 			position_context.implicit_selector_expr,
 		); ok {
 			location.range = resolved.range
-			uri = resolved.filepath
+			uri = common.path_to_uri(resolved.filepath, context.temp_allocator)
 		} else {
 			return {}, false
 		}
@@ -148,11 +147,11 @@ get_definition_location :: proc(req_ctx: ^RequestContext) -> ([]common.Location,
 			}
 			if v, ok := resolved.value.(analysis.SymbolAggregateValue); ok {
 				for symbol in v.symbols {
-					append(&locations, common.Location{range = symbol.range, uri = symbol.filepath})
+					append(&locations, common.Location{range = symbol.range, uri = common.path_to_uri(symbol.filepath, context.temp_allocator)})
 				}
 			}
 			location.range = resolved.range
-			uri = resolved.filepath
+			uri = common.path_to_uri(resolved.filepath, context.temp_allocator)
 		} else {
 			return {}, false
 		}

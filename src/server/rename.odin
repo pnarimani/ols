@@ -41,13 +41,13 @@ get_rename :: proc(doc_ctx: documents.Document, new_text: string, position: comm
 
 	locations, ok2 := resolve_references(doc_ctx, &ast_context, &position_context)
 
-	changes := make(map[string][dynamic]TextEdit, 0, context.temp_allocator)
+	changes := make(map[common.FileUri][dynamic]TextEdit, 0, context.temp_allocator)
 
 	for location in locations {
 		edits: ^[dynamic]TextEdit
 
 		if edits = &changes[location.uri]; edits == nil {
-			changes[strings.clone(location.uri, context.temp_allocator)] = make(
+			changes[common.clone_uri(location.uri, context.temp_allocator)] = make(
 				[dynamic]TextEdit,
 				context.temp_allocator,
 			)
@@ -59,7 +59,7 @@ get_rename :: proc(doc_ctx: documents.Document, new_text: string, position: comm
 
 	workspace: WorkspaceEdit
 
-	workspace.changes = make(map[string][]TextEdit, len(changes), context.temp_allocator)
+	workspace.changes = make(map[common.FileUri][]TextEdit, len(changes), context.temp_allocator)
 
 	for k, v in changes {
 		workspace.changes[k] = v[:]

@@ -64,7 +64,7 @@ Can be transformed to:
 add_redundant_else_action :: proc(
 	doc_ctx: documents.Document,
 	position: common.AbsolutePosition,
-	uri: string,
+	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,
 ) {
 	context_info := find_if_with_redundant_else(doc_ctx.ast.decls[:], position)

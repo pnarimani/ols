@@ -33,7 +33,7 @@ add_inline_proc_action :: proc(
 	doc_ctx: documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
-	uri: string,
+	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,
 ) {
 	// Only available for point selections (cursor), not range selections
@@ -678,7 +678,7 @@ can_inline_body_as_expression :: proc(ctx: ^InlineProcContext) -> bool {
 }
 
 // Generate the edit for inlining
-generate_inline_edit :: proc(ctx: ^InlineProcContext, uri: string) -> (WorkspaceEdit, bool) {
+generate_inline_edit :: proc(ctx: ^InlineProcContext, uri: FileUri) -> (WorkspaceEdit, bool) {
 	textEdits := make([dynamic]TextEdit, context.temp_allocator)
 
 	if ctx.call_expr != nil && len(ctx.all_calls) == 0 {

@@ -48,7 +48,7 @@ Block_Text_Options :: struct {
 add_invert_if_action :: proc(
 	doc_ctx: documents.Document,
 	position: common.AbsolutePosition,
-	uri: string,
+	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,
 ) {
 	inv_ctx := If_Inversion_Context {

@@ -1,5 +1,6 @@
 package documents
 
+import "src:urilib"
 import "core:log"
 import "core:mem"
 import "core:os"
@@ -45,6 +46,8 @@ shutdown :: proc() {
 // Get a document by encoded path string. Returns pointer to stored document, or nil if not found.
 // Will attempt to load from disk if document is not in storage.
 get :: proc(file_path: string) -> ^DocumentData {
+	assert(urilib.is_file_uri(file_path) == false, "Expected filesystem path, got URI")
+
 	if document, ok := &storage.documents[file_path]; ok {
 		return document
 	}
@@ -55,6 +58,8 @@ get :: proc(file_path: string) -> ^DocumentData {
 // Load a document from disk and store it in storage.
 // Returns pointer to the stored document, or nil on failure.
 load_from_disk :: proc(file_path: string) -> ^DocumentData {
+	assert(urilib.is_file_uri(file_path) == false, "Expected filesystem path, got URI")
+
 	data, read_ok := workspace.read_file_content(file_path, context.temp_allocator)
 	if !read_ok {
 		log.errorf("Failed to read file from disk: %v", file_path)
@@ -69,6 +74,7 @@ load_from_disk :: proc(file_path: string) -> ^DocumentData {
 // Returns pointer to the stored document and error status.
 open :: proc(filepath: string, text: string) -> (^DocumentData, common.Error) {
 	assert(filepath != "", "Document filepath cannot be empty")
+	assert(urilib.is_file_uri(filepath) == false, "Expected filesystem path, got URI")
 
 	if document, ok := &storage.documents[filepath]; ok {
 		// Document already exists, update it

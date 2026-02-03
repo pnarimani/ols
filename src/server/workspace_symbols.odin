@@ -87,7 +87,7 @@ get_workspace_symbols :: proc(query: string) -> (workspace_symbols: []WorkspaceS
 		for result in results {
 			symbol := WorkspaceSymbol {
 				name = result.symbol.name,
-				location = {range = result.symbol.range, uri = result.symbol.filepath},
+				location = {range = result.symbol.range, uri = common.path_to_uri(result.symbol.filepath, context.temp_allocator)},
 				kind = symbol_kind_to_type(result.symbol.type),
 			}
 

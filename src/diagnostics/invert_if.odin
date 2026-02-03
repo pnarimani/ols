@@ -39,7 +39,7 @@ Diagnostic_Reason :: enum {
 
 Invert_If_Visitor_Data :: struct {
 	doc_ctx:      documents.Document,
-	encoded_path: string,
+	encoded_path: common.FileUri,
 }
 
 // Check document for if statements that could benefit from inversion
@@ -233,7 +233,7 @@ is_early_exit :: proc(stmt: ^ast.Stmt) -> bool {
 }
 
 // Add a diagnostic for an if statement that should be inverted
-add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Document, encoded_path: string, reason: Diagnostic_Reason) {
+add_invert_if_diagnostic :: proc(if_stmt: ^ast.If_Stmt, doc_ctx: documents.Document, encoded_path: common.FileUri, reason: Diagnostic_Reason) {
 	if if_stmt == nil {
 		return
 	}

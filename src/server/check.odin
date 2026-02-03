@@ -29,7 +29,7 @@ check_unused_imports :: proc(doc_ctx: documents.Document, config: ^common.Config
 	}
 }
 
-check :: proc(paths: []string, encoded_path: string, config: ^common.Config) {
+check :: proc(paths: []string, encoded_path: common.FileUri, config: ^common.Config) {
 	diagnostics.check(paths, encoded_path, config)
 }
 
