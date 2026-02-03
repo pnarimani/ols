@@ -71,14 +71,14 @@ make_ast_context :: proc {
 	make_ast_context_from_doc_ctx,
 }
 
-make_ast_context_from_request :: proc(req_ctx: ^RequestContext, allocator := context.temp_allocator) -> AstContext {
+make_ast_context_from_request :: proc(req_ctx: ^RequestContext, allocator := context.allocator) -> AstContext {
 	return make_ast_context_from_doc_ctx(&req_ctx.doc_ctx, allocator)
 }
 
 // Create AstContext from a documents.Document pointer. This is the preferred method.
 make_ast_context_from_doc_ctx :: proc(
 	doc_ctx: ^documents.Document,
-	allocator := context.temp_allocator,
+	allocator := context.allocator,
 ) -> AstContext {
 	ast_context := AstContext {
 		locals                    = make([dynamic]map[string][dynamic]DocumentLocal, 0, allocator),
@@ -109,7 +109,7 @@ make_ast_context_from_doc :: proc(
 	imports: []Package,
 	package_name: string,
 	fullpath: string,
-	allocator := context.temp_allocator,
+	allocator := context.allocator,
 ) -> AstContext {
 	ast_context := AstContext {
 		locals                    = make([dynamic]map[string][dynamic]DocumentLocal, 0, allocator),

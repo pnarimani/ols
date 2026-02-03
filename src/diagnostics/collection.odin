@@ -98,7 +98,7 @@ add_diagnostic :: proc(type: DiagnosticType, uri: FileUri, diagnostic: Diagnosti
 }
 
 // Get all merged diagnostics for a URI (all types combined)
-get_merged_diagnostics :: proc(uri: FileUri, allocator := context.temp_allocator) -> []Diagnostic {
+get_merged_diagnostics :: proc(uri: FileUri, allocator := context.allocator) -> []Diagnostic {
 	if uri not_in g_persistent_diagnostics {
 		return {}
 	}
@@ -129,7 +129,7 @@ get_merged_diagnostics :: proc(uri: FileUri, allocator := context.temp_allocator
 }
 
 // Get all URIs that currently have diagnostics of a specific type
-get_uris_with_diagnostic_type :: proc(type: DiagnosticType, allocator := context.temp_allocator) -> []common.FileUri {
+get_uris_with_diagnostic_type :: proc(type: DiagnosticType, allocator := context.allocator) -> []common.FileUri {
 	result := make([dynamic]common.FileUri, 0, len(g_persistent_diagnostics), allocator)
 
 	for uri, uri_diagnostics in g_persistent_diagnostics {
@@ -142,7 +142,7 @@ get_uris_with_diagnostic_type :: proc(type: DiagnosticType, allocator := context
 }
 
 // Get all dirty URIs that need republishing, then clear the dirty set
-get_and_clear_dirty_uris :: proc(allocator := context.temp_allocator) -> []common.FileUri {
+get_and_clear_dirty_uris :: proc(allocator := context.allocator) -> []common.FileUri {
 	result := make([dynamic]common.FileUri, 0, len(g_dirty_uris), allocator)
 
 	for uri in g_dirty_uris {
@@ -155,7 +155,7 @@ get_and_clear_dirty_uris :: proc(allocator := context.temp_allocator) -> []commo
 }
 
 // Get diagnostics of a specific type for an encoded path (for testing)
-get_diagnostics_for_path :: proc(encoded_path: FileUri, type: DiagnosticType, allocator := context.temp_allocator) -> []Diagnostic {
+get_diagnostics_for_path :: proc(encoded_path: FileUri, type: DiagnosticType, allocator := context.allocator) -> []Diagnostic {
 	if encoded_path not_in g_persistent_diagnostics {
 		return {}
 	}

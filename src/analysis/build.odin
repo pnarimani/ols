@@ -250,6 +250,8 @@ load_package :: proc(pkg_name: string) {
 analyze_file :: proc(fullpath, text: string) {
 	assert(urilib.is_file_uri(fullpath) == false, "Expected filesystem path, got URI")
 
+	context.allocator = g_symbol_cache.allocator
+
 	p := parser.Parser {
 		flags = {.Optional_Semicolons},
 	}

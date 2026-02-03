@@ -242,12 +242,13 @@ resolve_references :: proc(
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 	current_file_only := false,
+	allocator := context.allocator,
 ) -> (
 	[]common.Location,
 	bool,
 ) {
-	locations := make([dynamic]common.Location)
-	fullpaths := make([dynamic]string)
+	locations := make([dynamic]common.Location, allocator)
+	fullpaths := make([dynamic]string, context.temp_allocator)
 
 	symbol, resolve_flag, ok := prepare_references(doc_ctx, ast_context, position_context)
 
@@ -269,7 +270,7 @@ resolve_references :: proc(
 
 			location := common.Location {
 				range = range,
-				uri   = common.clone_uri(node_encoded_path),
+				uri   = common.clone_uri(node_encoded_path, allocator),
 			}
 
 			append(&locations, location)
@@ -322,7 +323,7 @@ resolve_references :: proc(
 					}
 					location := common.Location {
 						range = range,
-						uri   = common.clone_uri(node_encoded_path),
+						uri   = common.clone_uri(node_encoded_path, allocator),
 					}
 					append(&locations, location)
 				}
@@ -337,6 +338,7 @@ get_references :: proc(
 	doc_ctx: documents.Document,
 	position: common.Position,
 	current_file_only := false,
+	allocator := context.allocator,
 ) -> (
 	[]common.Location,
 	bool,
@@ -370,17 +372,7 @@ get_references :: proc(
 		get_locals(doc_ctx.ast, position_context.function, &ast_context, &position_context)
 	}
 
-	locations, ok2 := resolve_references(doc_ctx, &ast_context, &position_context, current_file_only)
+	locations, ok2 := resolve_references(doc_ctx, &ast_context, &position_context, current_file_only, allocator)
 
-	temp_locations := make([dynamic]common.Location, 0, context.temp_allocator)
-
-	for location in locations {
-		temp_location := common.Location {
-			range = location.range,
-			uri   = common.clone_uri(location.uri, context.temp_allocator),
-		}
-		append(&temp_locations, temp_location)
-	}
-
-	return temp_locations[:], ok2
+	return locations[:], ok2
 }

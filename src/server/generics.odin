@@ -835,7 +835,7 @@ resolve_poly_union :: proc(ast_context: ^AstContext, poly_params: ^ast.Field_Lis
 	i := 0
 
 	poly_map := make(map[string]^ast.Expr, 0, context.temp_allocator)
-	poly_names := make([dynamic]string, 0, context.temp_allocator)
+	poly_names := make([dynamic]string, 0, ast_context.allocator)
 
 	for param in poly_params.list {
 		for name in param.names {

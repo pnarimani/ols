@@ -20,7 +20,7 @@ foreign kernel32 {
 
 get_case_sensitive_path :: proc(
 	path: string,
-	allocator := context.temp_allocator,
+	allocator := context.allocator,
 	location := #caller_location,
 ) -> string {
 	wide := win32.utf8_to_wstring(path, context.temp_allocator)

@@ -154,5 +154,6 @@ get_package_imports :: proc(pkg: string, allocator := context.allocator) -> []st
 // Collect symbols from a parsed file into the global cache.
 // This is used by tests and the document update path.
 collect_symbols_to_cache :: proc(file: ast.File) -> common.Error {
+	context.allocator = g_symbol_cache.allocator
 	return collect_symbols(&g_symbol_cache, file)
 }

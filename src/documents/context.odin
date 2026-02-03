@@ -12,9 +12,9 @@ import "core:strings"
 import "src:common"
 
 // Get a documents.Document for a given URI string. Parses AST and imports fresh.
-// All allocations use the provided allocator (typically context.temp_allocator).
+// All allocations use the provided allocator.
 // Returns nil if document not found or parsing fails.
-get_context :: proc(file_path: string, config: ^common.Config = nil, allocator := context.temp_allocator) -> (ctx: Document, ok: bool) #optional_ok {
+get_context :: proc(file_path: string, config: ^common.Config = nil, allocator := context.allocator) -> (ctx: Document, ok: bool) #optional_ok {
 	assert(urilib.is_file_uri(file_path) == false, "Expected filesystem path, got URI")
 
 	config := config
@@ -30,9 +30,9 @@ get_context :: proc(file_path: string, config: ^common.Config = nil, allocator :
 }
 
 // Create a documents.Document from a Document. Parses AST and imports fresh.
-// All allocations use the provided allocator (typically context.temp_allocator).
+// All allocations use the provided allocator.
 // Caller is responsible for freeing allocator when done.
-create_context :: proc(document: ^DocumentData, config: ^common.Config, allocator := context.temp_allocator) -> (ctx: Document, ok: bool) {
+create_context :: proc(document: ^DocumentData, config: ^common.Config, allocator := context.allocator) -> (ctx: Document, ok: bool) {
 	if document == nil {
 		return {}, false
 	}
@@ -72,7 +72,7 @@ parser_error_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {
 parse_document_text :: proc(
 	path: string,
 	text: []u8,
-	allocator := context.temp_allocator,
+	allocator := context.allocator,
 ) -> (
 	parsed_file: ast.File,
 	errors: []ParserError,
@@ -111,7 +111,7 @@ parse_document_text :: proc(
 }
 
 // Get fullpath from path, handling Windows case sensitivity
-get_fullpath_from_path :: proc(path: string, allocator := context.temp_allocator) -> string {
+get_fullpath_from_path :: proc(path: string, allocator := context.allocator) -> string {
 	when ODIN_OS == .Windows {
 		correct := common.get_case_sensitive_path(path, allocator)
 		if correct == "" {
@@ -128,7 +128,7 @@ get_fullpath_from_path :: proc(path: string, allocator := context.temp_allocator
 }
 
 // Get package name from path
-get_package_name_from_path :: proc(file_path: string, allocator := context.temp_allocator) -> string {
+get_package_name_from_path :: proc(file_path: string, allocator := context.allocator) -> string {
 	when ODIN_OS == .Windows {
 		package_name := path.dir(file_path, allocator)
 		forward, _ := filepath.to_slash(common.get_case_sensitive_path(package_name, allocator), allocator)
@@ -148,7 +148,7 @@ parse_imports_from_ast :: proc(
 	package_name: string,
 	text: []u8,
 	config: ^common.Config,
-	allocator := context.temp_allocator,
+	allocator := context.allocator,
 ) -> []Package {
 	imports := make([dynamic]Package, allocator)
 

@@ -32,7 +32,7 @@ walk_dir :: proc(info: os.File_Info, in_err: os.Errno, user_data: rawptr) -> (er
 }
 
 // Find all packages in the workspace (computes fresh every time)
-find_workspace_packages :: proc(allocator := context.temp_allocator) -> []string {
+find_workspace_packages :: proc(allocator := context.allocator) -> []string {
 	workspace_pkgs := make([dynamic]string, 0, allocator)
 
 	for workspace in common.config.workspace_folders {

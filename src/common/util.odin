@@ -126,8 +126,8 @@ when ODIN_OS == .Darwin || ODIN_OS == .FreeBSD || ODIN_OS == .Linux || ODIN_OS =
 	}
 }
 
-get_executable_path :: proc(allocator := context.temp_allocator) -> string {
-	exe_dir, err := os2.get_executable_directory(context.temp_allocator)
+get_executable_path :: proc(allocator := context.allocator) -> string {
+	exe_dir, err := os2.get_executable_directory(allocator)
 
 	if err != nil {
 		log.error("Failed to resolve executable path: ", err)

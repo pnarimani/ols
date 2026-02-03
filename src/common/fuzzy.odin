@@ -80,13 +80,13 @@ char_types: []u8 = {
 //odinfmt: enable
 
 
-make_fuzzy_matcher :: proc(pattern: string, allocator := context.temp_allocator) -> ^FuzzyMatcher {
+make_fuzzy_matcher :: proc(pattern: string, allocator := context.allocator) -> ^FuzzyMatcher {
 	matcher := new(FuzzyMatcher, allocator)
 
 	matcher.pattern_count = min(len(pattern), max_pattern)
 	matcher.score_scale = matcher.pattern_count > 0 ? 1 / cast(f32)(perfect_bonus * matcher.pattern_count) : 0
 	matcher.pattern = pattern[0:matcher.pattern_count]
-	matcher.lower_pattern = strings.to_lower(matcher.pattern, context.temp_allocator)
+	matcher.lower_pattern = strings.to_lower(matcher.pattern, allocator)
 
 	score_info_miss: FuzzyScoreInfo
 	score_info_miss.score = 0

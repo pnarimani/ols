@@ -17,7 +17,7 @@ FileResolve :: struct {
 // Find all package aliases from all collections.
 // Returns a map from collection name -> list of package paths.
 // Allocates in the provided allocator.
-find_all_package_aliases :: proc(allocator := context.temp_allocator) -> map[string][dynamic]string {
+find_all_package_aliases :: proc(allocator := context.allocator) -> map[string][dynamic]string {
 	result := make(map[string][dynamic]string, allocator = allocator)
 
 	walk_proc :: proc(info: os.File_Info, in_err: os.Errno, user_data: rawptr) -> (err: os.Errno, skip_dir: bool) {

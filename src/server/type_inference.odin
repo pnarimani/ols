@@ -18,7 +18,7 @@ InferenceContext :: struct {
 make_inference_context :: proc(
 	document: ^documents.DocumentData,
 	ast_context: ^AstContext,
-	allocator := context.temp_allocator,
+	allocator := context.allocator,
 ) -> InferenceContext {
 	return InferenceContext {
 		document = document,
@@ -560,7 +560,7 @@ extract_array_size :: proc(type_str: string) -> string {
 
 // Wrap a type in a pointer
 // e.g., "int" -> "^int"
-make_pointer_type :: proc(type_str: string, allocator := context.temp_allocator) -> string {
+make_pointer_type :: proc(type_str: string, allocator := context.allocator) -> string {
 	if type_str == "" {
 		return ""
 	}
@@ -569,7 +569,7 @@ make_pointer_type :: proc(type_str: string, allocator := context.temp_allocator)
 
 // Wrap a type in a slice
 // e.g., "int" -> "[]int"
-make_slice_type :: proc(type_str: string, allocator := context.temp_allocator) -> string {
+make_slice_type :: proc(type_str: string, allocator := context.allocator) -> string {
 	if type_str == "" {
 		return ""
 	}
@@ -578,7 +578,7 @@ make_slice_type :: proc(type_str: string, allocator := context.temp_allocator) -
 
 // Wrap a type in a dynamic array
 // e.g., "int" -> "[dynamic]int"
-make_dynamic_array_type :: proc(type_str: string, allocator := context.temp_allocator) -> string {
+make_dynamic_array_type :: proc(type_str: string, allocator := context.allocator) -> string {
 	if type_str == "" {
 		return ""
 	}

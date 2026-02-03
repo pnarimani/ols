@@ -28,7 +28,7 @@ build_documentation :: proc(ast_context: ^AstContext, symbol: ^analysis.Symbol, 
 	}
 }
 
-construct_symbol_docs :: proc(symbol: analysis.Symbol, allocator := context.temp_allocator) -> string {
+construct_symbol_docs :: proc(symbol: analysis.Symbol, allocator := context.allocator) -> string {
 	sb := strings.builder_make(allocator = allocator)
 	if symbol.doc != "" {
 		strings.write_string(&sb, symbol.doc)
@@ -367,7 +367,7 @@ write_indent :: proc(sb: ^strings.Builder, level: int) {
 	}
 }
 
-get_enum_field_signature :: proc(value: analysis.SymbolEnumValue, index: int, allocator := context.temp_allocator) -> string {
+get_enum_field_signature :: proc(value: analysis.SymbolEnumValue, index: int, allocator := context.allocator) -> string {
 	using codeprint
 	sb := strings.builder_make(allocator)
 	fmt.sbprintf(&sb, ".%s", value.names[index])
@@ -381,7 +381,7 @@ get_enum_field_signature :: proc(value: analysis.SymbolEnumValue, index: int, al
 get_bit_field_field_signature :: proc(
 	value: analysis.SymbolBitFieldValue,
 	index: int,
-	allocator := context.temp_allocator,
+	allocator := context.allocator,
 ) -> string {
 	using codeprint
 	sb := strings.builder_make(allocator)
