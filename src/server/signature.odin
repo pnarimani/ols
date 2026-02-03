@@ -71,7 +71,7 @@ get_signature_information :: proc(req_ctx: ^RequestContext) -> (SignatureHelp, b
 
 	ast_context := make_ast_context(req_ctx)
 
-	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .SignatureHelp)
+	position_context, ok := get_document_position_context(&req_ctx.doc, req_ctx.position, .SignatureHelp)
 	if !ok {
 		log.warn("Failed to get position context")
 		return signature_help, true

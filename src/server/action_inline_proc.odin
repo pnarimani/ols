@@ -15,7 +15,7 @@ INLINE_PROC_ACTION_TITLE :: "Inline Proc"
 INLINE_PROC_ACTION_KIND :: "refactor.inline"
 
 InlineProcContext :: struct {
-	doc_ctx:          documents.Document,
+	doc_ctx:          ^documents.Document,
 	ast_context:      ^AstContext,
 	position:         common.AbsolutePosition,
 	// The call expression if cursor is on a procedure call
@@ -30,7 +30,7 @@ InlineProcContext :: struct {
 
 @(private = "package")
 add_inline_proc_action :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
 	uri: common.FileUri,
@@ -81,7 +81,7 @@ add_inline_proc_action :: proc(
 }
 
 create_inline_proc_context :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	ast_context: ^AstContext,
 	position: common.Position,
 ) -> (
@@ -311,7 +311,7 @@ get_call_proc_name :: proc(call: ^ast.Call_Expr) -> string {
 
 // Find a procedure definition by name in the current document
 find_proc_definition :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	ast_context: ^AstContext,
 	name: string,
 ) -> (^ast.Value_Decl, ^ast.Proc_Lit) {
@@ -1236,7 +1236,7 @@ collect_local_vars :: proc(body: ^ast.Block_Stmt, src: string, allocator := cont
 }
 
 // Collect variable names visible at the call site
-collect_call_site_vars :: proc(doc_ctx: documents.Document, containing_stmt: ^ast.Stmt, src: string, allocator := context.allocator) -> map[string]bool {
+collect_call_site_vars :: proc(doc_ctx: ^documents.Document, containing_stmt: ^ast.Stmt, src: string, allocator := context.allocator) -> map[string]bool {
 	vars := make(map[string]bool, allocator)
 	
 	// Find the block containing the call and collect all variables declared before it

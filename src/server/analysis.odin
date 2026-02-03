@@ -63,15 +63,15 @@ SymbolResult :: struct {
 make_ast_context :: proc {
 	make_ast_context_from_request,
 	make_ast_context_from_doc,
-	make_ast_context_from_doc_ctx,
 }
 
 make_ast_context_from_request :: proc(req_ctx: ^RequestContext, allocator := context.allocator) -> AstContext {
-	return make_ast_context_from_doc_ctx(&req_ctx.doc_ctx, allocator)
+	assert(req_ctx.doc.text != nil, "RequestContext must have a valid doc to create AstContext from")
+	return make_ast_context_from_doc(&req_ctx.doc, allocator)
 }
 
 // Create AstContext from a documents.Document pointer. This is the preferred method.
-make_ast_context_from_doc_ctx :: proc(doc: ^documents.Document, allocator := context.allocator) -> AstContext {
+make_ast_context_from_doc :: proc(doc: ^documents.Document, allocator := context.allocator) -> AstContext {
 	ast_context := AstContext {
 		locals                    = make([dynamic]map[string][dynamic]DocumentLocal, 0, allocator),
 		globals                   = make(map[string]analysis.GlobalExpr, 0, allocator),
@@ -84,33 +84,6 @@ make_ast_context_from_doc_ctx :: proc(doc: ^documents.Document, allocator := con
 		current_package           = doc.package_name,
 		allocator                 = allocator,
 		doc                       = doc,
-	}
-
-	add_local_group(&ast_context)
-
-	return ast_context
-}
-
-// Legacy: Create AstContext from individual fields. Use make_ast_context_from_doc_ctx when possible.
-
-make_ast_context_from_doc :: proc(
-	file: ast.File,
-	imports: []Package,
-	package_name: string,
-	fullpath: string,
-	allocator := context.allocator,
-) -> AstContext {
-	ast_context := AstContext {
-		locals                    = make([dynamic]map[string][dynamic]DocumentLocal, 0, allocator),
-		globals                   = make(map[string]analysis.GlobalExpr, 0, allocator),
-		usings                    = make([dynamic]UsingStatement, allocator),
-		recursion_map             = make(map[rawptr]struct{}, 0, allocator),
-		call_expr_recursion_cache = make(map[rawptr]SymbolResult, 0, allocator),
-		use_locals                = true,
-		use_usings                = true,
-		document_package          = package_name,
-		current_package           = package_name,
-		allocator                 = allocator,
 	}
 
 	add_local_group(&ast_context)
@@ -4262,7 +4235,7 @@ field_exists_in_comp_lit :: proc(comp_lit: ^ast.Comp_Lit, name: string) -> bool 
 /*
 	Parser gives ranges of expression, but not actually where the commas are placed.
 */
-get_call_commas :: proc(position_context: ^DocumentPositionContext, doc_ctx: documents.Document) {
+get_call_commas :: proc(position_context: ^DocumentPositionContext, doc_ctx: ^documents.Document) {
 	if position_context.call == nil {
 		return
 	}

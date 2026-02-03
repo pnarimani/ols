@@ -67,7 +67,7 @@ expect_code_action_diff :: proc(
 	defer teardown(&src)
 
 	input_range := build_action_range(&src)
-	actions, ok := server.get_code_actions(src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
 	if !ok {
 		testing.expect(t, false, "Failed to get code actions")
 		return
@@ -330,7 +330,7 @@ expect_code_action_diff_multi_file :: proc(
 	defer teardown(&src)
 
 	input_range := build_action_range(&src)
-	actions, ok := server.get_code_actions(src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
 	if !ok {
 		testing.expect(t, false, "Failed to get code actions")
 		return

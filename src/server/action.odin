@@ -38,7 +38,7 @@ CodeAction :: struct {
 }
 
 get_code_actions :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	range: common.Range,
 	config: ^common.Config,
 ) -> (
@@ -52,13 +52,7 @@ get_code_actions :: proc(
 
 	encoded_path := common.path_to_uri(doc_ctx.filepath, context.temp_allocator)
 
-	ast_context := make_ast_context(
-		doc_ctx.syntaxTree,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.filepath,
-		context.temp_allocator,
-	)
+	ast_context := make_ast_context(doc_ctx, context.temp_allocator)
 
 	position_context, ok := get_document_position_context(doc_ctx, range.start, .Hover)
 	if !ok {
@@ -147,7 +141,7 @@ get_code_actions :: proc(
 }
 
 remove_unused_imports :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	uri: common.FileUri,
 	config: ^common.Config,
 	actions: ^[dynamic]CodeAction,

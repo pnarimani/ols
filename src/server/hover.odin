@@ -575,7 +575,7 @@ get_hover_information :: proc(req_ctx: ^RequestContext) -> (Hover, bool, bool) {
 
 	ast_context := make_ast_context(req_ctx)
 
-	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .Hover)
+	position_context, ok := get_document_position_context(&req_ctx.doc, req_ctx.position, .Hover)
 	if !ok {
 		log.warn("Failed to get position context")
 		return hover, false, false

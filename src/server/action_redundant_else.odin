@@ -62,7 +62,7 @@ Can be transformed to:
 */
 @(private = "package")
 add_redundant_else_action :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	position: common.AbsolutePosition,
 	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,
@@ -297,7 +297,7 @@ is_valid_branch_stmt :: proc(branch: ^ast.Branch_Stmt, ctx: IfContextInfo) -> bo
 }
 
 // Generate the transformed code with else removed
-generate_else_removed :: proc(doc_ctx: documents.Document, if_stmt: ^ast.If_Stmt) -> (string, bool) {
+generate_else_removed :: proc(doc_ctx: ^documents.Document, if_stmt: ^ast.If_Stmt) -> (string, bool) {
 	src := doc_ctx.syntaxTree.src
 	indent := get_line_indentation(src, if_stmt.pos.offset)
 

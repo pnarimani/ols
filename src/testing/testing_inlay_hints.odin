@@ -58,7 +58,7 @@ expect_inlay_hints :: proc(t: ^testing.T, src: ^Source) {
 	setup(src)
 	defer teardown(src)
 
-	symbols_and_nodes := server.resolve_entire_file(src.main.doc_ctx)
+	symbols_and_nodes := server.resolve_entire_file(&src.main.doc_ctx)
 
 	range := common.Range {
 		end = {line = 9000000},

@@ -46,7 +46,7 @@ Block_Text_Options :: struct {
 
 @(private = "package")
 add_invert_if_action :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	position: common.AbsolutePosition,
 	uri: common.FileUri,
 	actions: ^[dynamic]CodeAction,

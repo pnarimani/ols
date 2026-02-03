@@ -44,7 +44,7 @@ walk_directories :: proc(info: os.File_Info, in_err: os.Errno, user_data: rawptr
 }
 
 prepare_references :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 ) -> (
@@ -238,7 +238,7 @@ prepare_references :: proc(
 }
 
 resolve_references :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	ast_context: ^AstContext,
 	position_context: ^DocumentPositionContext,
 	current_file_only := false,
@@ -282,10 +282,9 @@ resolve_references :: proc(
 	}
 
 	when !ODIN_TEST {
-		// Copy doc_ctx so we can take a pointer to it for walk_directories
-		doc_ctx_copy := doc_ctx
+		// doc_ctx is already a pointer, so we can use it directly
 		walk_data := WalkDirectoriesData {
-			doc_ctx   = &doc_ctx_copy,
+			doc_ctx   = doc_ctx,
 			fullpaths = &fullpaths,
 		}
 		for workspace in common.config.workspace_folders {
@@ -312,7 +311,7 @@ resolve_references :: proc(
 		}
 
 		if in_pkg || symbol.pkg == inner_doc_ctx.package_name {
-			symbols_and_nodes := resolve_entire_file(inner_doc_ctx, resolve_flag)
+			symbols_and_nodes := resolve_entire_file(&inner_doc_ctx, resolve_flag)
 			for k, v in symbols_and_nodes {
 				if strings.equal_fold(v.symbol.filepath, symbol.filepath) && v.symbol.range == symbol.range {
 					node_encoded_path := common.path_to_uri(v.node.pos.file, context.temp_allocator)
@@ -335,7 +334,7 @@ resolve_references :: proc(
 }
 
 get_references :: proc(
-	doc_ctx: documents.Document,
+	doc: ^documents.Document,
 	position: common.Position,
 	current_file_only := false,
 	allocator := context.allocator,
@@ -344,19 +343,14 @@ get_references :: proc(
 	bool,
 ) {
 	// Build symbol cache for this request's packages
-	analysis.load_package(doc_ctx.package_name)
-	for pkg in doc_ctx.imports {
+	analysis.load_package(doc.package_name)
+	for pkg in doc.imports {
 		analysis.load_package(pkg.name)
 	}
 
-	ast_context := make_ast_context(
-		doc_ctx.syntaxTree,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.filepath,
-	)
+	ast_context := make_ast_context(doc, context.temp_allocator)
 
-	position_context, ok := get_document_position_context(doc_ctx, position, .Hover)
+	position_context, ok := get_document_position_context(doc, position, .Hover)
 	if !ok {
 		log.warn("Failed to get position context")
 		return {}, false
@@ -364,15 +358,15 @@ get_references :: proc(
 
 	ast_context.position_hint = position_context.hint
 
-	get_globals(doc_ctx.syntaxTree, &ast_context)
+	get_globals(doc.syntaxTree, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
 	if position_context.function != nil {
-		get_locals(doc_ctx.syntaxTree, position_context.function, &ast_context, &position_context)
+		get_locals(doc.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
-	locations, ok2 := resolve_references(doc_ctx, &ast_context, &position_context, current_file_only, allocator)
+	locations, ok2 := resolve_references(doc, &ast_context, &position_context, current_file_only, allocator)
 
 	return locations[:], ok2
 }

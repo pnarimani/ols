@@ -6,7 +6,7 @@ import "src:common"
 import "src:diagnostics"
 
 // check_unused_imports checks for unused imports and adds diagnostics
-check_unused_imports :: proc(doc_ctx: documents.Document, config: ^common.Config) {
+check_unused_imports :: proc(doc_ctx: ^documents.Document, config: ^common.Config) {
 	if !config.enable_unused_imports_reporting {
 		return
 	}

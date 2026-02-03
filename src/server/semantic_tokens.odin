@@ -132,7 +132,7 @@ semantic_tokens_to_response_params :: proc(tokens: []SemanticToken) -> SemanticT
 }
 
 get_semantic_tokens :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	range: common.Range,
 	symbols: map[uintptr]analysis.SymbolAndNode,
 ) -> []SemanticToken {
@@ -142,12 +142,7 @@ get_semantic_tokens :: proc(
 		analysis.load_package(pkg.name)
 	}
 
-	ast_context := make_ast_context(
-		doc_ctx.syntaxTree,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.filepath,
-	)
+	ast_context := make_ast_context(doc_ctx, context.temp_allocator)
 	ast_context.current_package = ast_context.document_package
 
 	builder: SemanticTokenBuilder = {

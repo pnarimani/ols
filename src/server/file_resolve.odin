@@ -28,17 +28,10 @@ reset_position_context :: proc(position_context: ^DocumentPositionContext) {
 	position_context.index = nil
 }
 
-resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range, allocator := context.allocator) -> map[uintptr]analysis.SymbolAndNode {
-	// Build symbol cache for this request's packages
+resolve_ranged_file :: proc(doc_ctx: ^documents.Document, range: common.Range, allocator := context.allocator) -> map[uintptr]analysis.SymbolAndNode {
 	load_document_packages(doc_ctx)
 
-	ast_context := make_ast_context(
-		doc_ctx.syntaxTree,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.filepath,
-		allocator,
-	)
+	ast_context := make_ast_context(doc_ctx, context.temp_allocator)
 
 	position_context: DocumentPositionContext
 	position_context.functions = make([dynamic]^ast.Proc_Lit, allocator)
@@ -66,23 +59,17 @@ resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range, al
 	return symbols
 }
 
-load_document_packages :: proc(doc: documents.Document) {
+load_document_packages :: proc(doc: ^documents.Document) {
 	analysis.load_package(doc.package_name)
 	for pkg in doc.imports {
 		analysis.load_package(pkg.name)
 	}
 }
 
-resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFlag.None, allocator := context.allocator) -> map[uintptr]analysis.SymbolAndNode {
+resolve_entire_file :: proc(doc: ^documents.Document, flag := ResolveReferenceFlag.None, allocator := context.allocator) -> map[uintptr]analysis.SymbolAndNode {
 	load_document_packages(doc)
 
-	ast_context := make_ast_context(
-		doc.syntaxTree,
-		doc.imports,
-		doc.package_name,
-		doc.filepath,
-		allocator,
-	)
+	ast_context := make_ast_context(doc, context.temp_allocator)
 
 	position_context: DocumentPositionContext
 	position_context.functions = make([dynamic]^ast.Proc_Lit, allocator)
@@ -109,7 +96,7 @@ FileResolveData :: struct {
 	ast_context:      ^AstContext,
 	symbols:          ^map[uintptr]analysis.SymbolAndNode,
 	id_counter:       int,
-	doc_ctx:          documents.Document,
+	doc_ctx:          ^documents.Document,
 	position_context: ^DocumentPositionContext,
 	flag:             ResolveReferenceFlag,
 }
@@ -118,7 +105,7 @@ FileResolveData :: struct {
 resolve_decl :: proc(
 	position_context: ^DocumentPositionContext,
 	ast_context: ^AstContext,
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	decl: ^ast.Node,
 	symbols: ^map[uintptr]analysis.SymbolAndNode,
 	flag: ResolveReferenceFlag,

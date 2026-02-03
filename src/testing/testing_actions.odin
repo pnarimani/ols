@@ -24,7 +24,7 @@ expect_no_action :: proc(t: ^testing.T, main: string, action_name: string, packa
 	defer teardown(&src)
 
 	input_range := build_action_range(&src)
-	actions, ok := server.get_code_actions(src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
 	if !ok {
 		// No actions returned is fine for this test
 		return
@@ -46,7 +46,7 @@ expect_action :: proc(t: ^testing.T, src: ^Source, expect_action_names: []string
 	defer teardown(src)
 
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
 	if !ok {
 		log.error("Failed to find actions")
 	}
@@ -77,7 +77,7 @@ expect_action_excludes :: proc(t: ^testing.T, src: ^Source, excluded_action_name
 	defer teardown(src)
 
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
 	if !ok {
 		log.error("Failed to find actions")
 	}
@@ -96,7 +96,7 @@ expect_action_with_edit :: proc(t: ^testing.T, src: ^Source, action_name: string
 	defer teardown(src)
 
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
 	if !ok {
 		log.error("Failed to find actions")
 		return
@@ -146,7 +146,7 @@ expect_action_with_edit_at_line :: proc(
 	defer teardown(src)
 
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
 	if !ok {
 		log.error("Failed to find actions")
 		testing.expect(t, false, "Failed to find actions")

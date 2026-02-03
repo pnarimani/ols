@@ -12,17 +12,11 @@ import "core:strings"
 
 import "src:common"
 
-get_rename :: proc(doc_ctx: documents.Document, new_text: string, position: common.Position) -> (WorkspaceEdit, bool) {
+get_rename :: proc(doc_ctx: ^documents.Document, new_text: string, position: common.Position) -> (WorkspaceEdit, bool) {
 	// Build symbol cache for this request's packages
 	load_document_packages(doc_ctx)
 
-	ast_context := make_ast_context(
-		doc_ctx.syntaxTree,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.filepath,
-		context.temp_allocator,
-	)
+	ast_context := make_ast_context(doc_ctx, context.temp_allocator)
 
 	position_context, ok := get_document_position_context(doc_ctx, position, .Hover)
 	if !ok {
@@ -69,17 +63,11 @@ get_rename :: proc(doc_ctx: documents.Document, new_text: string, position: comm
 }
 
 
-get_prepare_rename :: proc(doc_ctx: documents.Document, position: common.Position) -> (common.Range, bool) {
+get_prepare_rename :: proc(doc_ctx: ^documents.Document, position: common.Position) -> (common.Range, bool) {
 	// Build symbol cache for this request's packages
 	load_document_packages(doc_ctx)
 
-	ast_context := make_ast_context(
-		doc_ctx.syntaxTree,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.filepath,
-		context.temp_allocator,
-	)
+	ast_context := make_ast_context(doc_ctx, context.temp_allocator)
 
 	position_context, ok := get_document_position_context(doc_ctx, position, .Hover)
 	if !ok {
@@ -96,7 +84,7 @@ get_prepare_rename :: proc(doc_ctx: documents.Document, position: common.Positio
 		get_locals(doc_ctx.syntaxTree, position_context.function, &ast_context, &position_context)
 	}
 
-	symbol, ok2 := prepare_rename(doc_ctx, &ast_context, &position_context)
+	symbol, ok2 := prepare_rename(doc_ctx^, &ast_context, &position_context)
 	return symbol.range, ok2
 }
 

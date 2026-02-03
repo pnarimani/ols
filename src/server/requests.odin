@@ -1118,7 +1118,7 @@ notification_did_open :: proc(
 		analysis.update_doc(doc_ctx.syntaxTree)
 
 		// Run lightweight diagnostics
-		check_unused_imports(doc_ctx, config)
+		check_unused_imports(&doc_ctx, config)
 		check_invert_if_suggestions(doc_ctx, config)
 	}
 
@@ -1163,7 +1163,7 @@ notification_did_change :: proc(
 
 			// Run lightweight AST-based diagnostics on edit for immediate feedback
 			// (full odin check only runs on save as it's too expensive for every keystroke)
-			check_unused_imports(doc_ctx, config)
+			check_unused_imports(&doc_ctx, config)
 			check_invert_if_suggestions(doc_ctx, config)
 		}
 	}
@@ -1241,7 +1241,7 @@ notification_did_save :: proc(
 	if document != nil {
 		if doc_ctx, ctx_ok := create_document_context(document, config); ctx_ok {
 			// Run lightweight diagnostics for the current document
-			check_unused_imports(doc_ctx, config)
+			check_unused_imports(&doc_ctx, config)
 			check_invert_if_suggestions(doc_ctx, config)
 		}
 	}
@@ -1288,9 +1288,9 @@ request_semantic_token_full :: proc(
 		doc_ctx, ctx_ok := create_document_context(document, config)
 		if ctx_ok {
 			file := FileResolve {
-				symbols = resolve_entire_file(doc_ctx),
+				symbols = resolve_entire_file(&doc_ctx),
 			}
-			tokens := get_semantic_tokens(doc_ctx, range, file.symbols)
+			tokens := get_semantic_tokens(&doc_ctx, range, file.symbols)
 			tokens_params = semantic_tokens_to_response_params(tokens)
 		}
 	}
@@ -1333,9 +1333,9 @@ request_semantic_token_range :: proc(
 		doc_ctx, ctx_ok := create_document_context(document, config)
 		if ctx_ok {
 			file := FileResolve {
-				symbols = resolve_ranged_file(doc_ctx, semantic_params.range),
+				symbols = resolve_ranged_file(&doc_ctx, semantic_params.range),
 			}
-			tokens := get_semantic_tokens(doc_ctx, semantic_params.range, file.symbols)
+			tokens := get_semantic_tokens(&doc_ctx, semantic_params.range, file.symbols)
 			tokens_params = semantic_tokens_to_response_params(tokens)
 		}
 	}
@@ -1377,7 +1377,7 @@ request_document_symbols :: proc(
 		return .InternalError
 	}
 
-	symbols := get_document_symbols(doc_ctx)
+	symbols := get_document_symbols(&doc_ctx)
 
 	response := make_response_message(params = symbols, id = id)
 
@@ -1453,7 +1453,7 @@ request_inlay_hint :: proc(
 	if !ctx_ok do return .InternalError
 
 	file := FileResolve {
-		symbols = resolve_ranged_file(doc_ctx, inlay_params.range),
+		symbols = resolve_ranged_file(&doc_ctx, inlay_params.range),
 	}
 
 	hints, hints_ok := get_inlay_hints(doc_ctx, inlay_params.range, file.symbols, config)
@@ -1547,7 +1547,7 @@ request_prepare_rename :: proc(
 		return .InternalError
 	}
 
-	if range, ok := get_prepare_rename(doc_ctx, rename_param.position); ok {
+	if range, ok := get_prepare_rename(&doc_ctx, rename_param.position); ok {
 		response := make_response_message(params = range, id = id)
 		send_response(response, writer)
 	} else {
@@ -1584,7 +1584,7 @@ request_rename :: proc(params: json.Value, id: RequestId, config: ^common.Config
 	}
 
 	workspace_edit: WorkspaceEdit
-	workspace_edit, ok = get_rename(doc_ctx, rename_param.newName, rename_param.position)
+	workspace_edit, ok = get_rename(&doc_ctx, rename_param.newName, rename_param.position)
 
 	if !ok {
 		return .InternalError
@@ -1628,7 +1628,7 @@ request_references :: proc(
 	}
 
 	locations: []common.Location
-	locations, ok = get_references(doc_ctx, reference_param.position)
+	locations, ok = get_references(&doc_ctx, reference_param.position)
 
 	if !ok {
 		return .InternalError
@@ -1640,6 +1640,8 @@ request_references :: proc(
 
 	return .None
 }
+
+create_document_context :: documents.create_context
 
 request_highlights :: proc(
 	params: json.Value,
@@ -1672,7 +1674,7 @@ request_highlights :: proc(
 	}
 
 	locations: []common.Location
-	locations, ok = get_references(doc_ctx, highlight_param.position, true)
+	locations, ok = get_references(&doc_ctx, highlight_param.position, true)
 
 	if !ok {
 		return .InternalError
@@ -1715,13 +1717,13 @@ request_code_action :: proc(
 		return .InternalError
 	}
 
-	doc_ctx, ctx_ok := create_document_context(document, config)
+	doc_ctx, ctx_ok := documents.create_context(document, config)
 	if !ctx_ok {
 		return .InternalError
 	}
 
 	code_actions: []CodeAction
-	code_actions, ok = get_code_actions(doc_ctx, code_action_params.range, config)
+	code_actions, ok = get_code_actions(&doc_ctx, code_action_params.range, config)
 	if !ok {
 		return .InternalError
 	}

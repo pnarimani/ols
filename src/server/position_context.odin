@@ -112,7 +112,7 @@ get_document_position_decls :: proc(decls: []^ast.Stmt, position_context: ^Docum
 	Figure out what exactly is at the given position and whether it is in a function, struct, etc.
 */
 get_document_position_context :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	position: common.Position,
 	hint: DocumentPositionContextHint,
 ) -> (
@@ -186,7 +186,7 @@ get_document_position_context :: proc(
 
 //terrible fallback code
 fallback_position_context_completion :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	position: common.Position,
 	position_context: ^DocumentPositionContext,
 ) {
@@ -414,7 +414,7 @@ fallback_position_context_completion :: proc(
 }
 
 fallback_position_context_signature :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	position: common.Position,
 	position_context: ^DocumentPositionContext,
 ) {

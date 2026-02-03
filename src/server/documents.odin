@@ -19,7 +19,7 @@ Package :: documents.Package
 // Created fresh per-request with data from documents.Document.
 // Symbol access is through the analysis package's cache helpers.
 RequestContext :: struct {
-	doc_ctx:  documents.Document,
+	doc:  documents.Document,
 	config:   ^common.Config,
 	position: common.Position,
 }
@@ -28,15 +28,15 @@ RequestContext :: struct {
 // All data is allocated using context.temp_allocator.
 // Builds the symbol cache for the request's imports.
 make_request_context :: proc(d: ^documents.DocumentData, pos: common.Position, config: ^common.Config) -> (RequestContext, bool) {
-	doc_ctx, ok := create_document_context(d, config)
+	doc_ctx, ok := documents.create_context(d, config)
 	if !ok {
 		return {}, false
 	}
 
 	// Build symbol cache for this request's packages
-	load_document_packages(doc_ctx)
+	load_document_packages(&doc_ctx)
 
-	return RequestContext{doc_ctx = doc_ctx, config = config, position = pos}, true
+	return RequestContext{doc = doc_ctx, config = config, position = pos}, true
 }
 
 // Delegate to doc package
@@ -44,8 +44,6 @@ document_storage_init :: documents.init
 document_storage_shutdown :: documents.shutdown
 
 document_get :: documents.get
-
-create_document_context :: documents.create_context
 
 document_apply_changes :: proc(
 	uri_string: string,

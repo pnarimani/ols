@@ -21,16 +21,11 @@ CodeLens :: struct {
 	data:    string,
 }
 
-get_code_lenses :: proc(doc_ctx: documents.Document, position: common.Position) -> ([]CodeLens, bool) {
+get_code_lenses :: proc(doc_ctx: ^documents.Document, position: common.Position) -> ([]CodeLens, bool) {
 	// Build symbol cache for this request's packages
 	load_document_packages(doc_ctx)
 
-	ast_context := make_ast_context(
-		doc_ctx.syntaxTree,
-		doc_ctx.imports,
-		doc_ctx.package_name,
-		doc_ctx.filepath,
-	)
+	ast_context := make_ast_context(doc_ctx, context.allocator)
 
 	get_globals(doc_ctx.syntaxTree, &ast_context)
 

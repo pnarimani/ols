@@ -14,7 +14,7 @@ INLINE_VARIABLE_ACTION_TITLE :: "Inline Variable"
 INLINE_VARIABLE_ACTION_KIND :: "refactor.inline"
 
 InlineVariableContext :: struct {
-	doc_ctx:          documents.Document,
+	doc_ctx:          ^documents.Document,
 	ast_context:      ^AstContext,
 	position:         common.AbsolutePosition,
 	// The variable declaration containing the variable to inline
@@ -35,7 +35,7 @@ InlineVariableContext :: struct {
 
 @(private = "package")
 add_inline_variable_action :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	ast_context: ^AstContext,
 	range: common.Range,
 	uri: common.FileUri,
@@ -84,7 +84,7 @@ add_inline_variable_action :: proc(
 }
 
 create_inline_variable_context :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	ast_context: ^AstContext,
 	position: common.Position,
 ) -> (

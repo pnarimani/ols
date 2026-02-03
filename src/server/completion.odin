@@ -40,7 +40,7 @@ Completion_Type :: enum {
 get_completion_list :: proc(req_ctx: ^RequestContext, cmp_ctx: CompletionContext) -> (CompletionList, bool) {
 	list: CompletionList
 
-	position_context, ok := get_document_position_context(req_ctx.doc_ctx, req_ctx.position, .Completion)
+	position_context, ok := get_document_position_context(&req_ctx.doc, req_ctx.position, .Completion)
 
 	if !ok || position_context.abort_completion {
 		return list, true

@@ -34,7 +34,7 @@ CrossFileUsage :: struct {
 }
 
 InlineAliasContext :: struct {
-	doc:                documents.Document,
+	doc:                ^documents.Document,
 	config:             ^common.Config,
 	ast_context:        ^AstContext,
 	position:           common.AbsolutePosition,
@@ -60,7 +60,7 @@ InlineAliasContext :: struct {
 
 @(private = "package")
 add_inline_alias_action :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	ast_context: ^AstContext,
 	config: ^common.Config,
 	range: common.Range,
@@ -107,7 +107,7 @@ add_inline_alias_action :: proc(
 }
 
 create_inline_alias_context :: proc(
-	doc_ctx: documents.Document,
+	doc_ctx: ^documents.Document,
 	ast_context: ^AstContext,
 	config: ^common.Config,
 	position: common.Position,

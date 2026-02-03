@@ -34,7 +34,7 @@ Source :: struct {
 
 // Helper to create a RequestContext from a Source for testing
 make_test_request_context :: proc(src: ^Source) -> server.RequestContext {
-	return server.RequestContext{doc_ctx = src.main.doc_ctx, config = &src.config, position = src.main.position}
+	return server.RequestContext{doc = src.main.doc_ctx, config = &src.config, position = src.main.position}
 }
 
 @(private)
