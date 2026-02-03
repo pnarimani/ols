@@ -17,14 +17,23 @@ When reviewing or writing Odin code, enforce these allocator rules strictly:
 2. **NEVER use** `allocator := context.temp_allocator` as a default parameter - this is forbidden
 
 ## Return Value Rules  
-3. **Returned objects** and ALL their sub-objects must be allocated on the passed `allocator`
-4. **Never return** objects hardcoded to `context.temp_allocator`
+3. **Returned objects** and ALL their sub-objects must be **explicitly** allocated using the passed `allocator` parameter
+4. **Never use implicit `context.allocator`** for returned data - always pass `allocator` explicitly to `make`/`new`/`strings.clone`/etc.
 5. **Propagate allocator** to any called proc if that proc's result is being returned:
    ```odin
+   // CORRECT: Explicit allocator for all returned data
    get_data :: proc(allocator := context.allocator) -> []string {
-       return other_proc(allocator)  // MUST pass allocator since result is returned
+       result := make([]string, 10, allocator)  // Explicit - GOOD
+       result[0] = strings.clone("hello", allocator)  // Explicit - GOOD
+       return result
    }
-	```
+   
+   // WRONG: Using implicit context.allocator for returned data
+   get_data_bad :: proc(allocator := context.allocator) -> []string {
+       result := make([]string, 10)  // Implicit context.allocator - BAD
+       return result
+   }
+   ```
 
 ## Internal Data Rules
 6. Temporary working data that is NOT returned must use context.temp_allocator:
