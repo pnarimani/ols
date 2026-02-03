@@ -41,3 +41,10 @@ REQUIRED:
 - Use plain single-line comments: `// Comment text`
 - For section markers (if needed), use simple comments: `// Section name`
 - Prefer no comments over decorative comments
+
+## Verification of Changes
+
+After making changes, always verify by:
+- Build the project by `./build.bat` or `./build.sh` and make sure there are no errors.
+- Run all tests using `./build.bat test` or `./run_tests.sh test` and ensure they pass.
+- When facing a failing test, you can run the same test again by using `./build.bat single_test <TestName>` or `./run_tests.sh single_test <TestName>`.
