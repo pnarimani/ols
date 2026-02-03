@@ -10,13 +10,13 @@ import test "src:testing"
 @(test)
 reference_enum_value_initialize_rhs :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			a := e.{:}Chang{*}e_Me{:}
 		}
 
 		e :: enum { {:}Change_Me{:} }
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -25,7 +25,7 @@ reference_enum_value_initialize_rhs :: proc(t: ^testing.T) {
 @(test)
 reference_enum_type_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		TestEnum :: enum {
 			{:}valueOne{:}, 
 			valueTwo,
@@ -40,7 +40,7 @@ reference_enum_type_field :: proc(t: ^testing.T) {
 			arr :: EnumIndexedArray
 			return arr[.{:}valueOne{:}]
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -49,13 +49,13 @@ reference_enum_type_field :: proc(t: ^testing.T) {
 @(test)
 reference_variables_in_function :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		my_function :: proc() {
 			{:}b{:} := 2
 			a := {:}b{:}
 			c := 2 + {:}b{*}{:}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -64,14 +64,14 @@ reference_variables_in_function :: proc(t: ^testing.T) {
 @(test)
 reference_variables_in_function_with_empty_line_at_top_of_file :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `
+		files = {{source = `
 		package test
 		my_function :: proc() {
 			{:}b{:} := 2
 			a := {:}b{:}
 			c := 2 + {:}b{*}{:}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -80,11 +80,11 @@ reference_variables_in_function_with_empty_line_at_top_of_file :: proc(t: ^testi
 @(test)
 reference_variables_in_function_parameters :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		my_function :: proc({:}a{:}: int) {
 			b := {:}a{*}{:}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -93,7 +93,7 @@ reference_variables_in_function_parameters :: proc(t: ^testing.T) {
 @(test)
 reference_selectors_in_function :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		My_Struct :: struct {
 			{:}a{:}: int,
 		}
@@ -102,7 +102,7 @@ reference_selectors_in_function :: proc(t: ^testing.T) {
 			my: My_Struct
 			my.{:}a{*}{:} = 2
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -112,7 +112,7 @@ reference_selectors_in_function :: proc(t: ^testing.T) {
 @(test)
 reference_field_comp_lit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			{:}soo_many_cases{:}: int,
 		}
@@ -126,7 +126,7 @@ reference_field_comp_lit :: proc(t: ^testing.T) {
 				foo = {{:}soo_many_cases{*}{:} = 2},
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -135,7 +135,7 @@ reference_field_comp_lit :: proc(t: ^testing.T) {
 @(test)
 reference_field_comp_lit_infer_from_function :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			{:}soo_many_cases{:}: int,
 		}
@@ -147,7 +147,7 @@ reference_field_comp_lit_infer_from_function :: proc(t: ^testing.T) {
 		my_function :: proc(my_struct: My_Struct) {
 			my_function({foo = {{:}soo_many_cases{*}{:} = 2}})
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -156,7 +156,7 @@ reference_field_comp_lit_infer_from_function :: proc(t: ^testing.T) {
 @(test)
 reference_field_comp_lit_infer_from_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			{:}soo_many_cases{:}: int,
 		}
@@ -168,7 +168,7 @@ reference_field_comp_lit_infer_from_return :: proc(t: ^testing.T) {
 		my_function :: proc() -> My_Struct {
 			return {foo = {{:}soo_many_cases{*}{:} = 2}}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -178,7 +178,7 @@ reference_field_comp_lit_infer_from_return :: proc(t: ^testing.T) {
 @(test)
 reference_enum_field_infer_from_assignment :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Sub_Enum1 :: enum {
 			{:}ONE{:},
 		}
@@ -195,7 +195,7 @@ reference_enum_field_infer_from_assignment :: proc(t: ^testing.T) {
 			my_enum: Super_Enum
 			my_enum = .{:}ON{*}E{:}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -205,7 +205,7 @@ reference_enum_field_infer_from_assignment :: proc(t: ^testing.T) {
 @(test)
 reference_struct_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Mouse :: struct {
 			x, y: f32,
 		}
@@ -216,7 +216,7 @@ reference_struct_field :: proc(t: ^testing.T) {
 			mouse.x += {:}x{*}{:}
 			mouse.y += y
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -225,7 +225,7 @@ reference_struct_field :: proc(t: ^testing.T) {
 @(test)
 ast_reference_variable_declaration_with_selector_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Bar :: struct {
 			foo: int,
@@ -236,8 +236,7 @@ ast_reference_variable_declaration_with_selector_expr :: proc(t: ^testing.T) {
 			{:}bar{:}[0].foo = 5
 			{:}b{*}ar{:}[1].foo = 6
 		}
-		`},
-		extra_files = {},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -246,7 +245,7 @@ ast_reference_variable_declaration_with_selector_expr :: proc(t: ^testing.T) {
 @(test)
 ast_reference_variable_uses_from_declaration :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Bar :: struct {
 			foo: int,
@@ -257,8 +256,7 @@ ast_reference_variable_uses_from_declaration :: proc(t: ^testing.T) {
 			{:}bar{:}.foo = 5
 			{:}bar{:}.foo = 6
 		}
-		`},
-		extra_files = {},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -267,7 +265,7 @@ ast_reference_variable_uses_from_declaration :: proc(t: ^testing.T) {
 @(test)
 ast_reference_variable_uses_from_declaration_with_selector_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Bar :: struct {
 			foo: int,
@@ -278,8 +276,7 @@ ast_reference_variable_uses_from_declaration_with_selector_expr :: proc(t: ^test
 			{:}bar{:}[0].foo = 5
 			{:}bar{:}[1].foo = 6
 		}
-		`},
-		extra_files = {},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -288,7 +285,7 @@ ast_reference_variable_uses_from_declaration_with_selector_expr :: proc(t: ^test
 @(test)
 ast_reference_variable_declaration_field_with_selector_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Bar :: struct {
 			{:}foo{:}: int,
@@ -299,8 +296,7 @@ ast_reference_variable_declaration_field_with_selector_expr :: proc(t: ^testing.
 			bar[0].{:}foo{:} = 5
 			bar[1].{:}f{*}oo{:} = 6
 		}
-		`},
-		extra_files = {},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -309,7 +305,7 @@ ast_reference_variable_declaration_field_with_selector_expr :: proc(t: ^testing.
 @(test)
 ast_reference_cast_proc_param_with_param_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct{
 			data: int,
@@ -325,7 +321,7 @@ ast_reference_cast_proc_param_with_param_expr :: proc(t: ^testing.T) {
 			(cast(^Bar)&{:}buf{:}.data).len -= n
 			{:}buf{:}.r_offset = ({:}buf{:}.r_offset + n) % cap({:}buf{:}.data)
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -334,7 +330,7 @@ ast_reference_cast_proc_param_with_param_expr :: proc(t: ^testing.T) {
 @(test)
 ast_reference_variable_in_switch_case :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Bar :: enum {
 			Bar1,
@@ -354,7 +350,7 @@ ast_reference_variable_in_switch_case :: proc(t: ^testing.T) {
 				{:}f{*}oo{:}.foo1 = 2
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -363,7 +359,7 @@ ast_reference_variable_in_switch_case :: proc(t: ^testing.T) {
 @(test)
 ast_reference_shouldnt_reference_variable_outside_body :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			foo1: int,
@@ -376,7 +372,7 @@ ast_reference_shouldnt_reference_variable_outside_body :: proc(t: ^testing.T) {
 				{:}foo{:}.foo1 = 2
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -385,7 +381,7 @@ ast_reference_shouldnt_reference_variable_outside_body :: proc(t: ^testing.T) {
 @(test)
 ast_reference_shouldnt_reference_variable_inside_body :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			foo1: int,
@@ -398,7 +394,7 @@ ast_reference_shouldnt_reference_variable_inside_body :: proc(t: ^testing.T) {
 				foo.foo1 = 2
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -408,7 +404,7 @@ ast_reference_shouldnt_reference_variable_inside_body :: proc(t: ^testing.T) {
 @(test)
 ast_reference_should_reference_variable_inside_body :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			foo1: int,
@@ -420,7 +416,7 @@ ast_reference_should_reference_variable_inside_body :: proc(t: ^testing.T) {
 				{:}foo{:}.foo1 = 2
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -429,7 +425,7 @@ ast_reference_should_reference_variable_inside_body :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_within_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		{:}Foo{:} :: struct {
 			foo1: int,
@@ -443,7 +439,7 @@ ast_reference_struct_within_proc :: proc(t: ^testing.T) {
 
 			ifoo := InnerFoo {foo = foo}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -452,7 +448,7 @@ ast_reference_struct_within_proc :: proc(t: ^testing.T) {
 @(test)
 ast_reference_enum_field_list :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			{:}a{:} = 1,
@@ -462,7 +458,7 @@ ast_reference_enum_field_list :: proc(t: ^testing.T) {
 			foo: Foo
 			foo = .{:}a{*}{:}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -471,14 +467,14 @@ ast_reference_enum_field_list :: proc(t: ^testing.T) {
 @(test)
 ast_reference_enum_field_list_with_constant :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		{:}one{:} :: 1
 
 		Foo :: enum {
 			a = {:}on{*}e{:},
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -487,7 +483,7 @@ ast_reference_enum_field_list_with_constant :: proc(t: ^testing.T) {
 @(test)
 ast_reference_enum_bitset :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			{:}Aaa{:},
@@ -500,7 +496,7 @@ ast_reference_enum_bitset :: proc(t: ^testing.T) {
 			foos: Foos
 			foos += {.{:}A{*}aa{:}}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -509,7 +505,7 @@ ast_reference_enum_bitset :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_field_from_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Bar :: struct {
 			{:}bar{:}: int,
@@ -522,7 +518,7 @@ ast_reference_struct_field_from_proc :: proc(t: ^testing.T) {
 		main :: proc() {
 			bar := foo().{:}b{*}ar{:}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -531,7 +527,7 @@ ast_reference_struct_field_from_proc :: proc(t: ^testing.T) {
 @(test)
 ast_reference_proc_with_immediate_return_field_access :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Bar :: struct {
 			bar: int,
@@ -545,7 +541,7 @@ ast_reference_proc_with_immediate_return_field_access :: proc(t: ^testing.T) {
 			bar := {:}f{*}oo{:}().bar
 			bar2 := {:}foo{:}().bar
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -554,7 +550,7 @@ ast_reference_proc_with_immediate_return_field_access :: proc(t: ^testing.T) {
 @(test)
 ast_reference_enumerated_array :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			{:}A{:},
@@ -572,7 +568,7 @@ ast_reference_enumerated_array :: proc(t: ^testing.T) {
 				}
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -581,14 +577,14 @@ ast_reference_enumerated_array :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_field_ptr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			bar: ^{:}Ba{*}r{:}
 		}
 
 		{:}Bar{:} :: struct {}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -597,7 +593,7 @@ ast_reference_struct_field_ptr :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_and_enum_variant_same_name :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			Bar,
@@ -611,7 +607,7 @@ ast_reference_struct_and_enum_variant_same_name :: proc(t: ^testing.T) {
 			f = .Bar
 			b := {:}B{*}ar{:}{}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -620,7 +616,7 @@ ast_reference_struct_and_enum_variant_same_name :: proc(t: ^testing.T) {
 @(test)
 ast_reference_enum_variants_comp_lit_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			{:}A{:},
@@ -637,7 +633,7 @@ ast_reference_enum_variants_comp_lit_return :: proc(t: ^testing.T) {
 			}
 		}
 
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -646,7 +642,7 @@ ast_reference_enum_variants_comp_lit_return :: proc(t: ^testing.T) {
 @(test)
 ast_reference_enum_variants_comp_lit_return_implicit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			{:}A{:},
@@ -663,7 +659,7 @@ ast_reference_enum_variants_comp_lit_return_implicit :: proc(t: ^testing.T) {
 			}
 		}
 
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -672,7 +668,7 @@ ast_reference_enum_variants_comp_lit_return_implicit :: proc(t: ^testing.T) {
 @(test)
 ast_reference_enum_indexed_array_return_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			{:}A{:},
@@ -686,7 +682,7 @@ ast_reference_enum_indexed_array_return_value :: proc(t: ^testing.T) {
 			}
 		}
 
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -695,7 +691,7 @@ ast_reference_enum_indexed_array_return_value :: proc(t: ^testing.T) {
 @(test)
 ast_reference_enum_conflict_switch_statement :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			{:}A{*}{:},
@@ -716,7 +712,7 @@ ast_reference_enum_conflict_switch_statement :: proc(t: ^testing.T) {
 				foo = .{:}A{:}
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -725,7 +721,7 @@ ast_reference_enum_conflict_switch_statement :: proc(t: ^testing.T) {
 @(test)
 ast_reference_enum_nested_with_switch :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			{:}A{*}{:},
@@ -741,7 +737,7 @@ ast_reference_enum_nested_with_switch :: proc(t: ^testing.T) {
 				return .{:}A{:}
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -750,7 +746,7 @@ ast_reference_enum_nested_with_switch :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_field_enumerated_array :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		{:}Foo{:} :: enum {
 			A,
@@ -762,7 +758,7 @@ ast_reference_struct_field_enumerated_array :: proc(t: ^testing.T) {
 		}
 
 		Bazz :: struct {}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -771,7 +767,7 @@ ast_reference_struct_field_enumerated_array :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_field_map_key :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		{:}Foo{:} :: int
 
@@ -780,7 +776,7 @@ ast_reference_struct_field_map_key :: proc(t: ^testing.T) {
 		Bazz :: struct {
 			bars: map[{:}Fo{*}o{:}]Bar
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -789,7 +785,7 @@ ast_reference_struct_field_map_key :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_field_map_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: int
 
@@ -799,7 +795,7 @@ ast_reference_struct_field_map_value :: proc(t: ^testing.T) {
 			bars: map[Foo]{:}B{*}ar{:}
 		}
 
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -808,7 +804,7 @@ ast_reference_struct_field_map_value :: proc(t: ^testing.T) {
 @(test)
 ast_reference_named_parameter_same_as_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo :: proc({:}a{:}: int) {}
 
@@ -816,7 +812,7 @@ ast_reference_named_parameter_same_as_variable :: proc(t: ^testing.T) {
 			a := "hellope"
 			foo({:}a{*}{:} = 0)
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -825,7 +821,7 @@ ast_reference_named_parameter_same_as_variable :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_comp_lit_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -842,7 +838,7 @@ ast_reference_struct_comp_lit_field :: proc(t: ^testing.T) {
 			}
 		}
 
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -851,12 +847,12 @@ ast_reference_struct_comp_lit_field :: proc(t: ^testing.T) {
 @(test)
 ast_references_inside_where_clause :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc({:}x{:}: [2]int)
 			where len({:}x{:}) > 1,
 				  type_of({:}x{*}{:}) == [2]int {
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -865,7 +861,7 @@ ast_references_inside_where_clause :: proc(t: ^testing.T) {
 @(test)
 ast_references_union_switch_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: union {
 			int,
 			string
@@ -880,7 +876,7 @@ ast_references_union_switch_type :: proc(t: ^testing.T) {
 				bar := "test" + {:}v{:}
 			}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -889,7 +885,7 @@ ast_references_union_switch_type :: proc(t: ^testing.T) {
 @(test)
 ast_references_enum_struct_field_without_name :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			{:}A{:},
 			B,
@@ -902,7 +898,7 @@ ast_references_enum_struct_field_without_name :: proc(t: ^testing.T) {
 		main :: proc() {
 			bar: Bar = {.{:}A{*}{:}}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -911,13 +907,13 @@ ast_references_enum_struct_field_without_name :: proc(t: ^testing.T) {
 @(test)
 ast_references_poly_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc(array: $A/[dynamic]^$T) {
 			for {:}e{*}lem{:}, i in array {
 				{:}elem{:}
 			}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -926,7 +922,7 @@ ast_references_poly_type :: proc(t: ^testing.T) {
 @(test)
 ast_references_soa_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			{:}x{:}, y: int,
 		}
@@ -935,7 +931,7 @@ ast_references_soa_field :: proc(t: ^testing.T) {
 			foos: #soa[]Foo
 			x := foos.{:}x{*}{:}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -944,7 +940,7 @@ ast_references_soa_field :: proc(t: ^testing.T) {
 @(test)
 ast_references_soa_pointer_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			{:}x{:}, y: int,
 		}
@@ -953,7 +949,7 @@ ast_references_soa_pointer_field :: proc(t: ^testing.T) {
 			foos: #soa^#soa[]Foo
 			x := foos.{:}x{*}{:}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -962,7 +958,7 @@ ast_references_soa_pointer_field :: proc(t: ^testing.T) {
 @(test)
 ast_references_nested_switch_cases :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			{:}B{*}{:},
@@ -985,7 +981,7 @@ ast_references_nested_switch_cases :: proc(t: ^testing.T) {
 			case .{:}B{:}:
 			}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -994,7 +990,7 @@ ast_references_nested_switch_cases :: proc(t: ^testing.T) {
 @(test)
 ast_references_switch_cases_binary_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			{:}B{*}{:},
@@ -1015,7 +1011,7 @@ ast_references_switch_cases_binary_expr :: proc(t: ^testing.T) {
 			case .{:}B{:}:
 			}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1024,7 +1020,7 @@ ast_references_switch_cases_binary_expr :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_field_matrix_row :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		{:}Foo{:} :: int
 
@@ -1034,7 +1030,7 @@ ast_reference_struct_field_matrix_row :: proc(t: ^testing.T) {
 			bars: matrix[{:}Fo{*}o{:}, 2]Bar
 		}
 
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1043,7 +1039,7 @@ ast_reference_struct_field_matrix_row :: proc(t: ^testing.T) {
 @(test)
 ast_reference_struct_field_bitfield_backing_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		{:}Foo{:} :: int
 
@@ -1054,7 +1050,7 @@ ast_reference_struct_field_bitfield_backing_type :: proc(t: ^testing.T) {
 			}
 		}
 
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1063,7 +1059,7 @@ ast_reference_struct_field_bitfield_backing_type :: proc(t: ^testing.T) {
 @(test)
 ast_references_comp_lit_map_key :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			{:}a{*}{:}: int,
 		}
@@ -1076,7 +1072,7 @@ ast_references_comp_lit_map_key :: proc(t: ^testing.T) {
 			m: map[Foo]Bar
 			m[{{:}a{:} = 1}] = {b = 2}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1085,7 +1081,7 @@ ast_references_comp_lit_map_key :: proc(t: ^testing.T) {
 @(test)
 ast_references_comp_lit_map_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 		}
@@ -1098,7 +1094,7 @@ ast_references_comp_lit_map_value :: proc(t: ^testing.T) {
 			m: map[Foo]Bar
 			m[{a = 1}] = {{:}b{:} = 2}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1107,7 +1103,7 @@ ast_references_comp_lit_map_value :: proc(t: ^testing.T) {
 @(test)
 ast_references_nested_using_struct_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 			using _: struct {
@@ -1119,7 +1115,7 @@ ast_references_nested_using_struct_field :: proc(t: ^testing.T) {
 			foo: Foo
 			b := foo.{:}b{*}{:}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1128,7 +1124,7 @@ ast_references_nested_using_struct_field :: proc(t: ^testing.T) {
 @(test)
 ast_references_nested_using_bit_field_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 			using _: bit_field u8 {
@@ -1140,7 +1136,7 @@ ast_references_nested_using_bit_field_field :: proc(t: ^testing.T) {
 			foo: Foo
 			b := foo.{:}b{*}{:}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1149,7 +1145,7 @@ ast_references_nested_using_bit_field_field :: proc(t: ^testing.T) {
 @(test)
 ast_references_nested_using_bit_field_field_from_declaration :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 			using _: bit_field u8 {
@@ -1161,7 +1157,7 @@ ast_references_nested_using_bit_field_field_from_declaration :: proc(t: ^testing
 			foo: Foo
 			b := foo.{:}b{:}
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1170,14 +1166,14 @@ ast_references_nested_using_bit_field_field_from_declaration :: proc(t: ^testing
 @(test)
 ast_references_union_member_pointer :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		{:}Foo{:} :: struct{}
 
 		Foos :: union {
 			{:}Foo{:},
 			^{:}F{*}oo{:},
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1186,7 +1182,7 @@ ast_references_union_member_pointer :: proc(t: ^testing.T) {
 @(test)
 ast_references_enum_with_enumerated_array :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 		  {:}A{:}, B,
@@ -1212,7 +1208,7 @@ ast_references_enum_with_enumerated_array :: proc(t: ^testing.T) {
 		  case .B:
 		  }
 		}
-	`},
+	`}},
 	}
 
 	test.expect_reference_locations(t, &source)
@@ -1221,12 +1217,12 @@ ast_references_enum_with_enumerated_array :: proc(t: ^testing.T) {
 @(test)
 ast_references_deferred_attributes :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		{:}foo{:} :: proc() {}
 
 		@(deferred_in = {:}fo{*}o{:})
 		bar :: proc() {}
-		`},
+		`}},
 	}
 
 	test.expect_reference_locations(t, &source)

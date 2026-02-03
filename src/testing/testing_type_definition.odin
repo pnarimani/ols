@@ -10,10 +10,7 @@ expect_type_definition_locations :: proc(t: ^testing.T, src: ^Source) {
 	defer teardown(src)
 
 	expect_locations := make([dynamic]common.Location, 0, context.temp_allocator)
-	for loc in src.main.encoded_locations {
-		append(&expect_locations, loc)
-	}
-	for file in src.extra_files {
+	for file in src.files {
 		for loc in file.encoded_locations {
 			append(&expect_locations, loc)
 		}

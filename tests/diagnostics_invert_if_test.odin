@@ -10,7 +10,7 @@ INVERT_IF_DIAGNOSTIC_CODE :: "InvertIf"
 @(test)
 diagnostic_invert_if_negated_condition :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := true
@@ -20,8 +20,7 @@ main :: proc() {
 		z := 2
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -32,7 +31,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_guard_clause_opportunity :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := get_value()
@@ -44,8 +43,7 @@ main :: proc() {
 		}
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -56,7 +54,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_early_exit_pattern :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := get_value()
@@ -68,8 +66,7 @@ main :: proc() {
 		return
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -80,7 +77,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_no_suggestion_simple :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := get_value()
@@ -88,8 +85,7 @@ main :: proc() {
 		do_something()
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -100,7 +96,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_no_suggestion_else_if_chain :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := get_value()
@@ -125,8 +121,7 @@ main :: proc() {
 		rl.ClearBackground(rl.WHITE)
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -136,7 +131,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_no_suggestion_statements_after_if :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	for !rl.WindowShouldClose() {
@@ -152,8 +147,7 @@ main :: proc() {
 		rl.ClearBackground(rl.WHITE)
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -164,7 +158,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_no_suggestion_balanced :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := get_value()
@@ -176,8 +170,7 @@ main :: proc() {
 		qux()
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -187,7 +180,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_no_suggestion_remaining_statements :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 with_return_value :: proc() -> int {
 	x := get_value()
@@ -210,8 +203,7 @@ with_return_value :: proc() -> int {
 
 	return 2
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -222,7 +214,7 @@ with_return_value :: proc() -> int {
 @(test)
 diagnostic_invert_if_disabled :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := get_value()
@@ -232,8 +224,7 @@ main :: proc() {
 		do_work()
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = false},
 	}
 
@@ -245,7 +236,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_nested_in_loop :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	for item in items {
@@ -257,8 +248,7 @@ main :: proc() {
 		more_work()
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -270,7 +260,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_deeply_nested :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	if outer {
@@ -285,8 +275,7 @@ main :: proc() {
 		other_work()
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -297,7 +286,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_in_switch_case :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	switch x {
@@ -309,8 +298,7 @@ main :: proc() {
 		}
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -321,7 +309,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_in_inline_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	callback := proc() {
@@ -332,8 +320,7 @@ main :: proc() {
 		}
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -344,14 +331,13 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_empty_body :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	if x > 0 {
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -362,7 +348,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_in_defer :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	defer {
@@ -373,8 +359,7 @@ main :: proc() {
 		}
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -385,7 +370,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_complexity_below_threshold :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	if x > 0 {
@@ -393,8 +378,7 @@ main :: proc() {
 		step2()
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -405,7 +389,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_complexity_at_threshold :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	if {<}x > 0{>} {
@@ -414,8 +398,7 @@ main :: proc() {
 		step3()
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 
@@ -426,7 +409,7 @@ main :: proc() {
 @(test)
 diagnostic_invert_if_guard_clause_in_loop :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	for item in items {
@@ -437,8 +420,7 @@ main :: proc() {
 		}
 	}
 }
-`},
-		extra_files = {},
+`}},
 		config = {enable_invert_if_diagnostics = true},
 	}
 

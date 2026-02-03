@@ -8,23 +8,29 @@ import "src:server"
 // Build the input range from source position markers
 @(private)
 build_action_range :: proc(src: ^Source) -> common.Range {
-	if src.main.has_range {
-		return common.Range{start = src.main.position, end = src.main.end_position}
+	primary := get_primary_file(src)
+	if primary.has_range {
+		return common.Range{start = primary.position, end = primary.end_position}
 	}
-	return common.Range{start = src.main.position, end = src.main.position}
+	return common.Range{start = primary.position, end = primary.position}
 }
 
 expect_no_action :: proc(t: ^testing.T, main: string, action_name: string, packages: []FileInPackage = {}) {
+	files := make([dynamic]FileInPackage, context.temp_allocator)
+	append(&files, FileInPackage{source = main})
+	for pkg in packages {
+		append(&files, pkg)
+	}
 	src := Source {
-		main     = {source = main},
-		extra_files = packages,
+		files = files[:],
 	}
 
 	setup(&src)
 	defer teardown(&src)
 
+	primary := get_primary_file(&src)
 	input_range := build_action_range(&src)
-	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
 	if !ok {
 		// No actions returned is fine for this test
 		return
@@ -45,8 +51,9 @@ expect_action :: proc(t: ^testing.T, src: ^Source, expect_action_names: []string
 	setup(src)
 	defer teardown(src)
 
+	primary := get_primary_file(src)
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
 	if !ok {
 		log.error("Failed to find actions")
 	}
@@ -76,8 +83,9 @@ expect_action_excludes :: proc(t: ^testing.T, src: ^Source, excluded_action_name
 	setup(src)
 	defer teardown(src)
 
+	primary := get_primary_file(src)
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
 	if !ok {
 		log.error("Failed to find actions")
 	}
@@ -95,8 +103,9 @@ expect_action_with_edit :: proc(t: ^testing.T, src: ^Source, action_name: string
 	setup(src)
 	defer teardown(src)
 
+	primary := get_primary_file(src)
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
 	if !ok {
 		log.error("Failed to find actions")
 		return
@@ -105,7 +114,7 @@ expect_action_with_edit :: proc(t: ^testing.T, src: ^Source, action_name: string
 	for action in actions {
 		if action.title == action_name {
 			// Get the text edits for the document
-			encoded_path := common.path_to_uri(src.main.doc_ctx.filepath, context.temp_allocator)
+			encoded_path := common.path_to_uri(primary.doc_ctx.filepath, context.temp_allocator)
 			if edits, found := action.edit.changes[encoded_path]; found {
 				if len(edits) != len(expected_texts) {
 					log.errorf("Expected %d edits but got %d", len(expected_texts), len(edits))
@@ -145,8 +154,9 @@ expect_action_with_edit_at_line :: proc(
 	setup(src)
 	defer teardown(src)
 
+	primary := get_primary_file(src)
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
 	if !ok {
 		log.error("Failed to find actions")
 		testing.expect(t, false, "Failed to find actions")
@@ -156,7 +166,7 @@ expect_action_with_edit_at_line :: proc(
 	for action in actions {
 		if action.title == action_name {
 			// Get the text edits for the document
-			encoded_path := common.path_to_uri(src.main.doc_ctx.filepath, context.temp_allocator)
+			encoded_path := common.path_to_uri(primary.doc_ctx.filepath, context.temp_allocator)
 			if edits, found := action.edit.changes[encoded_path]; found {
 				if len(edits) != len(expected_texts) {
 					testing.expectf(t, false, "Expected %d edits but got %d", len(expected_texts), len(edits))

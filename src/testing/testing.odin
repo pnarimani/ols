@@ -25,8 +25,7 @@ FileInPackage :: struct {
 }
 
 Source :: struct {
-	main:        FileInPackage,
-	extra_files: []FileInPackage,
+	files:       []FileInPackage,
 	collections: map[string]string,
 	config:      common.Config,
 	test_name:   string,
@@ -34,7 +33,22 @@ Source :: struct {
 
 // Helper to create a RequestContext from a Source for testing
 make_test_request_context :: proc(src: ^Source) -> server.RequestContext {
-	return server.RequestContext{doc = src.main.doc_ctx, config = &src.config, position = src.main.position}
+	primary := get_primary_file(src)
+	return server.RequestContext{doc = primary.doc_ctx, config = &src.config, position = primary.position}
+}
+
+// Get the primary file (the one with cursor/range markers)
+get_primary_file :: proc(src: ^Source) -> ^FileInPackage {
+	for &file in src.files {
+		if file.has_range || file.position.line != 0 || file.position.character != 0 {
+			return &file
+		}
+	}
+	// Default to first file if no markers found
+	if len(src.files) > 0 {
+		return &src.files[0]
+	}
+	panic("Source has no files")
 }
 
 @(private)
@@ -51,9 +65,8 @@ setup :: proc(src: ^Source) {
 	server.init_diagnostic_store()
 
 	files := make([dynamic]^FileInPackage, context.temp_allocator)
-	append(&files, &src.main)
-	for &src_pkg in src.extra_files {
-		append(&files, &src_pkg)
+	for &file in src.files {
+		append(&files, &file)
 	}
 
 	if src.test_name == "" {

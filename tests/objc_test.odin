@@ -27,15 +27,15 @@ objc_return_type_with_selector_expression :: proc(t: ^testing.T) {
 		},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
         import "my_package"
 
 		main :: proc() {
             window := my_package.Window.alloc()->{*}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_completion_docs(
@@ -68,8 +68,7 @@ objc_return_type_with_selector_expression_2 :: proc(t: ^testing.T) {
 		},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
         import "my_package"
 
 		main :: proc() {
@@ -82,8 +81,9 @@ objc_return_type_with_selector_expression_2 :: proc(t: ^testing.T) {
 
 			window->{*}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_completion_docs(
@@ -121,8 +121,7 @@ objc_hover_chained_selector :: proc(t: ^testing.T) {
 		},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
         import "my_package"
 
 		main :: proc() {
@@ -133,8 +132,9 @@ objc_hover_chained_selector :: proc(t: ^testing.T) {
 				false,
 			)	
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(
@@ -176,8 +176,7 @@ objc_implicit_enum_completion :: proc(t: ^testing.T) {
 		},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
         import "my_package"
 
 		main :: proc() {
@@ -185,8 +184,9 @@ objc_implicit_enum_completion :: proc(t: ^testing.T) {
 				.{*}
 			)	
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_completion_labels(t, &source, ".", {"Accessory"})

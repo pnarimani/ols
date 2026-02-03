@@ -58,16 +58,21 @@ expect_code_action_diff :: proc(
 	}
 
 	// Create source with the "before" code
+	files := make([dynamic]FileInPackage, context.temp_allocator)
+	append(&files, FileInPackage{source = before_code})
+	for pkg in packages {
+		append(&files, pkg)
+	}
 	src := Source {
-		main = {source = before_code},
-		extra_files = packages,
+		files = files[:],
 	}
 
 	setup(&src)
 	defer teardown(&src)
 
+	primary := get_primary_file(&src)
 	input_range := build_action_range(&src)
-	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
 	if !ok {
 		testing.expect(t, false, "Failed to get code actions")
 		return
@@ -76,14 +81,14 @@ expect_code_action_diff :: proc(
 	// Find the requested action
 	for action in actions {
 		if action.title != action_name do continue
-		encoded_path := common.path_to_uri(src.main.doc_ctx.filepath, context.temp_allocator)
+		encoded_path := common.path_to_uri(primary.doc_ctx.filepath, context.temp_allocator)
 		edits, found := action.edit.changes[encoded_path]
 		if !found {
 			testing.expect(t, false, "Action found but has no edits")
 			return
 		}
 
-		source := string(src.main.doc_ctx.text)
+		source := string(primary.doc_ctx.text)
 
 		actual_after := apply_text_edits(source, edits)
 
@@ -321,16 +326,21 @@ expect_code_action_diff_multi_file :: proc(
 		files_expected[i] = expected
 	}
 
+	files := make([dynamic]FileInPackage, context.temp_allocator)
+	append(&files, FileInPackage{source = main_before})
+	for file in files_before {
+		append(&files, file)
+	}
 	src := Source {
-		main = {source = main_before},
-		extra_files = files_before,
+		files = files[:],
 	}
 
 	setup(&src)
 	defer teardown(&src)
 
+	primary := get_primary_file(&src)
 	input_range := build_action_range(&src)
-	actions, ok := server.get_code_actions(&src.main.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
 	if !ok {
 		testing.expect(t, false, "Failed to get code actions")
 		return
@@ -342,7 +352,7 @@ expect_code_action_diff_multi_file :: proc(
 
 		// Check main file edits
 		all_match := true
-		main_encoded_path := common.path_to_uri(src.main.fullpath, context.temp_allocator)
+		main_encoded_path := common.path_to_uri(primary.fullpath, context.temp_allocator)
 
 		edits, found := action.edit.changes[main_encoded_path]
 		if found {
@@ -378,7 +388,8 @@ expect_code_action_diff_multi_file :: proc(
 
 		// Check package file edits
 		for _, i in extra_files {
-			file_before := files_before[i]
+			// Access the file from src.files (index i+1 because index 0 is the main file)
+			file_before := src.files[i + 1]
 			file_expected := files_expected[i]
 
 			assert(file_before.pkg != "", "Package name cannot be empty")

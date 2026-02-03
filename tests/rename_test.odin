@@ -10,7 +10,7 @@ import test "src:testing"
 @(test)
 ast_prepare_rename_enum_field_list :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			a = 1,
@@ -20,7 +20,7 @@ ast_prepare_rename_enum_field_list :: proc (t: ^testing.T) {
 			foo: Foo
 			foo = .a{*}
 		}
-		`},
+		`}},
 	}
 	range := common.Range{start = {line = 8, character = 10}, end = {line = 8, character = 11}}
 	test.expect_prepare_rename_range(t, &source, range)
@@ -29,14 +29,14 @@ ast_prepare_rename_enum_field_list :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_enum_field_list_with_constant :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		one :: 1
 
 		Foo :: enum {
 			a = on{*}e,
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 5, character = 7}, end = {line = 5, character = 10}}
@@ -46,7 +46,7 @@ ast_prepare_rename_enum_field_list_with_constant :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_struct_field :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			bar: int,
@@ -57,7 +57,7 @@ ast_prepare_rename_struct_field :: proc (t: ^testing.T) {
 				b{*}ar = 1,
 			}
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 8, character = 4}, end = {line = 8, character = 7}}
@@ -67,7 +67,7 @@ ast_prepare_rename_struct_field :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_struct_field_selector :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			bar: int,
@@ -77,7 +77,7 @@ ast_prepare_rename_struct_field_selector :: proc (t: ^testing.T) {
 			foo := Foo{}
 			foo.ba{*}r = 1
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 8, character = 7}, end = {line = 8, character = 10}}
@@ -87,7 +87,7 @@ ast_prepare_rename_struct_field_selector :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_struct :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			bar: int,
@@ -96,7 +96,7 @@ ast_prepare_rename_struct :: proc (t: ^testing.T) {
 		main :: proc() {
 			foo := Fo{*}o{}
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 7, character = 10}, end = {line = 7, character = 13}}
@@ -106,14 +106,14 @@ ast_prepare_rename_struct :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_struct_field_type :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Bar :: struct {}
 
 		Foo :: struct {
 			bar: B{*}ar,
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 5, character = 8}, end = {line = 5, character = 11}}
@@ -133,15 +133,15 @@ ast_prepare_rename_struct_field_type_package :: proc (t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		Foo :: struct {
 			bar: my_package.My_Stru{*}ct,
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	range := common.Range{start = {line = 4, character = 19}, end = {line = 4, character = 28}}
@@ -151,7 +151,7 @@ ast_prepare_rename_struct_field_type_package :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_union_type :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			bar: int,
@@ -163,7 +163,7 @@ ast_prepare_rename_union_type :: proc (t: ^testing.T) {
 			Fo{*}o,
 			Bar,
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 9, character = 3}, end = {line = 9, character = 6}}
@@ -173,14 +173,14 @@ ast_prepare_rename_union_type :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_symbol_behind_for :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 		
 		main :: proc() {
 			foos := [5]int{1,2,3,4,5}
 			for f{*}oo in foos {
 			}
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 4, character = 7}, end = {line = 4, character = 10}}
@@ -190,14 +190,14 @@ ast_prepare_rename_symbol_behind_for :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_symbol_behind_for_with_label :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 		
 		main :: proc() {
 			foos := [5]int{1,2,3,4,5}
 			my_for: for f{*}oo in foos {
 			}
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 4, character = 15}, end = {line = 4, character = 18}}
@@ -207,7 +207,7 @@ ast_prepare_rename_symbol_behind_for_with_label :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_enumerated_array :: proc (t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -219,7 +219,7 @@ ast_prepare_rename_enumerated_array :: proc (t: ^testing.T) {
 				.A{*} = .B,
 			}
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 9, character = 5}, end = {line = 9, character = 6}}
@@ -229,14 +229,14 @@ ast_prepare_rename_enumerated_array :: proc (t: ^testing.T) {
 @(test)
 ast_prepare_rename_struct_field_ptr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			bar: ^Ba{*}r
 		}
 
 		Bar :: struct {}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 3, character = 9}, end = {line = 3, character = 12}}
@@ -246,7 +246,7 @@ ast_prepare_rename_struct_field_ptr :: proc(t: ^testing.T) {
 @(test)
 ast_prepare_rename_struct_field_enumerated_array :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -256,7 +256,7 @@ ast_prepare_rename_struct_field_enumerated_array :: proc(t: ^testing.T) {
 		Bar :: struct {
 			foos: [F{*}oo]int
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 8, character = 10}, end = {line = 8, character = 13}}
@@ -266,7 +266,7 @@ ast_prepare_rename_struct_field_enumerated_array :: proc(t: ^testing.T) {
 @(test)
 ast_prepare_rename_struct_field_map :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -276,7 +276,7 @@ ast_prepare_rename_struct_field_map :: proc(t: ^testing.T) {
 		Bar :: struct {
 			foos: map[F{*}oo]int
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 8, character = 13}, end = {line = 8, character = 16}}
@@ -286,7 +286,7 @@ ast_prepare_rename_struct_field_map :: proc(t: ^testing.T) {
 @(test)
 ast_prepare_rename_struct_field_dynamic_array :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -296,7 +296,7 @@ ast_prepare_rename_struct_field_dynamic_array :: proc(t: ^testing.T) {
 		Bar :: struct {
 			foos: [dynamic]Fo{*}o
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 8, character = 18}, end = {line = 8, character = 21}}
@@ -306,7 +306,7 @@ ast_prepare_rename_struct_field_dynamic_array :: proc(t: ^testing.T) {
 @(test)
 ast_prepare_rename_struct_field_bit_set :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -316,7 +316,7 @@ ast_prepare_rename_struct_field_bit_set :: proc(t: ^testing.T) {
 		Bar :: struct {
 			foos: bit_set[Fo{*}o]
 		}
-		`},
+		`}},
 	}
 
 	range := common.Range{start = {line = 8, character = 17}, end = {line = 8, character = 20}}

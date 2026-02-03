@@ -9,7 +9,8 @@ expect_prepare_rename_range :: proc(t: ^testing.T, src: ^Source, expect_range: c
 	setup(src)
 	defer teardown(src)
 
-	range, ok := server.get_prepare_rename(&src.main.doc_ctx, src.main.position)
+	primary := get_primary_file(src)
+	range, ok := server.get_prepare_rename(&primary.doc_ctx, primary.position)
 	if !ok {
 		log.error("Failed to find range")
 	}

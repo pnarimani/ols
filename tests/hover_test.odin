@@ -7,7 +7,7 @@ import test "src:testing"
 @(test)
 ast_hover_in_nested_blocks :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 		
 		main :: proc() {
 			{
@@ -17,8 +17,7 @@ ast_hover_in_nested_blocks :: proc(t: ^testing.T) {
 			}
 		}
 			
-		`},
-		extra_files = {},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.My_Struct :: struct {\n\tproperty: int,\n}")
@@ -27,14 +26,13 @@ ast_hover_in_nested_blocks :: proc(t: ^testing.T) {
 @(test)
 ast_hover_default_intialized_parameter :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		my_function :: proc(a := false) {
 			b := a{*};
 		}
 
-		`},
-		extra_files = {},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.a: bool")
@@ -43,15 +41,14 @@ ast_hover_default_intialized_parameter :: proc(t: ^testing.T) {
 @(test)
 ast_hover_default_parameter_enum :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 		procedure :: proc(called_from: Expr_Called_Type = .None, options := List_Options{}) {
 		}
 
 		main :: proc() {
 			procedure{*}
 		}
-		`},
-		extra_files = {},
+		`}},
 	}
 
 	test.expect_hover(
@@ -63,13 +60,12 @@ ast_hover_default_parameter_enum :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parameter :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 
 		main :: proc(cool: int) {
 			cool{*}
 		}
-		`},
-		extra_files = {},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.cool: int")
@@ -92,14 +88,14 @@ ast_hover_external_package_parameter :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 		main :: proc(cool: my_package.My_Struct) {
 			cool{*}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.cool: my_package.My_Struct")
@@ -122,14 +118,14 @@ ast_hover_external_package_parameter_pointer :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 		main :: proc(cool: ^my_package.My_Struct) {
 			cool{*}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.cool: ^my_package.My_Struct")
@@ -152,14 +148,14 @@ ast_hover_procedure_package_parameter :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 		main :: proc(cool: my_packa{*}ge.My_Struct) {
 			
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package: package")
@@ -168,7 +164,7 @@ ast_hover_procedure_package_parameter :: proc(t: ^testing.T) {
 @(test)
 ast_hover_procedure_with_default_comp_lit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Color :: struct {
 			r: int,
 			g: int,
@@ -178,7 +174,7 @@ ast_hover_procedure_with_default_comp_lit :: proc(t: ^testing.T) {
 
 		fa{*} :: proc(color_ : Color = { 255, 255, 255, 255 })
 
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.fa :: #type proc(color_: Color = {255, 255, 255, 255})")
@@ -187,7 +183,7 @@ ast_hover_procedure_with_default_comp_lit :: proc(t: ^testing.T) {
 @(test)
 ast_hover_same_name_in_selector_and_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Color :: struct {
 			color: int,
 		}
@@ -196,7 +192,7 @@ ast_hover_same_name_in_selector_and_field :: proc(t: ^testing.T) {
 			color: Color
 			color.colo{*}r
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "Color.color: int")
@@ -205,12 +201,12 @@ ast_hover_same_name_in_selector_and_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_on_sliced_result :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f :: proc() {
 			buf: [420]byte
 			slic{*}e := buf[2:20]
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.slice: []byte")
@@ -219,10 +215,10 @@ ast_hover_on_sliced_result :: proc(t: ^testing.T) {
 @(test)
 ast_hover_on_array_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Vec :: [2]f32
 		vec: Ve{*}c
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.Vec :: [2]f32")
@@ -231,9 +227,9 @@ ast_hover_on_array_variable :: proc(t: ^testing.T) {
 @(test)
 ast_hover_on_array_infer_length_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		ve{*}c :: [?]f32{1, 2, 3}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.vec :: [?]f32{1, 2, 3}")
@@ -242,12 +238,12 @@ ast_hover_on_array_infer_length_variable :: proc(t: ^testing.T) {
 @(test)
 ast_hover_on_bitset_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		test :: proc () {
 			Foo :: enum {A,B,C}
 			derived_{*}bit_set := bit_set[Foo]{}
 			}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.derived_bit_set: bit_set[Foo]")
@@ -256,13 +252,13 @@ ast_hover_on_bitset_variable :: proc(t: ^testing.T) {
 @(test)
 ast_hover_on_union_assertion :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		test :: proc () {
 			Foo :: union {int}
 			foo: Foo = int(0)
 			nu{*}m, _ := foo.(int)
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.num: int")
@@ -271,7 +267,7 @@ ast_hover_on_union_assertion :: proc(t: ^testing.T) {
 @(test)
 ast_hover_on_union_assertion_with_or_continue :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		test :: proc () {
 			Foo :: union {int}
 			foo: Foo = int(0)
@@ -279,7 +275,7 @@ ast_hover_on_union_assertion_with_or_continue :: proc(t: ^testing.T) {
 				nu{*}m := foo.(int) or_continue
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.num: int")
@@ -288,13 +284,13 @@ ast_hover_on_union_assertion_with_or_continue :: proc(t: ^testing.T) {
 @(test)
 ast_hover_on_union_assertion_with_or_else :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		test :: proc () {
 			Foo :: union {int}
 			foo: Foo = int(0)
 			nu{*}m := foo.(int) or_else 0
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.num: int")
@@ -303,14 +299,14 @@ ast_hover_on_union_assertion_with_or_else :: proc(t: ^testing.T) {
 @(test)
 ast_hover_on_union_assertion_with_or_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		test :: proc () -> bool {
 			Foo :: union {int}
 			foo: Foo = int(0)
 			nu{*}m := foo.(int) or_return
 			return true
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.num: int")
@@ -335,8 +331,7 @@ ast_hover_struct_field_selector_completion :: proc(t: ^testing.T) {
 		},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 
 		import "my_package"
 		My_Foo :: struct {
@@ -347,8 +342,9 @@ ast_hover_struct_field_selector_completion :: proc(t: ^testing.T) {
 		
 		}
 		
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.My_Struct :: struct {\n\tone:   int,\n\ttwo:   int,\n\tthree: int,\n}")
@@ -366,14 +362,14 @@ ast_hover_package_with_value_decl_same_name :: proc(t: ^testing.T) {
 		`},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 		main :: proc() {
 			_ = my_package.my_pack{*}age()
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.my_package :: proc() -> int")
@@ -383,7 +379,7 @@ ast_hover_package_with_value_decl_same_name :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_group :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 		add_num :: proc(a, b: int) -> int {return a + b}
 
 		add_vec :: proc(a, b: [2]f32) -> [2]f32 {return a + b}
@@ -397,8 +393,7 @@ ast_hover_proc_group :: proc(t: ^testing.T) {
 			foo := ad{*}d(2, 2)
 		}	
 
-		`},
-		extra_files = {},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.add :: proc(a, b: int) -> int\n---\ndocs\n---\ncomment")
@@ -407,9 +402,9 @@ ast_hover_proc_group :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_with_proc_parameter :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		a{*}a :: proc(p: proc()) {}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.aa :: proc(p: proc())")
@@ -418,9 +413,9 @@ ast_hover_proc_with_proc_parameter :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_with_proc_parameter_with_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		a{*}a :: proc(p: proc() -> int) {}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.aa :: proc(p: proc() -> int)")
@@ -429,7 +424,7 @@ ast_hover_proc_with_proc_parameter_with_return :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_implicit_selector :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			Foo1,
 			Foo2,
@@ -437,7 +432,7 @@ ast_hover_enum_implicit_selector :: proc(t: ^testing.T) {
 
 		foo: Foo
 		foo = .Fo{*}o1
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.Foo: .Foo1")
@@ -446,7 +441,7 @@ ast_hover_enum_implicit_selector :: proc(t: ^testing.T) {
 @(test)
 ast_hover_union_implicit_selector :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			Foo1,
 			Foo2,
@@ -456,7 +451,7 @@ ast_hover_union_implicit_selector :: proc(t: ^testing.T) {
 
 		bar: Bar
 		bar = .Fo{*}o1
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.Foo: .Foo1")
@@ -489,8 +484,7 @@ ast_hover_foreign_package_name_collision :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 		main :: proc() {
 			data := my_package.get_data()
@@ -499,8 +493,9 @@ ast_hover_foreign_package_name_collision :: proc(t: ^testing.T) {
 				bar := node.b{*}ar
 			}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "node.bar: ^my_package.bar")
@@ -508,7 +503,7 @@ ast_hover_foreign_package_name_collision :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			// this is a doc
 			bar: int,
@@ -516,7 +511,7 @@ ast_hover_struct :: proc(t: ^testing.T) {
 		}
 
 		foo := F{*}oo{}
-		`},
+		`}},
 	}
 
 	test.expect_hover(
@@ -543,14 +538,14 @@ ast_hover_proc_param_with_struct_from_another_package :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 		main :: proc(cool: my_package.My{*}_Struct) {
 			cool
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.My_Struct :: struct {\n\tone:   int,\n\ttwo:   int,\n\tthree: int,\n}")
@@ -559,14 +554,14 @@ ast_hover_proc_param_with_struct_from_another_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			bar: int,
 			f: proc(a: int) -> int,
 		}
 
 		fo{*}o := Foo{}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.foo: test.Foo")
@@ -575,14 +570,14 @@ ast_hover_struct_variable :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			Foo1,
 			Foo2,
 		}
 
 		foo: F{*}oo
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.Foo :: enum {\n\tFoo1,\n\tFoo2,\n}")
@@ -591,14 +586,14 @@ ast_hover_enum :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			Foo1,
 			Foo2,
 		}
 
 		f{*}oo: Foo
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.foo: test.Foo")
@@ -607,14 +602,14 @@ ast_hover_enum_variable :: proc(t: ^testing.T) {
 @(test)
 ast_hover_union :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: union {
 			string,
 			int,
 		}
 
 		foo: F{*}oo
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.Foo :: union {\n\tstring,\n\tint,\n}")
@@ -623,14 +618,14 @@ ast_hover_union :: proc(t: ^testing.T) {
 @(test)
 ast_hover_union_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: union {
 			string,
 			int,
 		}
 
 		f{*}oo: Foo
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.foo: test.Foo")
@@ -639,7 +634,7 @@ ast_hover_union_variable :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_field_definition :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			b{*}ar: int,
 			f: proc(a: int) -> int,
@@ -648,7 +643,7 @@ ast_hover_struct_field_definition :: proc(t: ^testing.T) {
 		foo := Foo{
 			bar = 1
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "Foo.bar: int")
@@ -657,7 +652,7 @@ ast_hover_struct_field_definition :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_field_complex_definition :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Bar :: struct {}
 
 		Foo :: struct {
@@ -669,7 +664,7 @@ ast_hover_struct_field_complex_definition :: proc(t: ^testing.T) {
 		foo := Foo{
 			bar = 1
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "Foo.bar: ^test.Bar\n---\nDocs\n---\ninline docs")
@@ -678,7 +673,7 @@ ast_hover_struct_field_complex_definition :: proc(t: ^testing.T) {
 @(test)
 ast_hover_within_struct_declaration :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		get_int :: proc() -> int {
 			return 42
@@ -693,7 +688,7 @@ ast_hover_within_struct_declaration :: proc(t: ^testing.T) {
 				foo = get_i{*}nt(),
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.get_int :: proc() -> int")
@@ -702,7 +697,7 @@ ast_hover_within_struct_declaration :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_overloading :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo_none :: proc(allocator := context.allocator) -> (int, bool) {
 			return 1, false
@@ -726,7 +721,7 @@ ast_hover_proc_overloading :: proc(t: ^testing.T) {
 		main :: proc() {
 			result, ok := fo{*}o(10, 10)
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(
@@ -739,7 +734,7 @@ ast_hover_proc_overloading :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_overloading_no_params :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo_none :: proc(allocator := context.allocator) -> (int, bool) {
 			return 1, false
@@ -763,7 +758,7 @@ ast_hover_proc_overloading_no_params :: proc(t: ^testing.T) {
 		main :: proc() {
 			result, ok := fo{*}o()
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.foo :: proc(allocator := context.allocator) -> (_: int, _: bool)")
@@ -772,7 +767,7 @@ ast_hover_proc_overloading_no_params :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_overloading_named_arguments :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo_none :: proc() -> (int, bool) {
 			return 1, false
@@ -796,7 +791,7 @@ ast_hover_proc_overloading_named_arguments :: proc(t: ^testing.T) {
 		main :: proc() {
 			result, ok := fo{*}o(10, "testing")
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.foo :: proc(i: int, s := \"hello\") -> (_: int, _: bool)")
@@ -832,15 +827,15 @@ ast_hover_proc_overloading_in_package :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			result, ok := my_package.fo{*}o(10)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(
@@ -880,15 +875,15 @@ ast_hover_proc_overloading_return_value_from_package :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			res{*}ult, ok := my_package.foo("Hello, world!")
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.result: int")
@@ -897,7 +892,7 @@ ast_hover_proc_overloading_return_value_from_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_overload_definition :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo_none :: proc(allocator := context.allocator) -> (int, bool) {
 			return 1, false
@@ -913,7 +908,7 @@ ast_hover_proc_overload_definition :: proc(t: ^testing.T) {
 		main :: proc() {
 			result, ok := foo(10, 10)
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(
@@ -926,7 +921,7 @@ ast_hover_proc_overload_definition :: proc(t: ^testing.T) {
 @(test)
 ast_hover_distinguish_names_correctly :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Bar :: struct {
 			bar: string
@@ -937,7 +932,7 @@ ast_hover_distinguish_names_correctly :: proc(t: ^testing.T) {
 				b{*}ar = "Hello, World",
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "Bar.bar: string")
@@ -946,7 +941,7 @@ ast_hover_distinguish_names_correctly :: proc(t: ^testing.T) {
 @(test)
 ast_hover_distinguish_names_correctly_variable_assignment :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			bar: ^Bar,
@@ -960,7 +955,7 @@ ast_hover_distinguish_names_correctly_variable_assignment :: proc(t: ^testing.T)
 			foo := &Foo{}
 			bar := foo.ba{*}r
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "Foo.bar: ^test.Bar")
@@ -969,12 +964,12 @@ ast_hover_distinguish_names_correctly_variable_assignment :: proc(t: ^testing.T)
 @(test)
 ast_hover_sub_string_slices :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			str := "Hello, World!"
 			s{*}ub_str := str[0:5]
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.sub_str: string")
@@ -983,7 +978,7 @@ ast_hover_sub_string_slices :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_field_use :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			value: int,
 		}
@@ -996,7 +991,7 @@ ast_hover_struct_field_use :: proc(t: ^testing.T) {
 			bar := Bar{}
 			bar.fo{*}o.value += 1
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "Bar.foo: test.Foo")
@@ -1005,7 +1000,7 @@ ast_hover_struct_field_use :: proc(t: ^testing.T) {
 @(test)
 ast_hover_empty_line_at_top_of_file :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `
+		files = {{source = `
 		package test
 		Foo :: struct {
 			bar: int,
@@ -1014,7 +1009,7 @@ ast_hover_empty_line_at_top_of_file :: proc(t: ^testing.T) {
 		main :: proc() {
 			foo := F{*}oo{}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.Foo :: struct {\n\tbar: int,\n}")
@@ -1023,7 +1018,7 @@ ast_hover_empty_line_at_top_of_file :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_overloading_arg_with_selector_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			bar: int,
@@ -1040,7 +1035,7 @@ ast_hover_proc_overloading_arg_with_selector_expr :: proc(t: ^testing.T) {
 		main :: proc(f: Foo) {
 			fo{*}o(f.bar)
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.foo :: proc(i: int)")
@@ -1069,8 +1064,7 @@ ast_hover_proc_overloading_named_arg_with_selector_expr_with_another_package :: 
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		Foo :: struct {
@@ -1080,8 +1074,9 @@ ast_hover_proc_overloading_named_arg_with_selector_expr_with_another_package :: 
 		main :: proc(f: ^Foo) {
 			result, ok := my_package.f{*}oo(f.i)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc(x := 1) -> (_: int, _: bool)\n---\nDocs\n---\ncomment")
@@ -1118,8 +1113,7 @@ ast_hover_proc_overloading_named_arg_with_selector_expr_multiple_packages :: pro
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 		import "my_package2"
 
@@ -1130,8 +1124,9 @@ ast_hover_proc_overloading_named_arg_with_selector_expr_multiple_packages :: pro
 		main :: proc(bar: ^my_package2.Bar) {
 			result, ok := my_package.f{*}oo(bar.my_int)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc(x := 1) -> (_: int, _: bool)")
@@ -1152,8 +1147,7 @@ ast_hover_distinguish_symbols_in_packages_proc :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		Foo :: struct {
@@ -1164,8 +1158,9 @@ ast_hover_distinguish_symbols_in_packages_proc :: proc(t: ^testing.T) {
 			foo := Foo{}
 			result, ok := my_package.f{*}oo(1)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc(x := 1) -> (_: int, _: bool)")
@@ -1184,8 +1179,7 @@ ast_hover_distinguish_symbols_in_packages_struct :: proc(t: ^testing.T) {
 			}
 		`},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		Foo :: struct {
@@ -1195,8 +1189,9 @@ ast_hover_distinguish_symbols_in_packages_struct :: proc(t: ^testing.T) {
 		main :: proc() {
 			foo := my_package.F{*}oo{}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.Foo :: struct {\n\tfoo: string,\n}")
@@ -1215,8 +1210,7 @@ ast_hover_distinguish_symbols_in_packages_local_struct :: proc(t: ^testing.T) {
 			}
 		`},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 
@@ -1227,8 +1221,9 @@ ast_hover_distinguish_symbols_in_packages_local_struct :: proc(t: ^testing.T) {
 
 			foo := my_package.F{*}oo{}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.Foo :: struct {\n\tfoo: string,\n}")
@@ -1242,8 +1237,7 @@ ast_hover_distinguish_symbols_in_packages_variable :: proc(t: ^testing.T) {
 
 			my_var := "my_var"
 		`})
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 
@@ -1252,8 +1246,9 @@ ast_hover_distinguish_symbols_in_packages_variable :: proc(t: ^testing.T) {
 
 			foo := my_package.my_va{*}r
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.my_var: string")
@@ -1262,7 +1257,7 @@ ast_hover_distinguish_symbols_in_packages_variable :: proc(t: ^testing.T) {
 @(test)
 ast_hover_inside_multi_pointer_struct :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package main
+		files = {{source = `package main
 
 		S1 :: struct {
 			s2_ptr: [^]S2,
@@ -1285,7 +1280,7 @@ ast_hover_inside_multi_pointer_struct :: proc(t: ^testing.T) {
 				}
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "S2.field: test.S3")
@@ -1300,8 +1295,7 @@ ast_hover_proc_overloading_parametric_type :: proc(t: ^testing.T) {
 			Foo :: struct {}
 		`})
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		new_ints :: proc($T: typeid, a, b: int) -> ^T {}
@@ -1316,8 +1310,9 @@ ast_hover_proc_overloading_parametric_type :: proc(t: ^testing.T) {
 		main :: proc() {
 			f{*}oo := new(my_package.Foo, 1, 2)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foo: ^my_package.Foo")
@@ -1345,8 +1340,7 @@ ast_hover_proc_overloading_parametric_type_external_package :: proc(t: ^testing.
 		},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 
 		import "my_package"		
 
@@ -1354,8 +1348,9 @@ ast_hover_proc_overloading_parametric_type_external_package :: proc(t: ^testing.
 		main :: proc() {
 			f{*}oo := my_package.new(my_package.Foo, 1, 2)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foo: ^my_package.Foo")
@@ -1364,7 +1359,7 @@ ast_hover_proc_overloading_parametric_type_external_package :: proc(t: ^testing.
 @(test)
 ast_hover_struct_documentation :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		F{*}oo :: struct {
 			// This is an int
@@ -1372,7 +1367,7 @@ ast_hover_struct_documentation :: proc(t: ^testing.T) {
 			bar: int, // this is bar
 			bazz: int,
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(
@@ -1385,7 +1380,7 @@ ast_hover_struct_documentation :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_documentation_using :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// This is an int
@@ -1405,7 +1400,7 @@ ast_hover_struct_documentation_using :: proc(t: ^testing.T) {
 		B{*}azz :: struct {
 			using bar: Bar,
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(
@@ -1440,8 +1435,7 @@ ast_hover_struct_documentation_using_package :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package main
+	inject_at(&packages, 0, test.FileInPackage{source = `package main
 		import "my_package"
 
 		F{*}oo :: struct {
@@ -1451,8 +1445,9 @@ ast_hover_struct_documentation_using_package :: proc(t: ^testing.T) {
 
 		main :: proc() {
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(
@@ -1465,7 +1460,7 @@ ast_hover_struct_documentation_using_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_comments :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package main
+		files = {{source = `package main
 		import "my_package"
 
 		// doc
@@ -1476,7 +1471,7 @@ ast_hover_proc_comments :: proc(t: ^testing.T) {
 		main :: proc() {
 			fo{*}o()
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.foo :: proc()\n---\ndoc\n---\ndo foo")
@@ -1496,15 +1491,15 @@ ast_hover_proc_comments_package :: proc(t: ^testing.T) {
 
 		`},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			my_package.fo{*}o()
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc()\n---\ndo foo")
@@ -1513,7 +1508,7 @@ ast_hover_proc_comments_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_field_distinct :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		A :: distinct u64
 		B :: distinct A
 
@@ -1522,7 +1517,7 @@ ast_hover_struct_field_distinct :: proc(t: ^testing.T) {
 			f{*}b: B, // type: fb
 			fc: string, // type: string
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "S.fb: test.B\n---\ntype: fb")
@@ -1536,15 +1531,15 @@ ast_hover_struct_field_distinct_external_package :: proc(t: ^testing.T) {
 
 			A :: distinct u64
 		`})
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		S :: struct {
 			f{*}b: my_package.A,
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "S.fb: my_package.A")
@@ -1553,9 +1548,9 @@ ast_hover_struct_field_distinct_external_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_distinct_definition :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		A{*} :: distinct u64
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.A :: distinct u64")
@@ -1569,15 +1564,15 @@ ast_hover_distinct_definition_external_package :: proc(t: ^testing.T) {
 
 			A :: distinct u64
 		`})
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		Foo :: struct {
 			a: my_package.A{*},
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.A :: distinct u64")
@@ -1586,7 +1581,7 @@ ast_hover_distinct_definition_external_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_poly_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		import "small_array"
 
 		Small_Array :: struct($N: int, $T: typeid) where N >= 0 {
@@ -1612,7 +1607,7 @@ ast_hover_poly_type :: proc(t: ^testing.T) {
 			for f{*}oo in foo_slice {
 			}
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.foo: test.Foo")
@@ -1639,8 +1634,7 @@ ast_hover_poly_type_external_package :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "small_array"
 
 		Foo :: struct {
@@ -1657,8 +1651,9 @@ ast_hover_poly_type_external_package :: proc(t: ^testing.T) {
 			for f{*}oo in foo_slice {
 			}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foo: test.Foo")
@@ -1687,8 +1682,7 @@ ast_hover_poly_type_external_package_with_external_type :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "small_array"
 
 		Foo :: struct {
@@ -1705,8 +1699,9 @@ ast_hover_poly_type_external_package_with_external_type :: proc(t: ^testing.T) {
 			for f{*}oo in foo_slice {
 			}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foo: small_array.Foo")
@@ -1715,11 +1710,11 @@ ast_hover_poly_type_external_package_with_external_type :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_poly_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: struct($T: typeid) {
 			foo: T,
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.Foo :: struct($T: typeid) {\n\tfoo: T,\n}")
@@ -1742,8 +1737,7 @@ ast_hover_struct_poly_type_external_package :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "small_array"
 
 		Foo :: struct {
@@ -1753,8 +1747,9 @@ ast_hover_struct_poly_type_external_package :: proc(t: ^testing.T) {
 		MAX :: 4
 
 		fo{*}os: small_array.Small_Array(MAX, Foo)
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.foos: small_array.Small_Array(MAX, Foo)")
@@ -1781,8 +1776,7 @@ ast_hover_poly_proc_mixed_packages :: proc(t: ^testing.T) {
 		`},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 
 		import "foo_package"
 		import "bar_package"
@@ -1792,8 +1786,9 @@ ast_hover_poly_proc_mixed_packages :: proc(t: ^testing.T) {
 			f{*} := foo_package.foo(b)
 		}
 	}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "test.f: bar_package.Bar")
@@ -1815,8 +1810,7 @@ ast_hover_poly_struct_proc_field :: proc(t: ^testing.T) {
 		},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 
 		import "my_package"
 
@@ -1832,8 +1826,9 @@ ast_hover_poly_struct_proc_field :: proc(t: ^testing.T) {
 
 		}
 	}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "Foo.foo: proc(t: ^Bar) -> Bar")
@@ -1842,7 +1837,7 @@ ast_hover_poly_struct_proc_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_poly_struct_poly_proc_fields :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		F{*}oo :: struct($S: typeid, $T: typeid) {
 			my_proc1: proc(s: S) -> ^S,
@@ -1854,7 +1849,7 @@ ast_hover_poly_struct_poly_proc_fields :: proc(t: ^testing.T) {
 			foo2: ^S,
 		}
 	}
-		`},
+		`}},
 	}
 
 	test.expect_hover(
@@ -1872,8 +1867,7 @@ ast_hover_poly_struct_poly_proc_fields_resolved :: proc(t: ^testing.T) {
 			Bazz :: struct{}
 		`})
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		Foo :: struct($S: typeid, $T: typeid) {
@@ -1890,8 +1884,9 @@ ast_hover_poly_struct_poly_proc_fields_resolved :: proc(t: ^testing.T) {
 			foo := Fo{*}o(Bar, my_package.Bazz){}
 		}
 	}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(
@@ -1904,7 +1899,7 @@ ast_hover_poly_struct_poly_proc_fields_resolved :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bitset_enum_for_loop :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			B,
@@ -1916,7 +1911,7 @@ ast_hover_bitset_enum_for_loop :: proc(t: ^testing.T) {
 
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.f: test.Foo")
 }
@@ -1924,7 +1919,7 @@ ast_hover_bitset_enum_for_loop :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_field_assignment :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			B,
@@ -1933,7 +1928,7 @@ ast_hover_enum_field_assignment :: proc(t: ^testing.T) {
 		main :: proc() {
 			a := Foo.A{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A")
 }
@@ -1942,7 +1937,7 @@ ast_hover_enum_field_assignment :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_field_implicit_assignment :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			B,
@@ -1952,7 +1947,7 @@ ast_hover_enum_field_implicit_assignment :: proc(t: ^testing.T) {
 			a: Foo
 			a = .A{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A")
 }
@@ -1960,12 +1955,12 @@ ast_hover_enum_field_implicit_assignment :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_field_definition :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A{*},
 			B,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A")
 }
@@ -1973,12 +1968,12 @@ ast_hover_enum_field_definition :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_field_definition_with_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A{*} = 1,
 			B,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A = 1")
 }
@@ -1986,7 +1981,7 @@ ast_hover_enum_field_definition_with_type :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_map_key :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A = 1,
 			B,
@@ -1995,7 +1990,7 @@ ast_hover_enum_map_key :: proc(t: ^testing.T) {
 			m: map[Foo]int
 			m[.A{*}] = 2
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A = 1")
 }
@@ -2003,13 +1998,13 @@ ast_hover_enum_map_key :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_defintion_with_base_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: enum u8 {
 			A   = 1,
 			Bar = 2,
 			C   = 3,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: enum u8 {\n\tA   = 1,\n\tBar = 2,\n\tC   = 3,\n}")
 }
@@ -2017,12 +2012,12 @@ ast_hover_enum_defintion_with_base_type :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bit_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: bit_field u8 {
 			foo_a: uint | 2,
 			foo_aa: uint | 4,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: bit_field u8 {\n\tfoo_a:  uint | 2,\n\tfoo_aa: uint | 4,\n}")
 }
@@ -2030,12 +2025,12 @@ ast_hover_bit_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bit_field_array_backed :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: bit_field [4]u8 {
 			foo_a: uint | 1,
 			foo_aa: uint | 3,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: bit_field [4]u8 {\n\tfoo_a:  uint | 1,\n\tfoo_aa: uint | 3,\n}")
 }
@@ -2043,7 +2038,7 @@ ast_hover_bit_field_array_backed :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bit_field_with_docs :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: bit_field u8 {
 		    // documentation
 			foo_a: uintptr | 2,
@@ -2051,7 +2046,7 @@ ast_hover_bit_field_with_docs :: proc(t: ^testing.T) {
 			// doc
 			foo_c: uint | 2, //comment
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -2063,7 +2058,7 @@ ast_hover_bit_field_with_docs :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_with_bit_field_using :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: bit_field u8 {
 			foo_a: uint | 2, // foo_a
 			// foo_aa
@@ -2075,7 +2070,7 @@ ast_hover_struct_with_bit_field_using :: proc(t: ^testing.T) {
 
 			bar: int,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -2101,8 +2096,7 @@ ast_hover_struct_with_bit_field_using_across_packages :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		Bazz :: struct {
@@ -2115,8 +2109,9 @@ ast_hover_struct_with_bit_field_using_across_packages :: proc(t: ^testing.T) {
 
 			bar: int,
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(
 		t,
@@ -2128,12 +2123,12 @@ ast_hover_struct_with_bit_field_using_across_packages :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bit_field_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: bit_field u8 {
 			foo_a: uint | 2,
 			f{*}oo_aa: uint | 6, // last 6 bits
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.foo_aa: uint | 6\n---\nlast 6 bits")
 }
@@ -2141,7 +2136,7 @@ ast_hover_bit_field_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bit_field_variable_with_docs :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: bit_field u8 {
 			// doc
 			foo_a: uint | 2, // foo a
@@ -2152,7 +2147,7 @@ ast_hover_bit_field_variable_with_docs :: proc(t: ^testing.T) {
 			foo := Foo{}
 			foo.f{*}oo_a = 1
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.foo_a: uint | 2\n---\ndoc\n---\nfoo a")
 }
@@ -2160,7 +2155,7 @@ ast_hover_bit_field_variable_with_docs :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bit_field_on_struct_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: bit_field u8 {
 			// doc
 			foo_a: uint | 2, // foo a
@@ -2170,7 +2165,7 @@ ast_hover_bit_field_on_struct_field :: proc(t: ^testing.T) {
 		Bar :: struct {
 			fo{*}o: Foo,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Bar.foo: test.Foo")
 }
@@ -2178,7 +2173,7 @@ ast_hover_bit_field_on_struct_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bitset_enum :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			Aaa,
@@ -2191,7 +2186,7 @@ ast_hover_bitset_enum :: proc(t: ^testing.T) {
 			foos: Foos
 			foos += {.A{*}aa}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .Aaa")
 }
@@ -2199,7 +2194,7 @@ ast_hover_bitset_enum :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enumerated_array_key :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -2217,7 +2212,7 @@ ast_hover_enumerated_array_key :: proc(t: ^testing.T) {
 				.B = Bar {},
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A")
 }
@@ -2225,7 +2220,7 @@ ast_hover_enumerated_array_key :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enumerated_array_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -2243,7 +2238,7 @@ ast_hover_enumerated_array_value :: proc(t: ^testing.T) {
 				.B = Bar {},
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Bar :: struct {\n\tbar: int,\n}")
 }
@@ -2251,7 +2246,7 @@ ast_hover_enumerated_array_value :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_fields_when_not_specifying_type_at_use :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			foo: int,
@@ -2268,7 +2263,7 @@ ast_hover_struct_fields_when_not_specifying_type_at_use :: proc(t: ^testing.T) {
 				fo{*}o =
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Bar.foo: test.Foo")
 }
@@ -2276,7 +2271,7 @@ ast_hover_struct_fields_when_not_specifying_type_at_use :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_field_value_when_not_specifying_type_at_use :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -2292,7 +2287,7 @@ ast_hover_struct_field_value_when_not_specifying_type_at_use :: proc(t: ^testing
 				foo = .B{*}
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .B")
 }
@@ -2322,8 +2317,7 @@ ast_hover_overload_proc_strings_from_different_packages :: proc(t: ^testing.T) {
 			}
 		`},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 		import "str"
 
@@ -2331,8 +2325,9 @@ ast_hover_overload_proc_strings_from_different_packages :: proc(t: ^testing.T) {
 			foo_str := str.get_str()
 			my_package.f{*}oo(foo_str, 1)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.foo :: proc(a: string, b: int)")
 }
@@ -2340,7 +2335,7 @@ ast_hover_overload_proc_strings_from_different_packages :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// a docs
@@ -2351,7 +2346,7 @@ ast_hover_struct_field_should_show_docs_and_comments :: proc(t: ^testing.T) {
 			foo := Foo{}
 			foo.a{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.a: int\n---\na docs\n---\na comment")
 }
@@ -2359,13 +2354,13 @@ ast_hover_struct_field_should_show_docs_and_comments :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// a docs
 			a{*}: int, // a comment
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.a: int\n---\na docs\n---\na comment")
 }
@@ -2373,7 +2368,7 @@ ast_hover_struct_field_should_show_docs_and_comments_field :: proc(t: ^testing.T
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_struct_types :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// bar docs
@@ -2386,7 +2381,7 @@ ast_hover_struct_field_should_show_docs_and_comments_struct_types :: proc(t: ^te
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: test.Bar\n---\nbar docs\n---\nbar comment")
 }
@@ -2394,7 +2389,7 @@ ast_hover_struct_field_should_show_docs_and_comments_struct_types :: proc(t: ^te
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_procs :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// bar docs
@@ -2405,7 +2400,7 @@ ast_hover_struct_field_should_show_docs_and_comments_procs :: proc(t: ^testing.T
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: proc(a: int) -> int\n---\nbar docs\n---\nbar comment")
 }
@@ -2413,7 +2408,7 @@ ast_hover_struct_field_should_show_docs_and_comments_procs :: proc(t: ^testing.T
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_named_procs :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		MyProc :: proc(a: int) -> string
 
@@ -2426,7 +2421,7 @@ ast_hover_struct_field_should_show_docs_and_comments_named_procs :: proc(t: ^tes
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: proc(a: int) -> string\n---\nbar docs\n---\nbar comment")
 }
@@ -2434,7 +2429,7 @@ ast_hover_struct_field_should_show_docs_and_comments_named_procs :: proc(t: ^tes
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_maps :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// bar docs
@@ -2445,7 +2440,7 @@ ast_hover_struct_field_should_show_docs_and_comments_maps :: proc(t: ^testing.T)
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: map[int]int\n---\nbar docs\n---\nbar comment")
 }
@@ -2453,7 +2448,7 @@ ast_hover_struct_field_should_show_docs_and_comments_maps :: proc(t: ^testing.T)
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_bit_sets :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// bar docs
@@ -2464,7 +2459,7 @@ ast_hover_struct_field_should_show_docs_and_comments_bit_sets :: proc(t: ^testin
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: bit_set[0 ..< 10]\n---\nbar docs\n---\nbar comment")
 }
@@ -2472,7 +2467,7 @@ ast_hover_struct_field_should_show_docs_and_comments_bit_sets :: proc(t: ^testin
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_unions :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		
 		Bar :: union {
 			int,
@@ -2488,7 +2483,7 @@ ast_hover_struct_field_should_show_docs_and_comments_unions :: proc(t: ^testing.
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: test.Bar\n---\nbar docs\n---\nbar comment")
 }
@@ -2496,7 +2491,7 @@ ast_hover_struct_field_should_show_docs_and_comments_unions :: proc(t: ^testing.
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_multipointers :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// bar docs
@@ -2507,7 +2502,7 @@ ast_hover_struct_field_should_show_docs_and_comments_multipointers :: proc(t: ^t
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: [^]int\n---\nbar docs\n---\nbar comment")
 }
@@ -2515,7 +2510,7 @@ ast_hover_struct_field_should_show_docs_and_comments_multipointers :: proc(t: ^t
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_dynamic_arrays :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// bar docs
@@ -2526,7 +2521,7 @@ ast_hover_struct_field_should_show_docs_and_comments_dynamic_arrays :: proc(t: ^
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: [dynamic]int\n---\nbar docs\n---\nbar comment")
 }
@@ -2534,7 +2529,7 @@ ast_hover_struct_field_should_show_docs_and_comments_dynamic_arrays :: proc(t: ^
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_fixed_arrays :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// bar docs
@@ -2545,7 +2540,7 @@ ast_hover_struct_field_should_show_docs_and_comments_fixed_arrays :: proc(t: ^te
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: [5]int\n---\nbar docs\n---\nbar comment")
 }
@@ -2553,7 +2548,7 @@ ast_hover_struct_field_should_show_docs_and_comments_fixed_arrays :: proc(t: ^te
 @(test)
 ast_hover_struct_field_should_show_docs_and_comments_matrix :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: struct {
 			// bar docs
@@ -2564,7 +2559,7 @@ ast_hover_struct_field_should_show_docs_and_comments_matrix :: proc(t: ^testing.
 			foo := Foo{}
 			foo.bar{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.bar: matrix[4,5]int\n---\nbar docs\n---\nbar comment")
 }
@@ -2572,7 +2567,7 @@ ast_hover_struct_field_should_show_docs_and_comments_matrix :: proc(t: ^testing.
 @(test)
 ast_hover_variable_from_comparison :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -2587,7 +2582,7 @@ ast_hover_variable_from_comparison :: proc(t: ^testing.T) {
 			bar: Bar
 			b{*}azz := bar.bar == .A
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bazz: bool")
 }
@@ -2595,7 +2590,7 @@ ast_hover_variable_from_comparison :: proc(t: ^testing.T) {
 @(test)
 ast_hover_named_parameter_same_as_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo :: proc(a: int) {}
 
@@ -2603,7 +2598,7 @@ ast_hover_named_parameter_same_as_variable :: proc(t: ^testing.T) {
 			a := "hellope"
 			foo(a{*} = 0)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "foo.a: int")
 }
@@ -2611,7 +2606,7 @@ ast_hover_named_parameter_same_as_variable :: proc(t: ^testing.T) {
 @(test)
 ast_hover_named_parameter_with_default_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo :: proc(b := "") {}
 
@@ -2619,7 +2614,7 @@ ast_hover_named_parameter_with_default_value :: proc(t: ^testing.T) {
 			a := "hellope"
 			foo(b{*} = a)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "foo.b: string")
 }
@@ -2627,7 +2622,7 @@ ast_hover_named_parameter_with_default_value :: proc(t: ^testing.T) {
 @(test)
 ast_hover_named_parameter_with_default_value_struct :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Bar :: struct{
 			bar: int,
@@ -2641,7 +2636,7 @@ ast_hover_named_parameter_with_default_value_struct :: proc(t: ^testing.T) {
 			b := Bar{}
 			foo(a{*} = b)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "foo.a: test.Bar")
 }
@@ -2649,12 +2644,12 @@ ast_hover_named_parameter_with_default_value_struct :: proc(t: ^testing.T) {
 @(test)
 ast_hover_inside_where_clause :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc(x: [2]int)
 			where len(x) > 1,
 				  type_of(x{*}) == [2]int {
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.x: [2]int")
 }
@@ -2662,7 +2657,7 @@ ast_hover_inside_where_clause :: proc(t: ^testing.T) {
 @(test)
 ast_hover_overloading_with_union :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			foo: int,
 		}
@@ -2688,7 +2683,7 @@ ast_hover_overloading_with_union :: proc(t: ^testing.T) {
 			foo: Foo
 			my_overloa{*}d(foo)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.my_overload :: proc(fb: FooBar)")
 }
@@ -2696,7 +2691,7 @@ ast_hover_overloading_with_union :: proc(t: ^testing.T) {
 @(test)
 ast_hover_overloading_with_union_and_variant :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			foo: int,
 		}
@@ -2722,7 +2717,7 @@ ast_hover_overloading_with_union_and_variant :: proc(t: ^testing.T) {
 			bar: Bar
 			my_overloa{*}d(bar)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.my_overload :: proc(bar: Bar)")
 }
@@ -2730,7 +2725,7 @@ ast_hover_overloading_with_union_and_variant :: proc(t: ^testing.T) {
 @(test)
 ast_hover_overloading_struct_with_usings :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			foo: int,
 		}
@@ -2760,7 +2755,7 @@ ast_hover_overloading_struct_with_usings :: proc(t: ^testing.T) {
 			bazz: Bazz
 			fooba{*}r(bazz)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.foobar :: proc(b: Bar)")
 }
@@ -2768,7 +2763,7 @@ ast_hover_overloading_struct_with_usings :: proc(t: ^testing.T) {
 @(test)
 ast_hover_overloading_struct_with_usings_with_pointers :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			foo: int,
 		}
@@ -2798,7 +2793,7 @@ ast_hover_overloading_struct_with_usings_with_pointers :: proc(t: ^testing.T) {
 			bazz: Bazz
 			fooba{*}r(&bazz)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.foobar :: proc(b: ^Bar)")
 }
@@ -2806,9 +2801,9 @@ ast_hover_overloading_struct_with_usings_with_pointers :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_calling_convention :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc "contextless" (a: int) {}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc \"contextless\" (a: int)")
 }
@@ -2816,9 +2811,9 @@ ast_hover_proc_calling_convention :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_directives :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc(a: int) #no_bounds_check {}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(a: int) #no_bounds_check")
 }
@@ -2826,11 +2821,11 @@ ast_hover_proc_directives :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_attributes :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		@(require_results) f{*}oo :: proc(a: int) -> int {
 			return 0
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "@(require_results)\ntest.foo :: proc(a: int) -> int")
 }
@@ -2838,11 +2833,11 @@ ast_hover_proc_attributes :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_attributes_key_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		@(disabled=false) f{*}oo :: proc(a: int) -> int {
 			return 0
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "@(disabled=false)\ntest.foo :: proc(a: int) -> int")
 }
@@ -2850,11 +2845,11 @@ ast_hover_proc_attributes_key_value :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_force_inline :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: #force_inline proc(a: int) -> int {
 			return 0
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: #force_inline proc(a: int) -> int")
 }
@@ -2862,7 +2857,7 @@ ast_hover_proc_force_inline :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_force_no_inline :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: #force_no_inline proc(a: int) -> int {
 			return 0
 		}
@@ -2870,7 +2865,7 @@ ast_hover_proc_force_no_inline :: proc(t: ^testing.T) {
 		main :: proc() {
 			i := f{*}oo(1)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: #force_no_inline proc(a: int) -> int")
 }
@@ -2878,11 +2873,11 @@ ast_hover_proc_force_no_inline :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_max_with_type_local :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			ma{*}x_u32 :: max(u32)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.max_u32 :: u32")
 }
@@ -2890,9 +2885,9 @@ ast_hover_builtin_max_with_type_local :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_max_with_type_global :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		ma{*}x_u32 :: max(u32)
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.max_u32 :: max(u32)")
 }
@@ -2900,9 +2895,9 @@ ast_hover_builtin_max_with_type_global :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_max_ints :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		ma{*}x_int :: max(1, 2, 3, 4)
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.max_int :: max(1, 2, 3, 4)")
 }
@@ -2910,12 +2905,12 @@ ast_hover_builtin_max_ints :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_max_mix :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		
 		main :: proc() {
 			m{*} := max(1, 2.0, 3, 4.6)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: f64")
 }
@@ -2923,12 +2918,12 @@ ast_hover_builtin_max_mix :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_max_mix_const :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		
 		main :: proc() {
 			m{*} :: max(1, 2.0, 3, 4.6)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m :: max(1, 2.0, 3, 4.6)")
 }
@@ -2936,9 +2931,9 @@ ast_hover_builtin_max_mix_const :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_max_mix_global_const :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		m{*} :: max(1, 2.0, 3, 4.6)
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m :: max(1, 2.0, 3, 4.6)")
 }
@@ -2946,7 +2941,7 @@ ast_hover_builtin_max_mix_global_const :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_max_value_from_function :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc(i: int) -> f64 {
 			return 1.0
 		}
@@ -2954,7 +2949,7 @@ ast_hover_builtin_max_value_from_function :: proc(t: ^testing.T) {
 		main :: proc() {
 			m{*} := max(foo(12), 1, 2, 3, 4)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: f64")
 }
@@ -2962,14 +2957,14 @@ ast_hover_builtin_max_value_from_function :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_max_f32 :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		main :: proc() {
 			a := f32(0)
 			b := f32(1)
 			m{*} := max(a, b)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: f32")
 }
@@ -2977,7 +2972,7 @@ ast_hover_builtin_max_f32 :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_max_global_consts :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		a :: 0.0
 		b :: 1.0
@@ -2985,7 +2980,7 @@ ast_hover_builtin_max_global_consts :: proc(t: ^testing.T) {
 		main :: proc() {
 			m{*} := max(a, b)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: f64")
 }
@@ -2993,11 +2988,11 @@ ast_hover_builtin_max_global_consts :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_min :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			m{*} := min(1, 0.5)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: f64")
 }
@@ -3005,11 +3000,11 @@ ast_hover_builtin_min :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_abs :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			m{*} := abs(-1)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: int")
 }
@@ -3017,11 +3012,11 @@ ast_hover_builtin_abs :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_clamp_less :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			m{*} := clamp(-1, 0.3, 7)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: f64")
 }
@@ -3029,11 +3024,11 @@ ast_hover_builtin_clamp_less :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_clamp_greater :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			m{*} := clamp(8, 0.3, 7)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: int")
 }
@@ -3041,11 +3036,11 @@ ast_hover_builtin_clamp_greater :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_clamp_between :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			m{*} := clamp(5, 0.3, 7)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: int")
 }
@@ -3053,7 +3048,7 @@ ast_hover_builtin_clamp_between :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_clamp_from_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() -> f64 {
 			return 1.2
 		}
@@ -3061,7 +3056,7 @@ ast_hover_builtin_clamp_from_proc :: proc(t: ^testing.T) {
 		main :: proc() {
 			m{*} := clamp(5, foo(), 7)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: f64")
 }
@@ -3069,11 +3064,11 @@ ast_hover_builtin_clamp_from_proc :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_complex :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			m{*} := complex(1, 2)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: complex128")
 }
@@ -3081,14 +3076,14 @@ ast_hover_builtin_complex :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_complex_with_global_const :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		a :: 0
 		b :: 1
 
 		main :: proc() {
 			m{*} := complex(a, b)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: complex128")
 }
@@ -3096,13 +3091,13 @@ ast_hover_builtin_complex_with_global_const :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_complex_variables :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			a := f32(1)
 			b := f32(2)
 			m{*} := complex(a, b)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: complex64")
 }
@@ -3110,11 +3105,11 @@ ast_hover_builtin_complex_variables :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_quaternion :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			m{*} := quaternion(w = 1, x = 2, y = 3, z = 4)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: quaternion256")
 }
@@ -3122,7 +3117,7 @@ ast_hover_builtin_quaternion :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_quaternion_with_global_const :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		w :: 0
 		x :: 1
 		y :: 1
@@ -3131,7 +3126,7 @@ ast_hover_builtin_quaternion_with_global_const :: proc(t: ^testing.T) {
 		main :: proc() {
 			m{*} := quaternion(w = w, x = x, y = y, z = z)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: quaternion256")
 }
@@ -3139,7 +3134,7 @@ ast_hover_builtin_quaternion_with_global_const :: proc(t: ^testing.T) {
 @(test)
 ast_hover_builtin_quaternion_variables :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			a := f16(1)
 			b := f16(2)
@@ -3147,7 +3142,7 @@ ast_hover_builtin_quaternion_variables :: proc(t: ^testing.T) {
 			d := f16(2)
 			m{*} := quaternion(w = a, x = b, y = c, z = d)
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.m: quaternion64")
 }
@@ -3155,7 +3150,7 @@ ast_hover_builtin_quaternion_variables :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_explicit_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			B,
@@ -3164,7 +3159,7 @@ ast_hover_enum_explicit_type :: proc(t: ^testing.T) {
 		main :: proc() {
 			foo: Foo = .A{*}
 		}
-	`},
+	`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A")
 }
@@ -3183,13 +3178,13 @@ ast_hover_documentation_reexported :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		F{*}oo :: my_package.Foo
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.Foo :: struct{}\n---\nDocumentation for Foo")
 }
@@ -3208,14 +3203,14 @@ ast_hover_override_documentation_reexported :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		// New docs for Foo
 		F{*}oo :: my_package.Foo
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.Foo :: struct{}\n---\nNew docs for Foo")
 }
@@ -3223,7 +3218,7 @@ ast_hover_override_documentation_reexported :: proc(t: ^testing.T) {
 @(test)
 ast_hover_switch_initialiser :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		A :: enum { B, C }
 
@@ -3234,7 +3229,7 @@ ast_hover_switch_initialiser :: proc(t: ^testing.T) {
 			switch c := b[0]; c{*} {
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.c: test.A")
 }
@@ -3257,8 +3252,7 @@ ast_hover_type_switch_with_using :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		foo :: proc(fb: ^my_package.Foo_Bar) {
@@ -3268,8 +3262,9 @@ ast_hover_type_switch_with_using :: proc(t: ^testing.T) {
 				v{*}
 			}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.v: ^my_package.Foo")
 }
@@ -3277,7 +3272,7 @@ ast_hover_type_switch_with_using :: proc(t: ^testing.T) {
 @(test)
 ast_hover_union_with_poly :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: union($T: typeid) {
 			T,
@@ -3286,7 +3281,7 @@ ast_hover_union_with_poly :: proc(t: ^testing.T) {
 		main :: proc() {
 			fo{*}o: Foo(int)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: test.Foo(int)")
 }
@@ -3304,15 +3299,15 @@ ast_hover_union_with_poly_from_package :: proc(t: ^testing.T) {
 			}
 		`},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			fo{*}o: my_package.Foo(int)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.foo: my_package.Foo(int)")
 }
@@ -3320,7 +3315,7 @@ ast_hover_union_with_poly_from_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_overloaded_proc_with_u8_byte_alias :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo_str :: proc(s: string) -> string {
 			return s
 		}
@@ -3338,7 +3333,7 @@ ast_hover_overloaded_proc_with_u8_byte_alias :: proc(t: ^testing.T) {
 			b: []byte
 			res{*}ult := foo(b)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.result: []u8")
 }
@@ -3346,7 +3341,7 @@ ast_hover_overloaded_proc_with_u8_byte_alias :: proc(t: ^testing.T) {
 @(test)
 ast_hover_chained_proc_call :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			someData: int,
 		}
@@ -3362,7 +3357,7 @@ ast_hover_chained_proc_call :: proc(t: ^testing.T) {
 		bar :: proc(data: Foo) -> bool {
 			return false
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.a: bool")
 }
@@ -3370,7 +3365,7 @@ ast_hover_chained_proc_call :: proc(t: ^testing.T) {
 @(test)
 ast_hover_chained_proc_call_multiple_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			someData: int,
 		}
@@ -3386,7 +3381,7 @@ ast_hover_chained_proc_call_multiple_return :: proc(t: ^testing.T) {
 		bar :: proc(data: Foo) -> (int, bool) {
 			return 1, false
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.b: bool")
 }
@@ -3394,7 +3389,7 @@ ast_hover_chained_proc_call_multiple_return :: proc(t: ^testing.T) {
 @(test)
 ast_hover_chained_call_expr_with_named_proc_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			someData: int,
 		}
@@ -3412,7 +3407,7 @@ ast_hover_chained_call_expr_with_named_proc_return :: proc(t: ^testing.T) {
 		bar :: proc(data: Foo) -> (bool, Foo) {
 			return false, data
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.b: test.Foo")
 }
@@ -3420,7 +3415,7 @@ ast_hover_chained_call_expr_with_named_proc_return :: proc(t: ^testing.T) {
 @(test)
 ast_hover_multiple_chained_call_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			someData: int,
 		}
@@ -3438,7 +3433,7 @@ ast_hover_multiple_chained_call_expr :: proc(t: ^testing.T) {
 		Bar2 :: proc(bazz: Bazz) -> int
 
 		foo :: proc() -> Bar {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.a: int")
 }
@@ -3446,7 +3441,7 @@ ast_hover_multiple_chained_call_expr :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_field_documentation :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: enum {
 			A = 1, // this is a comment for A
 			// This is a doc for B
@@ -3457,7 +3452,7 @@ ast_hover_enum_field_documentation :: proc(t: ^testing.T) {
 			D,
 			E, // E comment
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -3469,13 +3464,13 @@ ast_hover_enum_field_documentation :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_field_documentation_same_line :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: enum {
 			// Doc for A and B
 			// Mulitple lines!
 			A, B, // comment for A and B
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -3487,13 +3482,13 @@ ast_hover_enum_field_documentation_same_line :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_field_directly :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			// Doc for A and B
 			// Mulitple lines!
 			A{*}, B, // comment for A and B
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A\n---\nDoc for A and B\nMulitple lines!\n---\ncomment for A and B")
 }
@@ -3501,7 +3496,7 @@ ast_hover_enum_field_directly :: proc(t: ^testing.T) {
 @(test)
 ast_hover_union_field_documentation :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: union {
 			int, // this is a comment for int
 			// This is a doc for string
@@ -3512,7 +3507,7 @@ ast_hover_union_field_documentation :: proc(t: ^testing.T) {
 			i32,
 			i64, // i64 comment
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -3524,13 +3519,13 @@ ast_hover_union_field_documentation :: proc(t: ^testing.T) {
 @(test)
 ast_hover_union_field_documentation_same_line :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: union {
 			// Doc for int and string
 			// Mulitple lines!
 			int, string, // comment for int and string
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -3542,13 +3537,13 @@ ast_hover_union_field_documentation_same_line :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_proc_dynamic_array_elems :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc(array: $A/[dynamic]^$T) {
 			for e{*}lem, i in array {
 
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.elem: ^$T")
 }
@@ -3556,7 +3551,7 @@ ast_hover_parapoly_proc_dynamic_array_elems :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_proc_slice_param :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc(x: $T) -> T {
 			return x
 		}
@@ -3565,7 +3560,7 @@ ast_hover_parapoly_proc_slice_param :: proc(t: ^testing.T) {
 			x : []u8
 			b{*}ar := foo(x)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: []u8")
 }
@@ -3573,7 +3568,7 @@ ast_hover_parapoly_proc_slice_param :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_proc_multi_pointer_param :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc(x: ^$T) -> ^T {
 			return x
 		}
@@ -3583,7 +3578,7 @@ ast_hover_parapoly_proc_multi_pointer_param :: proc(t: ^testing.T) {
 			x : [^]u8
 			b{*}ar := foo(x)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: ^[^]u8")
 }
@@ -3591,11 +3586,11 @@ ast_hover_parapoly_proc_multi_pointer_param :: proc(t: ^testing.T) {
 @(test)
 ast_hover_union_with_tag :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: union #no_nil {
 			int, string,
 		}
-		`},
+		`}},
 	}
 
 	test.expect_hover(t, &source, "test.Foo :: union #no_nil {\n\tint,\n\tstring,\n}")
@@ -3604,11 +3599,11 @@ ast_hover_union_with_tag :: proc(t: ^testing.T) {
 @(test)
 ast_hover_union_with_align :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: union #no_nil #align(4) {
 			int, string,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: union #no_nil #align(4) {\n\tint,\n\tstring,\n}")
 }
@@ -3616,13 +3611,13 @@ ast_hover_union_with_align :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bit_set_intersection :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Flag  :: enum u8 {Foo, Bar}
 		Flags :: distinct bit_set[Flag; u8]
 
 		foo_bar  := Flags{.Foo, .Bar} // foo_bar: bit_set[Flag]
 		foo_{*}b := foo_bar & {.Foo}  // hover for foo_b
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo_b: distinct bit_set[Flag]\n---\nhover for foo_b")
 }
@@ -3630,13 +3625,13 @@ ast_hover_bit_set_intersection :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bit_set_union :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Flag  :: enum u8 {Foo, Bar}
 		Flags :: distinct bit_set[Flag; u8]
 
 		foo_bar  := Flags{.Bar} // foo_bar: bit_set[Flag]
 		foo_{*}b := {.Foo} | foo_bar  // hover for foo_b
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo_b: distinct bit_set[Flag]\n---\nhover for foo_b")
 }
@@ -3644,12 +3639,12 @@ ast_hover_bit_set_union :: proc(t: ^testing.T) {
 @(test)
 ast_hover_binary_expr_not_eq :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		main :: proc() {
 			fo{*}o := 1 != 2
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: bool")
 }
@@ -3657,14 +3652,14 @@ ast_hover_binary_expr_not_eq :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bit_set_in :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {A, B}
 
 		main :: proc() {
 			foos: bit_set[Foo]
 			f{*}oo := .A in foos
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: bool")
 }
@@ -3672,7 +3667,7 @@ ast_hover_bit_set_in :: proc(t: ^testing.T) {
 @(test)
 ast_hover_nested_struct :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Fo{*}o :: struct {
 			foo: int,
 			bar: struct {
@@ -3680,7 +3675,7 @@ ast_hover_nested_struct :: proc(t: ^testing.T) {
 				s: string,
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -3692,7 +3687,7 @@ ast_hover_nested_struct :: proc(t: ^testing.T) {
 @(test)
 ast_hover_nested_struct_union :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Fo{*}o :: struct {
 			foo: int,
 			bar: union #no_nil {
@@ -3700,7 +3695,7 @@ ast_hover_nested_struct_union :: proc(t: ^testing.T) {
 				string,
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -3712,7 +3707,7 @@ ast_hover_nested_struct_union :: proc(t: ^testing.T) {
 @(test)
 ast_hover_nested_struct_enum :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Fo{*}o :: struct {
 			foo: int,
 			bar: enum {
@@ -3721,7 +3716,7 @@ ast_hover_nested_struct_enum :: proc(t: ^testing.T) {
 				B,
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -3733,7 +3728,7 @@ ast_hover_nested_struct_enum :: proc(t: ^testing.T) {
 @(test)
 ast_hover_nested_struct_bit_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Fo{*}o :: struct {
 			foo: int,
 			bar: bit_field u8 {
@@ -3742,7 +3737,7 @@ ast_hover_nested_struct_bit_field :: proc(t: ^testing.T) {
 				b: uint | 5,
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -3754,7 +3749,7 @@ ast_hover_nested_struct_bit_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_foreign_block_calling_convention :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foreign import lib "lib"
 
 		@(default_calling_convention="c")
@@ -3763,7 +3758,7 @@ ast_hover_foreign_block_calling_convention :: proc(t: ^testing.T) {
 		}
 
 		fo{*}o
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, `test.foo :: proc "c" () -> int`)
 }
@@ -3771,7 +3766,7 @@ ast_hover_foreign_block_calling_convention :: proc(t: ^testing.T) {
 @(test)
 ast_hover_foreign_block_calling_convention_overridden :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foreign import lib "lib"
 
 		@(default_calling_convention="c")
@@ -3780,7 +3775,7 @@ ast_hover_foreign_block_calling_convention_overridden :: proc(t: ^testing.T) {
 		}
 
 		fo{*}o
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, `test.foo :: proc "contextless" () -> int`)
 }
@@ -3788,7 +3783,7 @@ ast_hover_foreign_block_calling_convention_overridden :: proc(t: ^testing.T) {
 @(test)
 ast_hover_foreign_block_link_prefix :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foreign import lib "lib"
 
 		@(link_prefix="bar")
@@ -3797,7 +3792,7 @@ ast_hover_foreign_block_link_prefix :: proc(t: ^testing.T) {
 		}
 
 		fo{*}o
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "@(link_prefix=\"bar\")\ntest.foo :: proc() -> int")
 }
@@ -3805,7 +3800,7 @@ ast_hover_foreign_block_link_prefix :: proc(t: ^testing.T) {
 @(test)
 ast_hover_foreign_block_link_prefix_overridden :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foreign import lib "lib"
 
 		@(link_prefix="bar")
@@ -3814,7 +3809,7 @@ ast_hover_foreign_block_link_prefix_overridden :: proc(t: ^testing.T) {
 		}
 
 		fo{*}o
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "@(link_name=\"foreign_foo\")\ntest.foo :: proc() -> int")
 }
@@ -3822,7 +3817,7 @@ ast_hover_foreign_block_link_prefix_overridden :: proc(t: ^testing.T) {
 @(test)
 ast_hover_foreign_private_block :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foreign import lib "lib"
 
 		@(private)
@@ -3831,7 +3826,7 @@ ast_hover_foreign_private_block :: proc(t: ^testing.T) {
 		}
 
 		fo{*}o
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "@(private)\ntest.foo :: proc() -> int")
 }
@@ -3839,7 +3834,7 @@ ast_hover_foreign_private_block :: proc(t: ^testing.T) {
 @(test)
 ast_hover_foreign_private_block_overridden :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foreign import lib "lib"
 
 		@(private)
@@ -3848,7 +3843,7 @@ ast_hover_foreign_private_block_overridden :: proc(t: ^testing.T) {
 		}
 
 		fo{*}o
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "@(private=\"file\")\ntest.foo :: proc() -> int")
 }
@@ -3856,7 +3851,7 @@ ast_hover_foreign_private_block_overridden :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_return_types :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() -> (a, b: int, c: bool) {
 			return
 		}
@@ -3864,7 +3859,7 @@ ast_hover_proc_return_types :: proc(t: ^testing.T) {
 		main :: proc() {
 			a, b{*}, c := foo()
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.b: int")
 }
@@ -3872,7 +3867,7 @@ ast_hover_proc_return_types :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_return_types_in_loop :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() -> (a, b: int, c: bool) {
 			return 1, 2, true
 		}
@@ -3882,7 +3877,7 @@ ast_hover_proc_return_types_in_loop :: proc(t: ^testing.T) {
 
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.b: int")
 }
@@ -3890,7 +3885,7 @@ ast_hover_proc_return_types_in_loop :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_overloads_arrays :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		normalize2 :: proc (v: [2]f32) -> [2]f32 {return {}}
 		normalize3 :: proc (v: [3]f32) -> [3]f32 {return {}}
@@ -3900,7 +3895,7 @@ ast_hover_proc_overloads_arrays :: proc(t: ^testing.T) {
 			v3: [3]f32
 			n{*}3 := normalize(v3)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.n3: [3]f32")
 }
@@ -3908,9 +3903,9 @@ ast_hover_proc_overloads_arrays :: proc(t: ^testing.T) {
 @(test)
 ast_hover_map_empty_struct_literal :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		m{*}: map[int]struct{}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.m: map[int]struct{}")
 }
@@ -3918,7 +3913,7 @@ ast_hover_map_empty_struct_literal :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_container_fields :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: struct {
 			foo_slice: []int,
 			foo_dynamic: [dynamic]int,
@@ -3926,7 +3921,7 @@ ast_hover_struct_container_fields :: proc(t: ^testing.T) {
 			foo_map: map[int]int,
 			foo_matrix: matrix[3,4]int,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -3938,11 +3933,11 @@ ast_hover_struct_container_fields :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_field_proc_calling_convention :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: struct {
 			foo_proc: proc "c" (a: int, b: int) -> int,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: struct {\n\tfoo_proc: proc \"c\" (a: int, b: int) -> int,\n}")
 }
@@ -3950,9 +3945,9 @@ ast_hover_struct_field_proc_calling_convention :: proc(t: ^testing.T) {
 @(test)
 ast_hover_distinct_array :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}oo :: distinct [4]u8
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: distinct [4]u8")
 }
@@ -3960,10 +3955,10 @@ ast_hover_distinct_array :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_tags :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Fo{*}o :: struct #no_copy #raw_union {
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: struct #raw_union #no_copy {}")
 }
@@ -3971,10 +3966,10 @@ ast_hover_struct_tags :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_tags_packed :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Fo{*}o :: struct($T: typeid) #packed #all_or_none {
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: struct($T: typeid) #packed #all_or_none {}")
 }
@@ -3982,10 +3977,10 @@ ast_hover_struct_tags_packed :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_tags_align :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Fo{*}o :: struct($T: typeid) #align(4) {
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: struct($T: typeid) #align(4) {}")
 }
@@ -4004,15 +3999,15 @@ ast_hover_struct_tags_align_package :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			foo := my_package.F{*}oo(int){}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.Foo :: struct(int) #align(4) {}")
@@ -4021,11 +4016,11 @@ ast_hover_struct_tags_align_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_tags_field_align :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Fo{*}o :: struct #max_field_align(4) #min_field_align(2) {
 			
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: struct #max_field_align(4) #min_field_align(2) {}")
 }
@@ -4033,7 +4028,7 @@ ast_hover_struct_tags_field_align :: proc(t: ^testing.T) {
 @(test)
 ast_hover_soa_slice :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			x, y: int,
 		}
@@ -4041,7 +4036,7 @@ ast_hover_soa_slice :: proc(t: ^testing.T) {
 		main :: proc() {
 			f{*}oos: #soa[]Foo
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foos: #soa[]Foo")
 }
@@ -4049,7 +4044,7 @@ ast_hover_soa_slice :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_with_soa_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			x, y: int,
 		}
@@ -4057,7 +4052,7 @@ ast_hover_struct_with_soa_field :: proc(t: ^testing.T) {
 		B{*}ar :: struct {
 			foos: #soa[5]Foo,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Bar :: struct {\n\tfoos: #soa[5]Foo,\n}")
 }
@@ -4065,7 +4060,7 @@ ast_hover_struct_with_soa_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_soa_slice_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			x, y: int,
 		}
@@ -4074,7 +4069,7 @@ ast_hover_soa_slice_field :: proc(t: ^testing.T) {
 			foos: #soa[]Foo
 			foos.x{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "foos.x: [^]int")
 }
@@ -4082,7 +4077,7 @@ ast_hover_soa_slice_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_identifier_soa_slice_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			x, y: int,
 		}
@@ -4091,7 +4086,7 @@ ast_hover_identifier_soa_slice_field :: proc(t: ^testing.T) {
 			foos: #soa[]Foo
 			x{*} := foos.x
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.x: [^]int")
 }
@@ -4099,7 +4094,7 @@ ast_hover_identifier_soa_slice_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_soa_fixed_array_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			x, y: int,
 		}
@@ -4108,7 +4103,7 @@ ast_hover_soa_fixed_array_field :: proc(t: ^testing.T) {
 			foos: #soa[6]Foo
 			foos.x{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "foos.x: [6]int")
 }
@@ -4116,7 +4111,7 @@ ast_hover_soa_fixed_array_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_soa_pointer :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			x, y: int,
 		}
@@ -4124,7 +4119,7 @@ ast_hover_soa_pointer :: proc(t: ^testing.T) {
 		main :: proc() {
 			f{*}oo: #soa^#soa[6]Foo
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: #soa^#soa[6]Foo")
 }
@@ -4132,7 +4127,7 @@ ast_hover_soa_pointer :: proc(t: ^testing.T) {
 @(test)
 ast_hover_soa_pointer_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			x, y: int,
 		}
@@ -4141,7 +4136,7 @@ ast_hover_soa_pointer_field :: proc(t: ^testing.T) {
 			foo: #soa^#soa[6]Foo
 			foo.x{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.x: int")
 }
@@ -4149,14 +4144,14 @@ ast_hover_soa_pointer_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_within_for_loop :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		main :: proc() {
 			for true {
 				f{*}oo :: proc() {}
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc()")
 }
@@ -4164,12 +4159,12 @@ ast_hover_proc_within_for_loop :: proc(t: ^testing.T) {
 @(test)
 ast_hover_string_slice_range :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: string
 			ba{*}r := foo[1:2]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: string")
 }
@@ -4177,12 +4172,12 @@ ast_hover_string_slice_range :: proc(t: ^testing.T) {
 @(test)
 ast_hover_string_index :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: string
 			ba{*}r := foo[1]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: u8")
 }
@@ -4190,12 +4185,12 @@ ast_hover_string_index :: proc(t: ^testing.T) {
 @(test)
 ast_hover_untyped_string_index :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo := "hellope"
 			ba{*}r := foo[1]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: u8")
 }
@@ -4203,12 +4198,12 @@ ast_hover_untyped_string_index :: proc(t: ^testing.T) {
 @(test)
 ast_hover_multi_pointer_slice_end_range :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: [^]int
 			b{*}ar := foo[:1]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: []int")
 }
@@ -4216,12 +4211,12 @@ ast_hover_multi_pointer_slice_end_range :: proc(t: ^testing.T) {
 @(test)
 ast_hover_multi_pointer_slice_start_range :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: [^]int
 			b{*}ar := foo[1:]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: [^]int")
 }
@@ -4229,12 +4224,12 @@ ast_hover_multi_pointer_slice_start_range :: proc(t: ^testing.T) {
 @(test)
 ast_hover_multi_pointer_slice_no_range :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: [^]int
 			b{*}ar := foo[:]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: [^]int")
 }
@@ -4242,9 +4237,9 @@ ast_hover_multi_pointer_slice_no_range :: proc(t: ^testing.T) {
 @(test)
 ast_hover_binary_expr_with_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}OO :: 1 + u8(2)
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.FOO :: 1 + u8(2)")
 }
@@ -4252,7 +4247,7 @@ ast_hover_binary_expr_with_type :: proc(t: ^testing.T) {
 @(test)
 ast_hover_soa_pointer_field_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		main :: proc() {
 			Shape :: struct{a, b:int}
@@ -4260,7 +4255,7 @@ ast_hover_soa_pointer_field_variable :: proc(t: ^testing.T) {
 
 			a{*} := ptr.a
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.a: int")
 }
@@ -4286,16 +4281,16 @@ ast_hover_overload_private_procs :: proc(t: ^testing.T) {
 		`,
 		},
 	)
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			s: string
 			foo := my_package.fo{*}o(s)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "@(private=\"file\")\nmy_package.foo :: proc(s: string)")
 }
@@ -4303,13 +4298,13 @@ ast_hover_overload_private_procs :: proc(t: ^testing.T) {
 @(test)
 ast_hover_keyword_transmute :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		main :: proc() {
 			foo: f64
 			bar := trans{*}mute(i64)foo
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "transmute(T)v\nBitwise cast between 2 types of the same size.")
 }
@@ -4317,9 +4312,9 @@ ast_hover_keyword_transmute :: proc(t: ^testing.T) {
 @(test)
 ast_hover_ternary :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		fo{*}o :: true ? 1 : 2
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: 1")
 }
@@ -4327,7 +4322,7 @@ ast_hover_ternary :: proc(t: ^testing.T) {
 @(test)
 ast_hover_defer_statement :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo :: proc() {
 			defer {
@@ -4336,7 +4331,7 @@ ast_hover_defer_statement :: proc(t: ^testing.T) {
 				}
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.s: struct {\n\tbar: int,\n}")
 }
@@ -4344,7 +4339,7 @@ ast_hover_defer_statement :: proc(t: ^testing.T) {
 @(test)
 ast_hover_implicit_selector_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			A,
@@ -4362,7 +4357,7 @@ ast_hover_implicit_selector_return :: proc(t: ^testing.T) {
 				return .A{*}
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Bar: .A")
 }
@@ -4374,16 +4369,16 @@ ast_hover_basic_value_cast_from_package :: proc(t: ^testing.T) {
 	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 			Bar :: int
 		`})
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			foo := i64(1)
 			b{*}ar := my_package.Bar(foo)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.bar: my_package.Bar")
 }
@@ -4391,7 +4386,7 @@ ast_hover_basic_value_cast_from_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_elem_overloaded_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo :: proc {
 			foo_array,
@@ -4405,7 +4400,7 @@ ast_hover_parapoly_elem_overloaded_proc :: proc(t: ^testing.T) {
 				f{*}oo(elem)
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(i: int)")
 }
@@ -4413,7 +4408,7 @@ ast_hover_parapoly_elem_overloaded_proc :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_elem_overloaded_proc_multiple_options :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo :: proc {
 			foo_array,
@@ -4429,7 +4424,7 @@ ast_hover_parapoly_elem_overloaded_proc_multiple_options :: proc(t: ^testing.T) 
 				f{*}oo(elem)
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc {\n\tfoo_int :: proc(i: int),\n\tfoo_string :: proc(s: string),\n}")
 }
@@ -4437,7 +4432,7 @@ ast_hover_parapoly_elem_overloaded_proc_multiple_options :: proc(t: ^testing.T) 
 @(test)
 ast_hover_overloaded_proc_slice_dynamic_array :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo :: proc {
 			foo_slice,
@@ -4451,7 +4446,7 @@ ast_hover_overloaded_proc_slice_dynamic_array :: proc(t: ^testing.T) {
 			foos: [dynamic]int
 			f{*}oo(foos)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(array: $A/[dynamic]$T)")
 }
@@ -4459,7 +4454,7 @@ ast_hover_overloaded_proc_slice_dynamic_array :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_call_implicit_selector_with_default_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Foo :: enum {
 			X, Y,
@@ -4478,7 +4473,7 @@ ast_hover_proc_call_implicit_selector_with_default_value :: proc(t: ^testing.T) 
 		main :: proc() {
 			foo({.A, .B{*}})
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Option: .B")
 }
@@ -4486,12 +4481,12 @@ ast_hover_proc_call_implicit_selector_with_default_value :: proc(t: ^testing.T) 
 @(test)
 ast_hover_casted_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: int = 25
 			bar := cast(f32)fo{*}o
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: int")
 }
@@ -4499,12 +4494,12 @@ ast_hover_casted_variable :: proc(t: ^testing.T) {
 @(test)
 ast_hover_float_binary_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo := 2.1
 			b{*}ar := foo - 2
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: f64")
 }
@@ -4512,7 +4507,7 @@ ast_hover_float_binary_expr :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_struct_with_where_clause :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		type_is_integer :: proc($T: typeid) -> bool {
 			return true
 		}
@@ -4523,7 +4518,7 @@ ast_hover_parapoly_struct_with_where_clause :: proc(t: ^testing.T) {
 			x: [N]T,
 			y: [N-2]T,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(
 		t,
@@ -4535,13 +4530,13 @@ ast_hover_parapoly_struct_with_where_clause :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_proc_with_where_clause :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		fo{*}o :: proc(x: [$N]int) -> bool
 			where N > 2 #optional_ok {
 			fmt.println(#procedure, "was called with the parameter", x)
 			return true
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(x: [$N]int) -> bool where N > 2 #optional_ok")
 }
@@ -4549,7 +4544,7 @@ ast_hover_parapoly_proc_with_where_clause :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_union_with_where_clause :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		type_is_integer :: proc($T: typeid) -> bool {
 			return true
 		}
@@ -4558,7 +4553,7 @@ ast_hover_parapoly_union_with_where_clause :: proc(t: ^testing.T) {
 			T,
 			string,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo :: union($T: typeid) #no_nil where type_is_integer(T) {\n\tT,\n\tstring,\n}")
 }
@@ -4566,11 +4561,11 @@ ast_hover_parapoly_union_with_where_clause :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_named_return_parens :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc() -> (a: int) {
 			return
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc() -> (a: int)")
 }
@@ -4578,7 +4573,7 @@ ast_hover_proc_named_return_parens :: proc(t: ^testing.T) {
 @(test)
 ast_hover_map_value_comp_lit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			foo: int,
 		}
@@ -4589,7 +4584,7 @@ ast_hover_map_value_comp_lit :: proc(t: ^testing.T) {
 				f{*}oo = 1,
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.foo: int")
 }
@@ -4597,7 +4592,7 @@ ast_hover_map_value_comp_lit :: proc(t: ^testing.T) {
 @(test)
 ast_hover_assign_comp_lit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			foo: int,
 		}
@@ -4608,7 +4603,7 @@ ast_hover_assign_comp_lit :: proc(t: ^testing.T) {
 				f{*}oo = 1,
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.foo: int")
 }
@@ -4616,7 +4611,7 @@ ast_hover_assign_comp_lit :: proc(t: ^testing.T) {
 @(test)
 ast_hover_assign_comp_lit_with_multiple_assigns_first :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 		}
@@ -4631,7 +4626,7 @@ ast_hover_assign_comp_lit_with_multiple_assigns_first :: proc(t: ^testing.T) {
 
 			foo, bar = {a{*} = 1}, {b = 2}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.a: int")
 }
@@ -4639,7 +4634,7 @@ ast_hover_assign_comp_lit_with_multiple_assigns_first :: proc(t: ^testing.T) {
 @(test)
 ast_hover_assign_comp_lit_with_multiple_assigns_second :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 		}
@@ -4654,7 +4649,7 @@ ast_hover_assign_comp_lit_with_multiple_assigns_second :: proc(t: ^testing.T) {
 
 			foo, bar = {a = 1}, {b{*} = 2}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Bar.b: int")
 }
@@ -4662,7 +4657,7 @@ ast_hover_assign_comp_lit_with_multiple_assigns_second :: proc(t: ^testing.T) {
 @(test)
 ast_hover_comp_lit_map_key :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 		}
@@ -4675,7 +4670,7 @@ ast_hover_comp_lit_map_key :: proc(t: ^testing.T) {
 			m: map[Foo]Bar
 			m[{a{*} = 1}] = {b = 2}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.a: int")
 }
@@ -4683,14 +4678,14 @@ ast_hover_comp_lit_map_key :: proc(t: ^testing.T) {
 @(test)
 ast_hover_inner_struct_field :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 			b: struct {
 				c{*}: int,
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "struct.c: int")
 }
@@ -4698,14 +4693,14 @@ ast_hover_inner_struct_field :: proc(t: ^testing.T) {
 @(test)
 ast_hover_using_bit_field_struct :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 			using _: bit_field u8 {
 				c{*}: u8 | 8,
 			},
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "bit_field.c: u8 | 8")
 }
@@ -4713,7 +4708,7 @@ ast_hover_using_bit_field_struct :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_group_parapoly_matrix :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		mul :: proc {
 			matrix_mul,
@@ -4737,7 +4732,7 @@ ast_hover_proc_group_parapoly_matrix :: proc(t: ^testing.T) {
 			b: matrix[3,2]int
 			c{*} := mul(a, b)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.c: matrix[3,2]int")
 }
@@ -4745,7 +4740,7 @@ ast_hover_proc_group_parapoly_matrix :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_group_variadic_args :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		append_elems :: proc(array: ^$T/[dynamic]string, args: ..string) {}
 		append_elem :: proc(array: ^$T/[dynamic]string, arg: string) {}
 
@@ -4759,7 +4754,7 @@ ast_hover_proc_group_variadic_args :: proc(t: ^testing.T) {
 			bars: [dynamic]string
 			app{*}end(&bars, ..foos[:])
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.append :: proc(array: ^$T/[dynamic]string, args: ..string)")
 }
@@ -4767,7 +4762,7 @@ ast_hover_proc_group_variadic_args :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_group_variadic_args_with_generic_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		append_elems :: proc(array: ^$T/[dynamic]$E, args: ..E) {}
 		append_elem :: proc(array: ^$T/[dynamic]$E, arg: E) {}
 
@@ -4781,7 +4776,7 @@ ast_hover_proc_group_variadic_args_with_generic_type :: proc(t: ^testing.T) {
 			bars: [dynamic]string
 			app{*}end(&bars, ..foos[:])
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.append :: proc(array: ^$T/[dynamic]$E, args: ..E)")
 }
@@ -4789,7 +4784,7 @@ ast_hover_proc_group_variadic_args_with_generic_type :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_group_with_generic_type_from_proc_param :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		append_elems :: proc(array: ^$T/[dynamic]$E, args: ..E) {}
 		append_elem :: proc(array: ^$T/[dynamic]$E, arg: E) {}
 
@@ -4801,7 +4796,7 @@ ast_hover_proc_group_with_generic_type_from_proc_param :: proc(t: ^testing.T) {
 		foo :: proc(bars: ^[dynamic]string) {
 			app{*}end(bars, "test")
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.append :: proc(array: ^$T/[dynamic]$E, arg: E)")
 }
@@ -4809,7 +4804,7 @@ ast_hover_proc_group_with_generic_type_from_proc_param :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_implicit_if_statement :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			B,
@@ -4820,7 +4815,7 @@ ast_hover_enum_implicit_if_statement :: proc(t: ^testing.T) {
 			if foo == .A{*} {
 			}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A")
 }
@@ -4828,12 +4823,12 @@ ast_hover_enum_implicit_if_statement :: proc(t: ^testing.T) {
 @(test)
 ast_hover_if_ternary_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: []int
 			ba{*}r := len(foo) if true else 2
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: int")
 }
@@ -4841,9 +4836,9 @@ ast_hover_if_ternary_expr :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_param_tags :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc (#by_ptr a: int, #any_int b: int) {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(#by_ptr a: int, #any_int b: int)")
 }
@@ -4851,9 +4846,9 @@ ast_hover_proc_param_tags :: proc(t: ^testing.T) {
 @(test)
 ast_hover_simd_array :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 		f{*}oo := #simd[2]f32{}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: #simd[2]f32")
 }
@@ -4861,9 +4856,9 @@ ast_hover_simd_array :: proc(t: ^testing.T) {
 @(test)
 ast_hover_simd_array_pointer :: proc(t: ^testing.T) {
 	source := test.Source {
-		main     = {source = `package test
+		files = {{source = `package test
 		f{*}oo := &#simd[4]f32{}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: ^#simd[4]f32")
 }
@@ -4871,9 +4866,9 @@ ast_hover_simd_array_pointer :: proc(t: ^testing.T) {
 @(test)
 ast_hover_const_untyped_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}OO :: 123
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.FOO :: 123")
 }
@@ -4881,7 +4876,7 @@ ast_hover_const_untyped_value :: proc(t: ^testing.T) {
 @(test)
 ast_hover_const_comp_lit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 			b: string,
@@ -4891,7 +4886,7 @@ ast_hover_const_comp_lit :: proc(t: ^testing.T) {
 			a = 1,
 			b = "b",
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.FOO :: Foo {\n\ta = 1,\n\tb = \"b\",\n}")
 }
@@ -4899,7 +4894,7 @@ ast_hover_const_comp_lit :: proc(t: ^testing.T) {
 @(test)
 ast_hover_const_comp_lit_with_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			a: int,
 			b: string,
@@ -4909,7 +4904,7 @@ ast_hover_const_comp_lit_with_type :: proc(t: ^testing.T) {
 			a = 1,
 			b = "b",
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.FOO : Foo : {\n\ta = 1,\n\tb = \"b\",\n}")
 }
@@ -4917,9 +4912,9 @@ ast_hover_const_comp_lit_with_type :: proc(t: ^testing.T) {
 @(test)
 ast_hover_const_binary_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		F{*}OO :: 3 + 4
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.FOO :: 3 + 4")
 }
@@ -4927,7 +4922,7 @@ ast_hover_const_binary_expr :: proc(t: ^testing.T) {
 @(test)
 ast_hover_const_complex_comp_lit :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		frgba :: distinct [4]f32
 
 		COLOUR_BLUE :: frgba{0.1, 0.1, 0.1, 0.1}
@@ -4953,7 +4948,7 @@ ast_hover_const_complex_comp_lit :: proc(t: ^testing.T) {
 			},
 			bar = 1 + 2,
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.COLOURS :: Colours {\n\tblue = frgba{0.1, 0.1, 0.1, 0.1},\n\tgreen = frgba{0.1, 0.1, 0.1, 0.1},\n\tfoo = {\n\t\ta = 32,\n\t\tb = \"testing\",\n\t},\n\tbar = 1 + 2,\n}")
 }
@@ -4961,9 +4956,9 @@ ast_hover_const_complex_comp_lit :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc(a: int) -> int
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: #type proc(a: int) -> int")
 }
@@ -4971,11 +4966,11 @@ ast_hover_proc_type :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_impl :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc(a: int) -> int {
 			return a + 1
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(a: int) -> int")
 }
@@ -4983,7 +4978,7 @@ ast_hover_proc_impl :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_overload_generic_map :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		clear_dynamic_array :: proc "contextless" (array: ^$T/[dynamic]$E) {}
 		clear_map :: proc "contextless" (m: ^$T/map[$K]$V) {}
 		clear :: proc{
@@ -4994,7 +4989,7 @@ ast_hover_proc_overload_generic_map :: proc(t: ^testing.T) {
 			foo: map[int]string
 			c{*}lear(&foo)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.clear :: proc(m: ^$T/map[$K]$V)")
 }
@@ -5007,8 +5002,7 @@ ast_hover_proc_overload_basic_type_alias :: proc(t: ^testing.T) {
 			Bar :: int
 		`})
 
-	source := test.Source {
-		main = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		foo_int :: proc(i: int) {}
@@ -5022,8 +5016,9 @@ ast_hover_proc_overload_basic_type_alias :: proc(t: ^testing.T) {
 			bar: my_package.Bar
 			f{*}oo(bar)
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(i: int)")
 }
@@ -5031,7 +5026,7 @@ ast_hover_proc_overload_basic_type_alias :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_overload_nil_pointer :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo_int :: proc(i: int) {}
 		foo_ptr :: proc(s: ^string) {}
@@ -5043,7 +5038,7 @@ ast_hover_proc_overload_nil_pointer :: proc(t: ^testing.T) {
 		main :: proc() {
 			f{*}oo(nil)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(s: ^string)")
 }
@@ -5070,16 +5065,16 @@ ast_hover_package_proc_naming_conflicting_with_another_package :: proc(t: ^testi
 		},
 	)
 
-	source := test.Source {
-		main     = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 		import "foo"
 
 		main :: proc() {
 			f := my_package.fo{*}o
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 
 	test.expect_hover(t, &source, "my_package.foo :: proc()")
@@ -5088,12 +5083,12 @@ ast_hover_package_proc_naming_conflicting_with_another_package :: proc(t: ^testi
 @(test)
 ast_hover_matrix_index :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: matrix[3, 2]f32
 			a{*} := foo[0]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.a: [3]f32")
 }
@@ -5101,13 +5096,13 @@ ast_hover_matrix_index :: proc(t: ^testing.T) {
 @(test)
 ast_hover_matrix_index_twice :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: matrix[2, 3]f32
 			a := foo[0]
 			b{*} := a[0]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.b: f32")
 }
@@ -5115,7 +5110,7 @@ ast_hover_matrix_index_twice :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_proc_slice_param_return :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		Iter :: struct(T: typeid) {
 			slice: []T,
@@ -5130,7 +5125,7 @@ ast_hover_parapoly_proc_slice_param_return :: proc(t: ^testing.T) {
 			slice := []string{}
 			i{*}t := make_iter(slice)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.it: test.Iter(string)")
 }
@@ -5138,7 +5133,7 @@ ast_hover_parapoly_proc_slice_param_return :: proc(t: ^testing.T) {
 @(test)
 ast_hover_generic_proc_with_inlining :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Bar :: struct{}
 
 		foo :: #force_inline proc(data: $T) {}
@@ -5146,7 +5141,7 @@ ast_hover_generic_proc_with_inlining :: proc(t: ^testing.T) {
 		main :: proc() {
 			f{*}oo(Bar{})
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: #force_inline proc(data: $T)")
 }
@@ -5161,8 +5156,7 @@ ast_hover_using_import_statement_name_conflict :: proc(t: ^testing.T) {
 			}
 		`})
 
-	source := test.Source {
-		main = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		Bar :: struct {
@@ -5173,8 +5167,9 @@ ast_hover_using_import_statement_name_conflict :: proc(t: ^testing.T) {
 			using my_package
 			bar := Ba{*}r{}
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.Bar :: struct {\n\tb: string,\n}")
 }
@@ -5182,7 +5177,7 @@ ast_hover_using_import_statement_name_conflict :: proc(t: ^testing.T) {
 @(test)
 ast_hover_enum_in_bitset_within_call_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {A, B}
 		Foos :: bit_set[Foo]
 
@@ -5192,7 +5187,7 @@ ast_hover_enum_in_bitset_within_call_expr :: proc(t: ^testing.T) {
 			foos: Foos
 			bar(.A{*} in foos)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A")
 }
@@ -5200,10 +5195,10 @@ ast_hover_enum_in_bitset_within_call_expr :: proc(t: ^testing.T) {
 @(test)
 ast_hover_typeid_with_specialization :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo{*} :: proc($T: typeid/[]$E) {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc($T: typeid/[]$E)")
 }
@@ -5211,7 +5206,7 @@ ast_hover_typeid_with_specialization :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_group_with_enum_arg :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			B,
@@ -5229,7 +5224,7 @@ ast_hover_proc_group_with_enum_arg :: proc(t: ^testing.T) {
 			b{*}ar(.B)
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar :: proc(foo: Foo)")
 }
@@ -5237,7 +5232,7 @@ ast_hover_proc_group_with_enum_arg :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_group_with_enum_named_arg :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			B,
@@ -5255,7 +5250,7 @@ ast_hover_proc_group_with_enum_named_arg :: proc(t: ^testing.T) {
 			b{*}ar(foo = .B, i = 2)
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar :: proc(i: int, foo: Foo)")
 }
@@ -5263,7 +5258,7 @@ ast_hover_proc_group_with_enum_named_arg :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_group_named_arg_with_nil :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {}
 
 		bar_none :: proc() {}
@@ -5277,7 +5272,7 @@ ast_hover_proc_group_named_arg_with_nil :: proc(t: ^testing.T) {
 			b{*}ar(foo = nil, i = 2)
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar :: proc(i: int, foo: ^Foo)")
 }
@@ -5285,9 +5280,9 @@ ast_hover_proc_group_named_arg_with_nil :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_return_with_union :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc() -> union{string, [4]u8} {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc() -> union{string, [4]u8}")
 }
@@ -5295,9 +5290,9 @@ ast_hover_proc_return_with_union :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_return_with_struct :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc() -> struct{s: string, i: int} {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc() -> struct{s: string, i: int}")
 }
@@ -5305,9 +5300,9 @@ ast_hover_proc_return_with_struct :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_return_with_enum :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc() -> enum{A, B} {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc() -> enum{A, B}")
 }
@@ -5315,9 +5310,9 @@ ast_hover_proc_return_with_enum :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_arg_generic_bit_set :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		f{*}oo :: proc($T: typeid/bit_set[$F; $E]) {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc($T: typeid/bit_set[$F; $E])")
 }
@@ -5325,12 +5320,12 @@ ast_hover_proc_arg_generic_bit_set :: proc(t: ^testing.T) {
 @(test)
 ast_hover_complex_number_literal :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			f{*}oo := 1 + 1i
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: complex128")
 }
@@ -5338,12 +5333,12 @@ ast_hover_complex_number_literal :: proc(t: ^testing.T) {
 @(test)
 ast_hover_quaternion_literal :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			f{*}oo := 1 + 2i + 3j + 4k
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: quaternion256")
 }
@@ -5356,15 +5351,15 @@ ast_hover_parapoly_other_package :: proc(t: ^testing.T) {
 		// Docs!
 		bar :: proc(_: $T) {} // Comment!
 		`})
-	source := test.Source {
-		main = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			my_package.ba{*}r("test")
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.bar :: proc(_: $T)\n---\nDocs!\n---\nComment!")
 }
@@ -5372,12 +5367,12 @@ ast_hover_parapoly_other_package :: proc(t: ^testing.T) {
 @(test)
 ast_hover_local_const_binary_expr :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			f{*}oo :: 1 + 2
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: 1 + 2")
 }
@@ -5385,12 +5380,12 @@ ast_hover_local_const_binary_expr :: proc(t: ^testing.T) {
 @(test)
 ast_hover_local_const_binary_expr_with_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			f{*}oo : i32 : 1 + 2
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo : i32 : 1 + 2")
 }
@@ -5398,13 +5393,13 @@ ast_hover_local_const_binary_expr_with_type :: proc(t: ^testing.T) {
 @(test)
 ast_hover_loop_over_enum :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {A, B, C}
 		main :: proc() {
 			for f{*}oo in Foo {}
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: test.Foo")
 }
@@ -5412,7 +5407,7 @@ ast_hover_loop_over_enum :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_return_enum :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {A, B, C}
 
 		get :: proc($T: typeid) -> T {}
@@ -5421,7 +5416,7 @@ ast_hover_parapoly_return_enum :: proc(t: ^testing.T) {
 			f{*}oo := get(Foo)
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: test.Foo")
 }
@@ -5429,7 +5424,7 @@ ast_hover_parapoly_return_enum :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_return_union :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: union {int}
 
 		get :: proc($T: typeid) -> T {}
@@ -5438,7 +5433,7 @@ ast_hover_parapoly_return_union :: proc(t: ^testing.T) {
 			f{*}oo := get(Foo)
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: test.Foo")
 }
@@ -5446,7 +5441,7 @@ ast_hover_parapoly_return_union :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_return_bit_set :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: union {int}
 
 		get :: proc($T: typeid) -> T {}
@@ -5455,7 +5450,7 @@ ast_hover_parapoly_return_bit_set :: proc(t: ^testing.T) {
 			f{*}oo := get(Foo)
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: test.Foo")
 }
@@ -5463,7 +5458,7 @@ ast_hover_parapoly_return_bit_set :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_return_slice :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: []int
 
 		get :: proc($T: typeid) -> T {}
@@ -5472,7 +5467,7 @@ ast_hover_parapoly_return_slice :: proc(t: ^testing.T) {
 			f{*}oo := get(Foo)
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: []int")
 }
@@ -5480,7 +5475,7 @@ ast_hover_parapoly_return_slice :: proc(t: ^testing.T) {
 @(test)
 ast_hover_parapoly_return_dynamic_array :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: [dynamic]string
 
 		get :: proc($T: typeid) -> T {}
@@ -5489,7 +5484,7 @@ ast_hover_parapoly_return_dynamic_array :: proc(t: ^testing.T) {
 			f{*}oo := get(Foo)
 		}
 
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: [dynamic]string")
 }
@@ -5497,7 +5492,7 @@ ast_hover_parapoly_return_dynamic_array :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_overload_with_less_args :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {}
 
 		foo_out :: proc(input: int, out_struct: ^Foo) -> (ok: bool) {}
@@ -5511,7 +5506,7 @@ ast_hover_proc_overload_with_less_args :: proc(t: ^testing.T) {
 		main :: proc() {
 			some, ok := f{*}oo(1)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc(input: int) -> (out_struct: Foo, ok: bool)")
 }
@@ -5519,11 +5514,11 @@ ast_hover_proc_overload_with_less_args :: proc(t: ^testing.T) {
 @(test)
 ast_hover_array_type_local_scope :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			Arra{*}y :: [2]int
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Array :: [2]int")
 }
@@ -5531,13 +5526,13 @@ ast_hover_array_type_local_scope :: proc(t: ^testing.T) {
 @(test)
 ast_hover_array_elem_local_scope :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			Array :: [2]int
 			array: Array
 			f{*}oo := array[0]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: int")
 }
@@ -5545,14 +5540,14 @@ ast_hover_array_elem_local_scope :: proc(t: ^testing.T) {
 @(test)
 ast_hover_array_of_array_type_x_elem_local_scope :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			Array :: [2]int
 			Array_2 :: [2]Array
 			array_2: Array_2
 			f{*}oo := array_2.x
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: [2]int")
 }
@@ -5560,14 +5555,14 @@ ast_hover_array_of_array_type_x_elem_local_scope :: proc(t: ^testing.T) {
 @(test)
 ast_hover_soa_poly_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc (arr: ^#soa[dynamic]$E) -> #soa^#soa[dynamic]E {}
 
 		main :: proc() {
 			array: #soa[dynamic]struct{}
 			b{*}ar := foo(&array)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: #soa^#soa[dynamic]struct{}")
 }
@@ -5575,13 +5570,13 @@ ast_hover_soa_poly_proc :: proc(t: ^testing.T) {
 @(test)
 ast_hover_slice_function_call :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() -> []int {}
 
 		main :: proc() {
 			x{*} := foo()[:1]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.x: []int")
 }
@@ -5589,13 +5584,13 @@ ast_hover_slice_function_call :: proc(t: ^testing.T) {
 @(test)
 ast_hover_index_function_call :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() -> []int {}
 
 		main :: proc() {
 			x{*} := foo()[0]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.x: int")
 }
@@ -5603,12 +5598,12 @@ ast_hover_index_function_call :: proc(t: ^testing.T) {
 @(test)
 ast_hover_local_proc_docs :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			// foo doc
 			f{*}oo :: proc() {}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc()\n---\nfoo doc")
 }
@@ -5616,7 +5611,7 @@ ast_hover_local_proc_docs :: proc(t: ^testing.T) {
 @(test)
 ast_hover_struct_using_with_parentheses :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct {
 			using bar: (struct { a: int }),
 		}
@@ -5624,7 +5619,7 @@ ast_hover_struct_using_with_parentheses :: proc(t: ^testing.T) {
 			foo: Foo
 			foo.a{*}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "Foo.a: int")
 }
@@ -5632,13 +5627,13 @@ ast_hover_struct_using_with_parentheses :: proc(t: ^testing.T) {
 @(test)
 ast_hover_named_proc_arg_hover :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc(bar: f32) {}
 
 		main :: proc() {
 			foo(b{*}ar=42)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "foo.bar: f32")
 }
@@ -5646,13 +5641,13 @@ ast_hover_named_proc_arg_hover :: proc(t: ^testing.T) {
 @(test)
 ast_hover_unary_function_call :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() -> int {}
 
 		main :: proc() {
 			b{*}ar := -foo()
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: int")
 }
@@ -5660,7 +5655,7 @@ ast_hover_unary_function_call :: proc(t: ^testing.T) {
 @(test)
 ast_hover_unary_overload_function_call :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo_int :: proc() -> int {}
 		foo_string :: proc(s: string) -> string {}
 		foo :: proc {
@@ -5671,7 +5666,7 @@ ast_hover_unary_overload_function_call :: proc(t: ^testing.T) {
 		main :: proc() {
 			b{*}ar := -foo()
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: int")
 }
@@ -5679,13 +5674,13 @@ ast_hover_unary_overload_function_call :: proc(t: ^testing.T) {
 @(test)
 ast_hover_negate_function_call :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() -> bool {}
 
 		main :: proc() {
 			b{*}ar := !foo()
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: bool")
 }
@@ -5693,13 +5688,13 @@ ast_hover_negate_function_call :: proc(t: ^testing.T) {
 @(test)
 ast_hover_function_call_with_parens :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() -> bool {}
 
 		main :: proc() {
 			b{*}ar := (foo())
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: bool")
 }
@@ -5707,12 +5702,12 @@ ast_hover_function_call_with_parens :: proc(t: ^testing.T) {
 @(test)
 ast_hover_bitshift_integer_type :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		main :: proc() {
 			foo: u16
 			b{*}ar := 6 << foo
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: int")
 }
@@ -5720,7 +5715,7 @@ ast_hover_bitshift_integer_type :: proc(t: ^testing.T) {
 @(test)
 ast_hover_type_assertion_unary_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: union {
 			int,
 			f64,
@@ -5730,7 +5725,7 @@ ast_hover_type_assertion_unary_value :: proc(t: ^testing.T) {
 			foo := Foo(0.0)
 			i{*} := &foo.(int)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.i: ^int")
 }
@@ -5738,7 +5733,7 @@ ast_hover_type_assertion_unary_value :: proc(t: ^testing.T) {
 @(test)
 ast_hover_type_assertion_unary_value_value :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: union {
 			int,
 			f64,
@@ -5748,7 +5743,7 @@ ast_hover_type_assertion_unary_value_value :: proc(t: ^testing.T) {
 			foo := Foo(0.0)
 			i{*}, ok := &foo.(int)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.i: ^int")
 }
@@ -5756,7 +5751,7 @@ ast_hover_type_assertion_unary_value_value :: proc(t: ^testing.T) {
 @(test)
 ast_hover_type_assertion_unary_value_ok :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: union {
 			int,
 			f64,
@@ -5766,7 +5761,7 @@ ast_hover_type_assertion_unary_value_ok :: proc(t: ^testing.T) {
 			foo := Foo(0.0)
 			i, ok{*} := &foo.(int)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.ok: bool")
 }
@@ -5774,7 +5769,7 @@ ast_hover_type_assertion_unary_value_ok :: proc(t: ^testing.T) {
 @(test)
 ast_hover_nested_proc_docs_tabs :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		main :: proc() {
 			/*
@@ -5783,7 +5778,7 @@ ast_hover_nested_proc_docs_tabs :: proc(t: ^testing.T) {
 			*/
 			f{*}oo :: proc() {}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc()\n---\nDocs!\n\tDocs2\n")
 }
@@ -5791,7 +5786,7 @@ ast_hover_nested_proc_docs_tabs :: proc(t: ^testing.T) {
 @(test)
 ast_hover_nested_proc_docs_spaces :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		main :: proc() {
             /*
@@ -5800,7 +5795,7 @@ ast_hover_nested_proc_docs_spaces :: proc(t: ^testing.T) {
             */
 			f{*}oo :: proc() {}
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc()\n---\nDocs!\n    Docs2\n")
 }
@@ -5815,15 +5810,15 @@ ast_hover_propagate_docs_alias_in_package :: proc(t: ^testing.T) {
 
 		bar :: foo
 		`})
-	source := test.Source {
-		main = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			my_package.ba{*}r()
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.bar :: proc()\n---\nDocs!\n---\nComment!")
 }
@@ -5839,15 +5834,15 @@ ast_hover_propagate_docs_alias_in_package_override :: proc(t: ^testing.T) {
 		// Overridden
 		bar :: foo
 		`})
-	source := test.Source {
-		main = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		main :: proc() {
 			my_package.ba{*}r()
 		}
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "my_package.bar :: proc()\n---\nOverridden\n---\nComment!")
 }
@@ -5855,12 +5850,12 @@ ast_hover_propagate_docs_alias_in_package_override :: proc(t: ^testing.T) {
 @(test)
 ast_hover_deferred_attributes :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() {}
 
 		@(deferred_in = fo{*}o)
 		bar :: proc() {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo :: proc()")
 }
@@ -5868,10 +5863,10 @@ ast_hover_deferred_attributes :: proc(t: ^testing.T) {
 @(test)
 ast_hover_const_aliases :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: 3 + 4
 		B{*}ar :: Foo
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Bar :: Foo")
 }
@@ -5883,13 +5878,13 @@ ast_hover_const_aliases_from_other_pkg :: proc(t: ^testing.T) {
 	append(&packages, test.FileInPackage{pkg = "my_package", source = `package my_package
 		Foo :: 3 + 4
 		`})
-	source := test.Source {
-		main = {source = `package test
+	inject_at(&packages, 0, test.FileInPackage{source = `package test
 		import "my_package"
 
 		B{*}ar :: my_package.Foo
-		`},
-		extra_files = packages[:],
+		`})
+source := test.Source {
+	files = packages[:],
 	}
 	test.expect_hover(t, &source, "test.Bar :: my_package.Foo")
 }
@@ -5897,11 +5892,11 @@ ast_hover_const_aliases_from_other_pkg :: proc(t: ^testing.T) {
 @(test)
 ast_hover_directives_config_local :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() {
 			b{*}ar := #config(TEST, false)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: bool")
 }
@@ -5909,11 +5904,11 @@ ast_hover_directives_config_local :: proc(t: ^testing.T) {
 @(test)
 ast_hover_directives_load_type_local :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc() {
 			b{*}ar := #load("foo", string)
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: string")
 }
@@ -5921,12 +5916,12 @@ ast_hover_directives_load_type_local :: proc(t: ^testing.T) {
 @(test)
 ast_hover_directives_load_hash_local :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 		foo :: proc() {
 			b{*}ar := #load_hash("a", "b")
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar: int")
 }
@@ -5934,9 +5929,9 @@ ast_hover_directives_load_hash_local :: proc(t: ^testing.T) {
 @(test)
 ast_hover_directives_config :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		b{*}ar :: #config(TEST, false)
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar :: #config(TEST, false)")
 }
@@ -5944,9 +5939,9 @@ ast_hover_directives_config :: proc(t: ^testing.T) {
 @(test)
 ast_hover_directives_load :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		b{*}ar :: #load("foo.txt")
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.bar :: #load(\"foo.txt\")")
 }
@@ -5954,9 +5949,9 @@ ast_hover_directives_load :: proc(t: ^testing.T) {
 @(test)
 ast_hover_directives_config_info :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		bar :: #c{*}onfig(TEST, false)
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "#config(<identifier>, default)\n\nChecks if an identifier is defined through the command line, or gives a default value instead.\n\nValues can be set with the `-define:NAME=VALUE` command line flag.")
 }
@@ -5964,7 +5959,7 @@ ast_hover_directives_config_info :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_group_bitset :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: enum {
 			A,
 			B,
@@ -5982,7 +5977,7 @@ ast_hover_proc_group_bitset :: proc(t: ^testing.T) {
 		main :: proc() {
 			foo(1, {.A{*}})
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.Foo: .A")
 }
@@ -5990,7 +5985,7 @@ ast_hover_proc_group_bitset :: proc(t: ^testing.T) {
 @(test)
 ast_hover_soa_struct_field_indexed :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		Foo :: struct{}
 
 		Bar :: struct {
@@ -6000,7 +5995,7 @@ ast_hover_soa_struct_field_indexed :: proc(t: ^testing.T) {
 		bazz :: proc(bar: ^Bar, index: int) {
 			f{*}oo := &bar.foos[index]
 		}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.foo: #soa^#soa[dynamic]Foo")
 }
@@ -6008,9 +6003,9 @@ ast_hover_soa_struct_field_indexed :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_poly_params :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc($T{*}: int) {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.$T: int")
 }
@@ -6018,9 +6013,9 @@ ast_hover_proc_poly_params :: proc(t: ^testing.T) {
 @(test)
 ast_hover_proc_poly_params_where_clause :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 		foo :: proc($T: int) where T{*} >= 0 {}
-		`},
+		`}},
 	}
 	test.expect_hover(t, &source, "test.$T: int")
 }

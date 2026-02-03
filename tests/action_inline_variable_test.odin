@@ -297,15 +297,14 @@ main :: proc() {
 @(test)
 action_inline_variable_reassigned :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	{*}x := 10
 	x = 20
 	y := x
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Variable is reassigned - cannot inline
@@ -315,13 +314,12 @@ main :: proc() {
 @(test)
 action_inline_variable_no_usages :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	{*}x := 10
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Variable has no usages - action not useful
@@ -331,13 +329,12 @@ main :: proc() {
 @(test)
 action_inline_variable_not_on_variable :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := {*}10
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Cursor not on variable name
@@ -347,14 +344,13 @@ main :: proc() {
 @(test)
 action_inline_variable_procedure_decl :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	{*}helper :: proc() {}
 	helper()
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Cannot inline procedure declarations
@@ -364,7 +360,7 @@ main :: proc() {
 @(test)
 action_inline_variable_used_in_loop_assignment :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	{*}sum := 0
@@ -372,8 +368,7 @@ main :: proc() {
 		sum += i
 	}
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Variable is modified in loop
@@ -383,15 +378,14 @@ main :: proc() {
 @(test)
 action_inline_variable_outside_proc :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 {*}GLOBAL :: 42
 
 main :: proc() {
 	x := GLOBAL
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Global constants - not inside a procedure
@@ -401,14 +395,13 @@ main :: proc() {
 @(test)
 action_inline_variable_multi_var_decl_first :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	{*}a, b := 1, 2
 	x := a + b
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Multiple variables in one declaration - not supported
@@ -418,14 +411,13 @@ main :: proc() {
 @(test)
 action_inline_variable_multi_var_decl_second :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	a, {*}b := 1, 2
 	x := a + b
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Multiple variables in one declaration - not supported
@@ -439,15 +431,14 @@ main :: proc() {
 @(test)
 action_inline_variable_from_usage_reassigned :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := 10
 	x = 20
 	y := {*}x
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Variable is reassigned - cannot inline from usage site either
@@ -457,7 +448,7 @@ main :: proc() {
 @(test)
 action_inline_variable_from_usage_mutated_in_loop :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	sum := 0
@@ -466,8 +457,7 @@ main :: proc() {
 	}
 	result := {*}sum
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Variable is modified - cannot inline from usage site
@@ -477,14 +467,13 @@ main :: proc() {
 @(test)
 action_inline_variable_from_usage_multi_var_decl :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	a, b := 1, 2
 	x := {*}a + b
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Multiple variables in one declaration - not supported from usage site either

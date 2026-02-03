@@ -74,13 +74,12 @@ main :: proc() {
 @(test)
 action_invert_if_not_on_if :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x :={*} 5
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Should not have the invert action when not on an if statement
@@ -91,15 +90,14 @@ main :: proc() {
 @(test)
 action_invert_if_inside_of_statement :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	if x != 0 {
 		foo{*}()
 	}
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	test.expect_action(t, &source, {})
@@ -258,7 +256,7 @@ main :: proc() {
 @(test)
 action_invert_if_not_on_else_if :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := something()
@@ -269,8 +267,7 @@ main :: proc() {
 	}
 	statement3()
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Should not have the invert action when on an else-if statement
@@ -280,7 +277,7 @@ main :: proc() {
 @(test)
 action_invert_if_not_on_else :: proc(t: ^testing.T) {
 	source := test.Source {
-		main = {source = `package test
+		files = {{source = `package test
 
 main :: proc() {
 	x := something()
@@ -290,8 +287,7 @@ main :: proc() {
 		statement3(){*}
 	}
 }
-`},
-		extra_files = {},
+`}},
 	}
 
 	// Should not have the invert action when in the else block (not on an if)
