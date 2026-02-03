@@ -272,59 +272,24 @@ find_cross_file_usages :: proc(ctx: ^InlineAliasContext) {
 			continue
 		}
 
-		// Parse the file
-		p := parser.Parser {
-			err   = analysis.log_error_handler,
-			warn  = analysis.log_warning_handler,
-			flags = {.Optional_Semicolons},
-		}
-
-		dir := filepath.base(filepath.dir(source.fullpath, context.temp_allocator))
-
-		pkg := new(ast.Package, context.temp_allocator)
-		pkg.kind = .Normal
-		pkg.fullpath = source.fullpath
-		pkg.name = dir
-
-		file := ast.File {
-			fullpath = source.fullpath,
-			src      = source.text,
-			pkg      = pkg,
-		}
-
-		if !parser.parse_file(&p, &file) {
-			continue
-		}
+		doc, _ := documents.get_context(source.fullpath, ctx.config)
 
 		// Check if this file is in the same package
-		is_same_package := file.pkg_name == ctx.doc.ast.pkg_name
-
-		// Parse imports to check if this file imports our package
-		forward_dir, _ := filepath.to_slash(
-			filepath.dir(source.fullpath, context.temp_allocator),
-			context.temp_allocator,
-		)
-		imports := documents.parse_imports_from_ast(
-			file,
-			forward_dir,
-			transmute([]u8)source.text,
-			ctx.config,
-			context.temp_allocator,
-		)
+		is_same_package := doc.ast.pkg_name == ctx.doc.ast.pkg_name
 
 		usage := CrossFileUsage {
 			fullpath         = source.fullpath,
 			source           = source.text,
 			selector_usages  = make([dynamic]^ast.Selector_Expr, context.temp_allocator),
 			ident_usages     = make([dynamic]^ast.Ident, context.temp_allocator),
-			file             = file,
-			existing_imports = imports,
+			file             = doc.ast,
+			existing_imports = doc.imports,
 			is_same_package  = is_same_package,
 		}
 
 		if is_same_package {
 			// Same package - look for direct ident usages of AliasName
-			find_ident_usages_in_stmts(file.decls[:], ctx.alias_name, &usage.ident_usages)
+			find_ident_usages_in_stmts(doc.ast.decls[:], ctx.alias_name, &usage.ident_usages)
 
 			if len(usage.ident_usages) > 0 {
 				// Need to add import for target package since the alias will be replaced
@@ -332,7 +297,7 @@ find_cross_file_usages :: proc(ctx: ^InlineAliasContext) {
 				usage.import_alias = ctx.target_selector
 
 				// Check if target package is already imported
-				for imp in imports {
+				for imp in doc.imports {
 					if imp.name == ctx.target_package {
 						usage.needs_import = false
 						usage.import_alias = imp.base
@@ -346,7 +311,7 @@ find_cross_file_usages :: proc(ctx: ^InlineAliasContext) {
 			// Different package - check if it imports our package
 			imports_our_pkg := false
 			pkg_alias := "" // The alias used to import our package (e.g., "test" or a custom alias)
-			for imp in imports {
+			for imp in doc.imports {
 				// Check if this import points to our package
 				if strings.has_suffix(imp.name, current_pkg_name) || imp.name == ctx.doc.package_name {
 					imports_our_pkg = true
@@ -360,7 +325,7 @@ find_cross_file_usages :: proc(ctx: ^InlineAliasContext) {
 			}
 
 			// Find selector expressions like pkg_alias.AliasName
-			find_selector_usages_in_stmts(file.decls[:], pkg_alias, ctx.alias_name, &usage.selector_usages)
+			find_selector_usages_in_stmts(doc.ast.decls[:], pkg_alias, ctx.alias_name, &usage.selector_usages)
 
 			if len(usage.selector_usages) > 0 {
 				// Determine if we need to add an import for the target package
@@ -368,7 +333,7 @@ find_cross_file_usages :: proc(ctx: ^InlineAliasContext) {
 				usage.import_alias = ctx.target_selector
 
 				// Check if target package is already imported
-				for imp in imports {
+				for imp in doc.imports {
 					if imp.name == ctx.target_package {
 						usage.needs_import = false
 						usage.import_alias = imp.base

@@ -146,7 +146,6 @@ get_semantic_tokens :: proc(
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		common.make_encoded_path(doc_ctx.filepath, context.temp_allocator),
 		doc_ctx.filepath,
 	)
 	ast_context.current_package = ast_context.document_package

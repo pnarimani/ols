@@ -298,60 +298,8 @@ resolve_references :: proc(
 	unique_fullpaths := slice.unique(fullpaths[:])
 
 	for fullpath in unique_fullpaths {
-		dir := filepath.dir(fullpath)
-		base := filepath.base(dir)
-		forward_dir, _ := filepath.to_slash(dir)
-
-		data, ok := os.read_entire_file(fullpath)
-
-		if !ok {
-			log.errorf("failed to read entire file for indexing %v", fullpath)
-			continue
-		}
-
-		p := parser.Parser {
-			err   = analysis.log_error_handler,
-			warn  = analysis.log_warning_handler,
-			flags = {.Optional_Semicolons},
-		}
-
-
-		pkg := new(ast.Package)
-		pkg.kind = .Normal
-		pkg.fullpath = fullpath
-		pkg.name = base
-
-		if base == "runtime" {
-			pkg.kind = .Runtime
-		}
-
-		file := ast.File {
-			fullpath = fullpath,
-			src      = string(data),
-			pkg      = pkg,
-		}
-
-		ok = parser.parse_file(&p, &file)
-
-		if !ok {
-			if !strings.contains(fullpath, "builtin.odin") && !strings.contains(fullpath, "intrinsics.odin") {
-				log.errorf("error in parse file for indexing %v", fullpath)
-			}
-			continue
-		}
-
 		encoded_path := common.make_encoded_path(fullpath, context.temp_allocator)
-
-		// Create a documents.Document directly for this file
-		inner_doc_ctx := documents.Document {
-			filepath     = fullpath,
-			text         = data,
-			ast          = file,
-			package_name = forward_dir,
-		}
-
-		// Parse imports for this file
-		inner_doc_ctx.imports = parse_imports_from_ast(file, forward_dir, data, &common.config)
+		inner_doc_ctx := documents.get_context(fullpath)
 
 		in_pkg := false
 
@@ -403,7 +351,6 @@ get_references :: proc(
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		common.make_encoded_path(doc_ctx.filepath, context.temp_allocator),
 		doc_ctx.filepath,
 	)
 

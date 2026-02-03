@@ -43,7 +43,6 @@ AstContext :: struct {
 	call:                      ^ast.Call_Expr, //used to determine the types for generics and the correct function for overloaded functions
 	value_decl:                ^ast.Value_Decl,
 	field_name:                ast.Ident,
-	uri:                       string,
 	fullpath:                  string,
 	non_mutable_only:          bool, //Only store local value declarations that are non mutable.
 	overloading:               bool,
@@ -96,7 +95,6 @@ make_ast_context_from_doc_ctx :: proc(
 		use_usings                = true,
 		document_package          = doc_ctx.package_name,
 		current_package           = doc_ctx.package_name,
-		uri                       = common.make_encoded_path(doc_ctx.filepath, allocator),
 		fullpath                  = doc_ctx.filepath,
 		allocator                 = allocator,
 		doc_ctx                   = doc_ctx,
@@ -113,7 +111,6 @@ make_ast_context_from_doc :: proc(
 	file: ast.File,
 	imports: []Package,
 	package_name: string,
-	uri: string,
 	fullpath: string,
 	allocator := context.temp_allocator,
 ) -> AstContext {
@@ -129,7 +126,6 @@ make_ast_context_from_doc :: proc(
 		use_usings                = true,
 		document_package          = package_name,
 		current_package           = package_name,
-		uri                       = uri,
 		fullpath                  = fullpath,
 		allocator                 = allocator,
 	}
@@ -1367,6 +1363,8 @@ internal_resolve_type_expression :: proc(ast_context: ^AstContext, node: ^ast.Ex
 	case ^ast.Ternary_When_Expr:
 		ok = internal_resolve_type_expression(ast_context, v.x, out)
 		return ok
+	case ^ast.Bad_Expr:
+		return false
 	case:
 		log.warnf("default node kind, internal_resolve_type_expression: %v", v)
 	}

@@ -36,7 +36,6 @@ resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range) ->
 		doc_ctx.ast,
 		doc_ctx.imports,
 		doc_ctx.package_name,
-		common.make_encoded_path(doc_ctx.filepath, context.temp_allocator),
 		doc_ctx.filepath,
 	)
 
@@ -80,7 +79,6 @@ resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFla
 		doc.ast,
 		doc.imports,
 		doc.package_name,
-		common.make_encoded_path(doc.filepath, context.temp_allocator),
 		doc.filepath,
 	)
 

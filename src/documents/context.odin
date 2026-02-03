@@ -13,7 +13,11 @@ import "src:common"
 // Get a documents.Document for a given URI string. Parses AST and imports fresh.
 // All allocations use the provided allocator (typically context.temp_allocator).
 // Returns nil if document not found or parsing fails.
-get_context :: proc(file_path: string, config: ^common.Config, allocator := context.temp_allocator) -> (ctx: Document, ok: bool) {
+get_context :: proc(file_path: string, config: ^common.Config = nil, allocator := context.temp_allocator) -> (ctx: Document, ok: bool) #optional_ok {
+	config := config
+	if config == nil {
+		config = &common.config
+	}
 	document := get(file_path)
 	if document == nil {
 		return {}, false

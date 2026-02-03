@@ -248,8 +248,6 @@ load_package :: proc(pkg_name: string) {
 
 analyze_file :: proc(fullpath, text: string) {
 	p := parser.Parser {
-		err   = log_error_handler,
-		warn  = log_warning_handler,
 		flags = {.Optional_Semicolons},
 	}
 
@@ -273,9 +271,7 @@ analyze_file :: proc(fullpath, text: string) {
 	ok := parser.parse_file(&p, &file)
 
 	if !ok {
-		if !strings.contains(fullpath, "builtin.odin") && !strings.contains(fullpath, "intrinsics.odin") {
 			log.errorf("error in parse file for indexing %v", fullpath)
-		}
 		return
 	}
 
@@ -295,12 +291,4 @@ get_runtime_path :: proc() -> string {
 		return path.join({base, "runtime"}, context.temp_allocator)
 	}
 	return ""
-}
-
-log_error_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {
-	log.warnf("%v %v %v", pos, msg, args)
-}
-
-log_warning_handler :: proc(pos: tokenizer.Pos, msg: string, args: ..any) {
-	log.warnf("%v %v %v", pos, msg, args)
 }
