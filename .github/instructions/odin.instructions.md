@@ -2,32 +2,75 @@
 applyTo: '**'
 ---
 
+# Odin Memory Allocator Rules
+
+When reviewing or writing Odin code, enforce these allocator rules strictly:
+
+## Quick Decision Guide
+* Is the data returned? → Use allocator parameter
+* Is the data stored in a struct with allocator field? → Use that struct's allocator
+* Is the data temporary/internal only? → Use context.temp_allocator
+* Is this a default parameter? → Must be context.allocator, never context.temp_allocator
+
+## Parameter Rules
+1. **Procs that allocate memory** must have `allocator := context.allocator` as the last parameter
+2. **NEVER use** `allocator := context.temp_allocator` as a default parameter - this is forbidden
+
+## Return Value Rules  
+3. **Returned objects** and ALL their sub-objects must be allocated on the passed `allocator`
+4. **Never return** objects hardcoded to `context.temp_allocator`
+5. **Propagate allocator** to any called proc if that proc's result is being returned:
+   ```odin
+   get_data :: proc(allocator := context.allocator) -> []string {
+       return other_proc(allocator)  // MUST pass allocator since result is returned
+   }
+	```
+
+## Internal Data Rules
+6. Temporary working data that is NOT returned must use context.temp_allocator:
+```odin
+process :: proc(allocator := context.allocator) -> []Result {
+    temp_buffer := make([dynamic]int, context.temp_allocator)  // NOT returned, use temp
+    results := make([dynamic]Result, allocator)                 // IS returned, use allocator
+    // ... process using temp_buffer, populate results ...
+    return results[:]
+}
+```
+
+## Data Structure Rules
+7. **Structs with allocator fields**: All data stored in the struct must be allocated using that struct's allocator. **Explicitly pass** the struct's allocator to specific `make`/`new` calls - do NOT set `context.allocator = struct.allocator` as this risks unintended allocations:
+```odin
+// CORRECT: Explicitly pass struct's allocator only where needed
+add_item :: proc(collection: ^Collection, name: string) {
+    cloned_name := strings.clone(name, collection.allocator)  // Explicit
+    item := new(Item, collection.allocator)                    // Explicit
+    append(&collection.items, item)  // items already uses collection.allocator
+}
+
+// WRONG: Setting context.allocator globally is dangerous
+add_item_bad :: proc(collection: ^Collection, name: string) {
+    context.allocator = collection.allocator  // RISKY - affects ALL allocations
+    // ...
+}
+```
+
+# Odin Language Features
+
 ## Implicit `context`
 
-In each scope, there is an implicit value named context. This context variable is local to each scope and is implicitly passed by pointer to any procedure call in that scope (if the procedure has the Odin calling convention).
-
-When a scope ends, that scope's `context` is discarded and the parent scope's `context` is restored.
-
-CRITICAL: Before analyzing or modifying code that involves memory operations, you MUST first document the `context.allocator` value for each scope in the code. Map out which allocator is active in each scope to ensure correct memory safety reasoning.
+Each scope has an implicit `context` variable, passed by pointer to procedure calls. When a scope ends, the parent's `context` is restored.
 
 ```odin
 main :: proc() {
-	context.user_index = 456
 	{
-		context.allocator = my_custom_allocator() // allocator change
-		context.user_index = 123
-		supertramp() // the `context` for this scope is implicitly passed to `supertramp`
+		context.allocator = my_custom_allocator()
+		supertramp() // receives modified context
 	}
-	// restored to outer scope's context
-
-	assert(context.user_index == 456) 
+	// context.allocator restored to original
 }
 
 supertramp :: proc() {
-	assert(context.user_index == 123) 
-	assert(context.allocator == my_custom_allocator())
-	ptr := new(int) // allocated with my_custom_allocator
-	free(ptr) // deallocated with my_custom_allocator
+	ptr := new(int) // uses my_custom_allocator from caller's context
 }
 ```
 
@@ -47,27 +90,15 @@ ptr := new(int, context.allocator)
 
 When the prompt involves memory issues, bugs, leaks, crashes, or allocation/deallocation problems, you MUST follow this protocol BEFORE proposing any fix:
 
-1. **VERIFY ALLOCATOR UNDERSTANDING**
-   - Repeat back how `context.allocator` works in Odin (implicit passing, scope-local behavior, restoration on scope exit)
-   - Confirm that allocations and deallocations must use the SAME allocator
-
-2. **MAP ALLOCATORS PER SCOPE**
+1. **MAP ALLOCATORS PER SCOPE**
    - Document which `context.allocator` is active in each scope of the code
    - Trace the allocator through nested scopes and procedure calls
-   - Note any explicit allocator overrides (e.g., `context.allocator = context.temp_allocator`)
+   - Note any explicit allocator overrides
 
-3. **TRACE ALLOCATION-DEALLOCATION PAIRS**
-   - For EVERY allocation in the code (new, make, mem.alloc, etc.), identify:
-	 * Which allocator was used (implicitly via context or explicitly passed)
-	 * Where the corresponding deallocation occurs (free, delete, mem.free, etc.)
-	 * Which allocator is active at the deallocation site
-   - Create a table mapping each allocation to its deallocation with allocator info
-
-4. **VERIFY ALLOCATOR MATCHING**
-   - Confirm that each allocation/deallocation pair uses the same allocator
+2. **TRACE ALLOCATION-DEALLOCATION PAIRS**
+   - For EVERY allocation (new, make, strings.clone, fmt.aprintf, etc.), identify which allocator was used
+   - Verify deallocations use the SAME allocator
    - Flag any mismatches as the root cause before proposing fixes
-
-This verification step is mandatory before proposing any fix or analysis.
 
 ## Extra Information
 If you cannot understand odin syntax, look up https://odin-lang.org/docs/overview/

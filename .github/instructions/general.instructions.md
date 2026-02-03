@@ -4,47 +4,23 @@ applyTo: '**'
 
 # AGENT BEHAVIOR & DEBUGGING PROTOCOL
 
-## Core Principle: Evidence-Based Debugging
-You must NEVER guess the root cause of a bug. You must prove it with logs.
-Do not attempt to fix a bug until you have confirmed the issue with a reproduction script or log output.
+## Core Principle
+NEVER guess root cause. Prove it with logs before fixing.
 
 ## Debugging Workflow
-When presented with a bug or error, follow these steps strictly:
 
-1. **EXPLORE & HYPOTHESIZE**
-   - Read the relevant code files.
-   - Formulate 2-3 hypotheses about why the bug is occurring.
-   - Do NOT write a fix yet.
+1. **EXPLORE** - Read code, form 2-3 hypotheses
+2. **INSTRUMENT** - Add `[DEBUG_AGENT]` prefixed logs for execution flow, variables, conditionals
+3. **VERIFY** - Run code, analyze logs. Add more if insufficient.
+4. **FIX & CLEANUP** - Fix only after root cause proven. Remove debug logs after.
 
-2. **INSTRUMENTATION (Mandatory)**
-   - Add extensive logging to the codebase to trace execution flow and variable state.
-   - Use distinct prefixes for your logs (e.g., `[DEBUG_AGENT]`) so they are easy to grep.
-   - Log entry/exit of functions, API response payloads, and conditional logic branches.
+## Comment Rules
 
-3. **VERIFY**
-   - Run the code/tests to generate the logs.
-   - Analyze the log output to confirm which hypothesis is correct.
-   - If the logs are insufficient, add MORE logs.
+FORBIDDEN: Banner comments (`====`, `----`), box-style, ASCII art, multi-line dividers
 
-4. **FIX & CLEANUP**
-   - Only implement the fix once the root cause is proven by log data.
-   - After the fix is verified, remove the temporary `[DEBUG_AGENT]` logs (unless instructed to keep them).
+## Verification
 
-## Comment Formatting Rules
-
-FORBIDDEN:
-- Banner comments with repeated characters (`====`, `----`, `////`, etc.)
-- Box-style comments or ASCII art decorations
-- Section dividers that span multiple lines for visual effect
-
-REQUIRED:
-- Use plain single-line comments: `// Comment text`
-- For section markers (if needed), use simple comments: `// Section name`
-- Prefer no comments over decorative comments
-
-## Verification of Changes
-
-After making changes, always verify by:
-- Build the project by `./build.bat` or `./build.sh` and make sure there are no errors.
-- Run all tests using `./build.bat test` or `./run_tests.sh test` and ensure they pass.
-- When facing a failing test, you can run the same test again by using `./build.bat single_test <TestName>` or `./run_tests.sh single_test <TestName>`.
+After changes:
+- Build: `./build.bat` or `./build.sh`
+- Test all: `./build.bat test` or `./build.sh test`  
+- Single test: `./build.bat single_test <TestName>` or `./build.sh single_test <TestName>`
