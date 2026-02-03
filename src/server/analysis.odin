@@ -1157,6 +1157,30 @@ resolve_location_type_expression :: proc(ast_context: ^AstContext, node: ^ast.Ex
 	return resolve_type_expression(ast_context, node)
 }
 
+// Resolves an AST expression node to its corresponding type symbol.
+//
+// This is the primary entry point for type resolution in the language server. Given an
+// AST expression node, it determines what type that expression represents and returns
+// a Symbol containing type information, location, and metadata.
+//
+// Parameters:
+//   - ast_context: The analysis context containing package information, symbol tables,
+//                  and resolution state
+//   - node: The AST expression node to resolve (e.g., identifier, type literal, call expression)
+//
+// Returns:
+//   - analysis.Symbol: The resolved type symbol with metadata (name, package, type, etc.)
+//   - bool: true if resolution succeeded, false otherwise
+//
+// Common Usage Examples:
+//   // Resolve a struct field type:
+//   symbol, ok := resolve_type_expression(&ast_context, field.type)
+//
+//   // Resolve an identifier to its declaration:
+//   symbol, ok := resolve_type_expression(&ast_context, &ident_node)
+//
+//   // Resolve a procedure return type:
+//   symbol, ok := resolve_type_expression(&ast_context, proc_return_expr)
 resolve_type_expression :: proc(ast_context: ^AstContext, node: ^ast.Expr) -> (analysis.Symbol, bool) {
 	clear(&ast_context.recursion_map)
 	symbol := analysis.Symbol{}
