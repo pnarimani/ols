@@ -13,7 +13,7 @@ import "core:odin/parser"
 
 // Corrects docs and comments on a Struct_Type. Creates new nodes and adds them to the provided struct
 // using the provided allocator, so `v` should have the same lifetime as the allocator.
-construct_struct_field_docs :: proc(file: ast.File, v: ^ast.Struct_Type) {
+construct_struct_field_docs :: proc(file: ast.File, v: ^ast.Struct_Type, allocator := context.allocator) {
 	for field, i in v.fields.list {
 		// There is currently a bug in the odin parser where it adds line comments for a field to the
 		// docs of the following field, we address this problem here.
@@ -34,11 +34,11 @@ construct_struct_field_docs :: proc(file: ast.File, v: ^ast.Struct_Type) {
 				if list[0].pos.line == field.pos.line {
 					// if the comment is missing from the appropriate field, we add it (for older versions of the parser)
 					if field.comment == nil {
-						field.comment = new_type(ast.Comment_Group, list[0].pos, parser.end_pos(list[0]))
+						field.comment = new_type(ast.Comment_Group, list[0].pos, parser.end_pos(list[0]), allocator)
 						field.comment.list = list[:1]
 					}
 					if len(list) > 1 {
-						next_field.docs = new_type(ast.Comment_Group, list[1].pos, parser.end_pos(list[len(list) - 2]))
+						next_field.docs = new_type(ast.Comment_Group, list[1].pos, parser.end_pos(list[len(list) - 2]), allocator)
 						next_field.docs.list = list[1:]
 					} else {
 						next_field.docs = nil
@@ -47,14 +47,14 @@ construct_struct_field_docs :: proc(file: ast.File, v: ^ast.Struct_Type) {
 			}
 		} else if field.comment == nil {
 			// We need to check the file to see if it contains a line comment as it might be skipped
-			field.comment, _ = get_file_comment(file, field.pos.line)
+			field.comment, _ = get_file_comment(file, field.pos.line, allocator = allocator)
 		}
 	}
 }
 
 // Corrects docs and comments on a Bit_Field_Type. Creates new nodes and adds them to the provided bit_field
 // using the provided allocator, so `v` should have the same lifetime as the allocator.
-construct_bit_field_field_docs :: proc(file: ast.File, v: ^ast.Bit_Field_Type) {
+construct_bit_field_field_docs :: proc(file: ast.File, v: ^ast.Bit_Field_Type, allocator := context.allocator) {
 	for field, i in v.fields {
 		// There is currently a bug in the odin parser where it adds line comments for a field to the
 		// docs of the following field, we address this problem here.
@@ -66,11 +66,11 @@ construct_bit_field_field_docs :: proc(file: ast.File, v: ^ast.Bit_Field_Type) {
 				list := next_field.docs.list
 				if list[0].pos.line == field.pos.line {
 					if field.comments == nil {
-						field.comments = new_type(ast.Comment_Group, list[0].pos, parser.end_pos(list[0]))
+						field.comments = new_type(ast.Comment_Group, list[0].pos, parser.end_pos(list[0]), allocator)
 						field.comments.list = list[:1]
 					}
 					if len(list) > 1 {
-						next_field.docs = new_type(ast.Comment_Group, list[1].pos, parser.end_pos(list[len(list) - 2]))
+						next_field.docs = new_type(ast.Comment_Group, list[1].pos, parser.end_pos(list[len(list) - 2]), allocator)
 						next_field.docs.list = list[1:]
 					} else {
 						next_field.docs = nil
@@ -79,20 +79,20 @@ construct_bit_field_field_docs :: proc(file: ast.File, v: ^ast.Bit_Field_Type) {
 			}
 		} else if field.comments == nil {
 			// We need to check the file to see if it contains a line comment as there is no next field
-			field.comments, _ = get_file_comment(file, field.pos.line)
+			field.comments, _ = get_file_comment(file, field.pos.line, allocator = allocator)
 		}
 	}
 }
 
 // Retrives the comment group from the specified line of the file
 // Returns the index where the comment was found
-get_file_comment :: proc(file: ast.File, line: int, start_index := 0) -> (^ast.Comment_Group, int) {
+get_file_comment :: proc(file: ast.File, line: int, start_index := 0, allocator := context.allocator) -> (^ast.Comment_Group, int) {
 	// TODO: linear scan might be a bit slow for files with lots of comments?
 	for i := start_index; i < len(file.comments); i += 1 {
 		c := file.comments[i]
 		if c.pos.line == line {
 			for item, j in c.list {
-				comment := new_type(ast.Comment_Group, item.pos, parser.end_pos(item))
+				comment := new_type(ast.Comment_Group, item.pos, parser.end_pos(item), allocator)
 				if j == len(c.list) - 1 {
 					comment.list = c.list[j:]
 				} else {
@@ -107,11 +107,11 @@ get_file_comment :: proc(file: ast.File, line: int, start_index := 0) -> (^ast.C
 
 // Retrieves the comment group that ends on the specified line of the file
 // If start_line is specified, it will only add the docs that on that line and beyond
-get_file_doc :: proc(file: ast.File, end_line: int, start_line := -1, start_index := 0) -> (^ast.Comment_Group, int) {
+get_file_doc :: proc(file: ast.File, end_line: int, start_line := -1, start_index := 0, allocator := context.allocator) -> (^ast.Comment_Group, int) {
 	for i := start_index; i < len(file.comments); i += 1 {
 		c := file.comments[i]
 		if c.end.line == end_line {
-			docs := new_type(ast.Comment_Group, c.pos, c.end)
+			docs := new_type(ast.Comment_Group, c.pos, c.end, allocator)
 			if start_line != -1 {
 				for item, j in c.list {
 					if item.pos.line >= start_line {
@@ -133,12 +133,13 @@ get_file_doc :: proc(file: ast.File, end_line: int, start_line := -1, start_inde
 get_field_docs_and_comments :: proc(
 	file: ast.File,
 	fields: []^ast.Expr,
+	allocator := context.allocator,
 ) -> (
 	[dynamic]^ast.Comment_Group,
 	[dynamic]^ast.Comment_Group,
 ) {
-	docs := make([dynamic]^ast.Comment_Group)
-	comments := make([dynamic]^ast.Comment_Group)
+	docs := make([dynamic]^ast.Comment_Group, allocator)
+	comments := make([dynamic]^ast.Comment_Group, allocator)
 	prev_line := -1
 	last_comment := -1
 	last_doc := -1
@@ -158,10 +159,11 @@ get_field_docs_and_comments :: proc(
 					n.pos.line - 1,
 					start_line = prev_line + 1,
 					start_index = last_doc + 1,
+					allocator = allocator,
 				)
 			}
 
-			comment, last_comment = get_file_comment(file, n.pos.line, start_index = last_comment + 1)
+			comment, last_comment = get_file_comment(file, n.pos.line, start_index = last_comment + 1, allocator = allocator)
 		}
 
 		append(&docs, doc)
@@ -499,12 +501,12 @@ unwrap_attr_elem :: proc(elem: ^ast.Expr) -> (^ast.Ident, ^ast.Expr, bool) {
 	return nil, nil, false
 }
 
-merge_attributes :: proc(attrs: []^ast.Attribute, foreign_attrs: []^ast.Attribute) -> []^ast.Attribute {
+merge_attributes :: proc(attrs: []^ast.Attribute, foreign_attrs: []^ast.Attribute, allocator := context.allocator) -> []^ast.Attribute {
 	if len(foreign_attrs) == 0 {
 		return attrs
 	}
 
-	new_attrs := make([dynamic]^ast.Attribute, context.temp_allocator)
+	new_attrs := make([dynamic]^ast.Attribute, allocator)
 	attr_names := make(map[string]struct{}, context.temp_allocator)
 	for attr in attrs {
 		append(&new_attrs, attr)
@@ -523,8 +525,8 @@ merge_attributes :: proc(attrs: []^ast.Attribute, foreign_attrs: []^ast.Attribut
 					name_to_check = "link_name"
 				}
 				if _, ok := attr_names[name_to_check]; !ok {
-					new_attr := new_type(ast.Attribute, attr.pos, attr.end)
-					elems := make([dynamic]^ast.Expr)
+					new_attr := new_type(ast.Attribute, attr.pos, attr.end, allocator)
+					elems := make([dynamic]^ast.Expr, allocator)
 					append(&elems, elem)
 					new_attr.elems = elems[:]
 					append(&new_attrs, new_attr)

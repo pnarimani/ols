@@ -1433,8 +1433,8 @@ generate_extract_edit :: proc(
 	return make_workspace_edit(uri, textEdits[:]), true
 }
 
-build_parameter_list :: proc(ctx: ^ExtractProcContext) -> [dynamic]ParamInfo {
-	params := make([dynamic]ParamInfo, context.temp_allocator)
+build_parameter_list :: proc(ctx: ^ExtractProcContext, allocator := context.allocator) -> [dynamic]ParamInfo {
+	params := make([dynamic]ParamInfo, allocator)
 
 	for name, usage in ctx.variables {
 		if usage.is_declared {
@@ -1477,8 +1477,8 @@ build_parameter_list :: proc(ctx: ^ExtractProcContext) -> [dynamic]ParamInfo {
 	return params
 }
 
-build_return_list :: proc(ctx: ^ExtractProcContext) -> [dynamic]ReturnInfo {
-	returns := make([dynamic]ReturnInfo, context.temp_allocator)
+build_return_list :: proc(ctx: ^ExtractProcContext, allocator := context.allocator) -> [dynamic]ReturnInfo {
+	returns := make([dynamic]ReturnInfo, allocator)
 
 	for name, usage in ctx.variables {
 		if usage.is_declared && usage.is_used_after {

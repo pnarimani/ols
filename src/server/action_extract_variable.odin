@@ -115,8 +115,8 @@ expr_uses_out_of_scope_vars :: proc(ctx: ^ExtractVariableContext) -> bool {
 }
 
 // Collect all identifier names from an expression
-collect_identifiers :: proc(expr: ^ast.Expr) -> [dynamic]string {
-	idents := make([dynamic]string, context.temp_allocator)
+collect_identifiers :: proc(expr: ^ast.Expr, allocator := context.allocator) -> [dynamic]string {
+	idents := make([dynamic]string, allocator)
 	collect_identifiers_recursive(expr, &idents)
 	return idents
 }

@@ -580,12 +580,12 @@ resolve_generic_function_symbol :: proc(
 				symbol_expr.pos.offset = call_expr.pos.offset
 				symbol_expr.end.offset = call_expr.end.offset
 
-				symbol_expr = analysis.clone_expr(symbol_expr)
-				param_type := analysis.clone_expr(param.type)
+				symbol_expr = analysis.clone_expr(symbol_expr, ast_context.allocator)
+				param_type := analysis.clone_expr(param.type, ast_context.allocator)
 
 				if resolve_poly(ast_context, symbol_expr, symbol, param_type, &poly_map) {
 					if poly, ok := name.derived.(^ast.Poly_Type); ok {
-						poly_map[poly.type.name] = analysis.clone_expr(call_expr.args[i])
+						poly_map[poly.type.name] = analysis.clone_expr(call_expr.args[i], ast_context.allocator)
 					}
 				}
 			}
@@ -613,15 +613,15 @@ resolve_generic_function_symbol :: proc(
 		return {}, false
 	}
 
-	return_types := make([dynamic]^ast.Field)
-	argument_types := make([dynamic]^ast.Field)
+	return_types := make([dynamic]^ast.Field, ast_context.allocator)
+	argument_types := make([dynamic]^ast.Field, ast_context.allocator)
 
 	for result in results {
 		if result.type == nil {
 			continue
 		}
 
-		field := cast(^ast.Field)analysis.clone_node(result)
+		field := cast(^ast.Field)analysis.clone_node(result, ast_context.allocator)
 
 		if ident, ok := unwrap_ident(field.type); ok {
 			if expr, ok := poly_map[ident.name]; ok {
@@ -635,7 +635,7 @@ resolve_generic_function_symbol :: proc(
 	}
 
 	for param in params {
-		field := cast(^ast.Field)analysis.clone_node(param)
+		field := cast(^ast.Field)analysis.clone_node(param, ast_context.allocator)
 
 		if field.type != nil {
 			if poly_type, ok := field.type.derived.(^ast.Poly_Type); ok {

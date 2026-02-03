@@ -795,6 +795,7 @@ get_selector_completion :: proc(
 						"(%v%v)",
 						repeat("^", symbol.pointers, context.temp_allocator),
 						node_to_string(type, true),
+						allocator = ast_context.allocator,
 					)
 				} else {
 					item.label = fmt.aprintf(
@@ -802,6 +803,7 @@ get_selector_completion :: proc(
 						repeat("^", symbol.pointers, context.temp_allocator),
 						get_symbol_pkg_name(ast_context, &symbol),
 						node_to_string(type, true),
+						allocator = ast_context.allocator,
 					)
 				}
 				append(results, CompletionResult{completion_item = item})
@@ -1913,8 +1915,8 @@ clean_ident :: proc(ident: string) -> string {
 	return name
 }
 
-search_for_packages :: proc(fullpath: string) -> []string {
-	packages := make([dynamic]string, context.temp_allocator)
+search_for_packages :: proc(fullpath: string, allocator := context.allocator) -> []string {
+	packages := make([dynamic]string, allocator)
 
 	fh, err := os.open(fullpath)
 
@@ -1925,7 +1927,7 @@ search_for_packages :: proc(fullpath: string) -> []string {
 	if files, err := os.read_dir(fh, 0, context.temp_allocator); err == 0 {
 		for file in files {
 			if file.is_dir {
-				append(&packages, file.fullpath)
+				append(&packages, strings.clone(file.fullpath, allocator))
 			}
 		}
 
@@ -1988,7 +1990,7 @@ get_type_switch_completion :: proc(
 					}
 
 					if symbol.pkg == ast_context.document_package {
-						item.label = fmt.aprintf("%v%v", repeat("^", symbol.pointers, context.temp_allocator), name)
+						item.label = fmt.aprintf("%v%v", repeat("^", symbol.pointers, context.temp_allocator), name, allocator = ast_context.allocator)
 						item.detail = item.label
 					} else {
 						item.label = fmt.aprintf(
@@ -1996,6 +1998,7 @@ get_type_switch_completion :: proc(
 							codeprint.repeat("^", symbol.pointers, context.temp_allocator),
 							get_symbol_pkg_name(ast_context, &symbol),
 							name,
+							allocator = ast_context.allocator,
 						)
 						item.detail = item.label
 					}

@@ -9,8 +9,8 @@ import "core:odin/tokenizer"
 import "core:reflect"
 import "core:strings"
 
-new_type :: proc($T: typeid, pos, end: tokenizer.Pos) -> ^T {
-	n := new(T)
+new_type :: proc($T: typeid, pos, end: tokenizer.Pos, allocator := context.allocator) -> ^T {
+	n := new(T, allocator)
 	n.pos = pos
 	n.end = end
 	n.derived = n
@@ -33,33 +33,33 @@ clone_type :: proc {
 	clone_comment_group,
 }
 
-clone_array :: proc(array: $A/[]^$T) -> A {
+clone_array :: proc(array: $A/[]^$T, allocator := context.allocator) -> A {
 	if len(array) == 0 {
 		return nil
 	}
-	res := make(A, len(array))
+	res := make(A, len(array), allocator)
 	for elem, i in array {
-		res[i] = cast(^T)clone_type(elem)
+		res[i] = cast(^T)clone_type(elem, allocator)
 	}
 	return res
 }
 
-clone_dynamic_array :: proc(array: $A/[dynamic]^$T) -> A {
+clone_dynamic_array :: proc(array: $A/[dynamic]^$T, allocator := context.allocator) -> A {
 	if len(array) == 0 {
 		return nil
 	}
-	res := make(A, len(array))
+	res := make(A, len(array), allocator)
 	for elem, i in array {
-		res[i] = auto_cast clone_type(elem)
+		res[i] = auto_cast clone_type(elem, allocator)
 	}
 	return res
 }
 
-clone_expr :: proc(node: ^ast.Expr) -> ^ast.Expr {
-	return cast(^ast.Expr)clone_node(node)
+clone_expr :: proc(node: ^ast.Expr, allocator := context.allocator) -> ^ast.Expr {
+	return cast(^ast.Expr)clone_node(node, allocator)
 }
 
-clone_node :: proc(node: ^ast.Node) -> ^ast.Node {
+clone_node :: proc(node: ^ast.Node, allocator := context.allocator) -> ^ast.Node {
 	using ast
 	if node == nil {
 		return nil
@@ -79,7 +79,7 @@ clone_node :: proc(node: ^ast.Node) -> ^ast.Node {
 		panic("Cannot clone this node type")
 	}
 
-	res := cast(^Node)(mem.alloc(size, align) or_else panic("OOM"))
+	res := cast(^Node)(mem.alloc(size, align, allocator) or_else panic("OOM"))
 	src: rawptr = node
 	if node.derived != nil {
 		src = (^rawptr)(&node.derived)^
@@ -120,168 +120,168 @@ clone_node :: proc(node: ^ast.Node) -> ^ast.Node {
 		n := node.derived.(^Basic_Directive)
 		r.name = get_interned_string(n.name)
 	case ^Ellipsis:
-		r.expr = clone_type(r.expr)
+		r.expr = clone_type(r.expr, allocator)
 	case ^Tag_Expr:
-		r.expr = clone_type(r.expr)
+		r.expr = clone_type(r.expr, allocator)
 	case ^Unary_Expr:
 		n := node.derived.(^Unary_Expr)
-		r.expr = clone_type(r.expr)
+		r.expr = clone_type(r.expr, allocator)
 		r.op.text = get_interned_string(n.op.text)
 	case ^Binary_Expr:
 		n := node.derived.(^Binary_Expr)
-		r.left = clone_type(r.left)
-		r.right = clone_type(r.right)
+		r.left = clone_type(r.left, allocator)
+		r.right = clone_type(r.right, allocator)
 		//Todo: Replace this with some constant table for opeator text
 		r.op.text = get_interned_string(n.op.text)
 	case ^Paren_Expr:
-		r.expr = clone_type(r.expr)
+		r.expr = clone_type(r.expr, allocator)
 	case ^Selector_Expr:
-		r.expr = clone_type(r.expr)
-		r.field = auto_cast clone_type(r.field)
+		r.expr = clone_type(r.expr, allocator)
+		r.field = auto_cast clone_type(r.field, allocator)
 	case ^Selector_Call_Expr:
-		r.expr = clone_type(r.expr)
-		r.call = auto_cast clone_type(r.call)
+		r.expr = clone_type(r.expr, allocator)
+		r.call = auto_cast clone_type(r.call, allocator)
 	case ^Implicit_Selector_Expr:
-		r.field = auto_cast clone_type(r.field)
+		r.field = auto_cast clone_type(r.field, allocator)
 	case ^Slice_Expr:
-		r.expr = clone_type(r.expr)
-		r.low = clone_type(r.low)
-		r.high = clone_type(r.high)
+		r.expr = clone_type(r.expr, allocator)
+		r.low = clone_type(r.low, allocator)
+		r.high = clone_type(r.high, allocator)
 	case ^Attribute:
-		r.elems = clone_type(r.elems)
+		r.elems = clone_type(r.elems, allocator)
 	case ^Distinct_Type:
-		r.type = clone_type(r.type)
+		r.type = clone_type(r.type, allocator)
 	case ^Proc_Type:
-		r.params = auto_cast clone_type(r.params)
-		r.results = auto_cast clone_type(r.results)
+		r.params = auto_cast clone_type(r.params, allocator)
+		r.results = auto_cast clone_type(r.results, allocator)
 		r.calling_convention = clone_calling_convention(r.calling_convention)
 	case ^Pointer_Type:
-		r.tag = clone_type(r.tag)
-		r.elem = clone_type(r.elem)
+		r.tag = clone_type(r.tag, allocator)
+		r.elem = clone_type(r.elem, allocator)
 	case ^Array_Type:
-		r.len = clone_type(r.len)
-		r.elem = clone_type(r.elem)
-		r.tag = clone_type(r.tag)
+		r.len = clone_type(r.len, allocator)
+		r.elem = clone_type(r.elem, allocator)
+		r.tag = clone_type(r.tag, allocator)
 	case ^Dynamic_Array_Type:
-		r.elem = clone_type(r.elem)
-		r.tag = clone_type(r.tag)
+		r.elem = clone_type(r.elem, allocator)
+		r.tag = clone_type(r.tag, allocator)
 	case ^Struct_Type:
-		r.poly_params = auto_cast clone_type(r.poly_params)
-		r.align = clone_type(r.align)
-		r.fields = auto_cast clone_type(r.fields)
-		r.where_clauses = clone_type(r.where_clauses)
-		r.align = clone_type(r.align)
-		r.max_field_align = clone_type(r.max_field_align)
-		r.min_field_align = clone_type(r.min_field_align)
+		r.poly_params = auto_cast clone_type(r.poly_params, allocator)
+		r.align = clone_type(r.align, allocator)
+		r.fields = auto_cast clone_type(r.fields, allocator)
+		r.where_clauses = clone_type(r.where_clauses, allocator)
+		r.align = clone_type(r.align, allocator)
+		r.max_field_align = clone_type(r.max_field_align, allocator)
+		r.min_field_align = clone_type(r.min_field_align, allocator)
 	case ^Field:
-		r.names = clone_type(r.names)
-		r.type = clone_type(r.type)
-		r.default_value = clone_type(r.default_value)
-		r.docs = clone_type(r.docs)
-		r.comment = clone_type(r.comment)
+		r.names = clone_type(r.names, allocator)
+		r.type = clone_type(r.type, allocator)
+		r.default_value = clone_type(r.default_value, allocator)
+		r.docs = clone_type(r.docs, allocator)
+		r.comment = clone_type(r.comment, allocator)
 	case ^Field_List:
-		r.list = clone_type(r.list)
+		r.list = clone_type(r.list, allocator)
 	case ^Field_Value:
-		r.field = clone_type(r.field)
-		r.value = clone_type(r.value)
+		r.field = clone_type(r.field, allocator)
+		r.value = clone_type(r.value, allocator)
 	case ^Union_Type:
-		r.poly_params = auto_cast clone_type(r.poly_params)
-		r.align = clone_type(r.align)
-		r.variants = clone_type(r.variants)
-		r.where_clauses = clone_type(r.where_clauses)
+		r.poly_params = auto_cast clone_type(r.poly_params, allocator)
+		r.align = clone_type(r.align, allocator)
+		r.variants = clone_type(r.variants, allocator)
+		r.where_clauses = clone_type(r.where_clauses, allocator)
 	case ^Enum_Type:
-		r.base_type = clone_type(r.base_type)
-		r.fields = clone_type(r.fields)
+		r.base_type = clone_type(r.base_type, allocator)
+		r.fields = clone_type(r.fields, allocator)
 	case ^Bit_Set_Type:
-		r.elem = clone_type(r.elem)
-		r.underlying = clone_type(r.underlying)
+		r.elem = clone_type(r.elem, allocator)
+		r.underlying = clone_type(r.underlying, allocator)
 	case ^Map_Type:
-		r.key = clone_type(r.key)
-		r.value = clone_type(r.value)
+		r.key = clone_type(r.key, allocator)
+		r.value = clone_type(r.value, allocator)
 	case ^Call_Expr:
-		r.expr = clone_type(r.expr)
-		r.args = clone_type(r.args)
+		r.expr = clone_type(r.expr, allocator)
+		r.args = clone_type(r.args, allocator)
 	case ^Typeid_Type:
-		r.specialization = clone_type(r.specialization)
+		r.specialization = clone_type(r.specialization, allocator)
 	case ^Ternary_When_Expr:
-		r.x = clone_type(r.x)
-		r.cond = clone_type(r.cond)
-		r.y = clone_type(r.y)
+		r.x = clone_type(r.x, allocator)
+		r.cond = clone_type(r.cond, allocator)
+		r.y = clone_type(r.y, allocator)
 	case ^Ternary_If_Expr:
-		r.x = clone_type(r.x)
-		r.cond = clone_type(r.cond)
-		r.y = clone_type(r.y)
+		r.x = clone_type(r.x, allocator)
+		r.cond = clone_type(r.cond, allocator)
+		r.y = clone_type(r.y, allocator)
 	case ^Poly_Type:
-		r.type = auto_cast clone_type(r.type)
-		r.specialization = clone_type(r.specialization)
+		r.type = auto_cast clone_type(r.type, allocator)
+		r.specialization = clone_type(r.specialization, allocator)
 	case ^Proc_Group:
-		r.args = clone_type(r.args)
+		r.args = clone_type(r.args, allocator)
 	case ^Comp_Lit:
-		r.type = clone_type(r.type)
-		r.elems = clone_type(r.elems)
+		r.type = clone_type(r.type, allocator)
+		r.elems = clone_type(r.elems, allocator)
 	case ^Proc_Lit:
-		r.type = cast(^Proc_Type)clone_type(cast(^Node)r.type)
+		r.type = cast(^Proc_Type)clone_type(cast(^Node)r.type, allocator)
 		r.body = nil
-		r.where_clauses = clone_type(r.where_clauses)
+		r.where_clauses = clone_type(r.where_clauses, allocator)
 	case ^Helper_Type:
-		r.type = clone_type(r.type)
+		r.type = clone_type(r.type, allocator)
 	case ^Type_Cast:
-		r.type = clone_type(r.type)
-		r.expr = clone_type(r.expr)
+		r.type = clone_type(r.type, allocator)
+		r.expr = clone_type(r.expr, allocator)
 	case ^Deref_Expr:
-		r.expr = clone_type(r.expr)
+		r.expr = clone_type(r.expr, allocator)
 	case ^Index_Expr:
-		r.expr = clone_type(r.expr)
-		r.index = clone_type(r.index)
+		r.expr = clone_type(r.expr, allocator)
+		r.index = clone_type(r.index, allocator)
 	case ^Multi_Pointer_Type:
-		r.elem = clone_type(r.elem)
+		r.elem = clone_type(r.elem, allocator)
 	case ^Matrix_Type:
-		r.elem = clone_type(r.elem)
-		r.column_count = clone_type(r.column_count)
-		r.row_count = clone_type(r.row_count)
+		r.elem = clone_type(r.elem, allocator)
+		r.column_count = clone_type(r.column_count, allocator)
+		r.row_count = clone_type(r.row_count, allocator)
 	case ^Type_Assertion:
-		r.expr = clone_type(r.expr)
-		r.type = clone_type(r.type)
+		r.expr = clone_type(r.expr, allocator)
+		r.type = clone_type(r.type, allocator)
 	case ^Relative_Type:
-		r.tag = clone_type(r.tag)
-		r.type = clone_type(r.type)
+		r.tag = clone_type(r.tag, allocator)
+		r.type = clone_type(r.type, allocator)
 	case ^Bit_Field_Type:
-		r.backing_type = clone_type(r.backing_type)
-		r.fields = clone_type(r.fields)
+		r.backing_type = clone_type(r.backing_type, allocator)
+		r.fields = clone_type(r.fields, allocator)
 	case ^Bit_Field_Field:
-		r.name = clone_type(r.name)
-		r.type = clone_type(r.type)
-		r.bit_size = clone_type(r.bit_size)
-		r.docs = clone_type(r.docs)
-		r.comments = clone_type(r.comments)
+		r.name = clone_type(r.name, allocator)
+		r.type = clone_type(r.type, allocator)
+		r.bit_size = clone_type(r.bit_size, allocator)
+		r.docs = clone_type(r.docs, allocator)
+		r.comments = clone_type(r.comments, allocator)
 	case ^Or_Else_Expr:
-		r.x = clone_type(r.x)
-		r.y = clone_type(r.y)
+		r.x = clone_type(r.x, allocator)
+		r.y = clone_type(r.y, allocator)
 	case ^Or_Branch_Expr:
-		r.expr = clone_type(r.expr)
-		r.label = clone_type(r.label)
+		r.expr = clone_type(r.expr, allocator)
+		r.label = clone_type(r.label, allocator)
 	case ^Comment_Group:
-		list := make([dynamic]tokenizer.Token, 0, len(r.list))
+		list := make([dynamic]tokenizer.Token, 0, len(r.list), allocator)
 		for t in r.list {
-			append(&list, tokenizer.Token{text = strings.clone(t.text), kind = t.kind, pos = tokenizer.Pos{file = strings.clone(t.pos.file), offset = t.pos.offset, line = t.pos.line, column = t.pos.column}})
+			append(&list, tokenizer.Token{text = strings.clone(t.text, allocator), kind = t.kind, pos = tokenizer.Pos{file = strings.clone(t.pos.file, allocator), offset = t.pos.offset, line = t.pos.line, column = t.pos.column}})
 		}
 		r.list = list[:]
 	case ^Auto_Cast:
-		r.expr = clone_type(r.expr)
+		r.expr = clone_type(r.expr, allocator)
 	case ^Or_Return_Expr:
-		r.expr = clone_type(r.expr)
+		r.expr = clone_type(r.expr, allocator)
 	case ^Matrix_Index_Expr:
-		r.expr = clone_type(r.expr)
-		r.row_index = clone_type(r.row_index)
-		r.column_index = clone_type(r.column_index)
+		r.expr = clone_type(r.expr, allocator)
+		r.row_index = clone_type(r.row_index, allocator)
+		r.column_index = clone_type(r.column_index, allocator)
 	case:
 	}
 
 	return res
 }
 
-clone_comment_group :: proc(node: ^ast.Comment_Group) -> ^ast.Comment_Group {
-	return cast(^ast.Comment_Group)clone_node(node)
+clone_comment_group :: proc(node: ^ast.Comment_Group, allocator := context.allocator) -> ^ast.Comment_Group {
+	return cast(^ast.Comment_Group)clone_node(node, allocator)
 }
 
 clone_calling_convention :: proc(cc: ast.Proc_Calling_Convention) -> ast.Proc_Calling_Convention {

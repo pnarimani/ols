@@ -1218,8 +1218,8 @@ is_identifier_char :: proc(c: u8) -> bool {
 }
 
 // Collect local variable names declared in a block
-collect_local_vars :: proc(body: ^ast.Block_Stmt, src: string) -> [dynamic]string {
-	vars := make([dynamic]string, context.temp_allocator)
+collect_local_vars :: proc(body: ^ast.Block_Stmt, src: string, allocator := context.allocator) -> [dynamic]string {
+	vars := make([dynamic]string, allocator)
 	
 	for stmt in body.stmts {
 		#partial switch s in stmt.derived {
@@ -1236,8 +1236,8 @@ collect_local_vars :: proc(body: ^ast.Block_Stmt, src: string) -> [dynamic]strin
 }
 
 // Collect variable names visible at the call site
-collect_call_site_vars :: proc(doc_ctx: documents.Document, containing_stmt: ^ast.Stmt, src: string) -> map[string]bool {
-	vars := make(map[string]bool, context.temp_allocator)
+collect_call_site_vars :: proc(doc_ctx: documents.Document, containing_stmt: ^ast.Stmt, src: string, allocator := context.allocator) -> map[string]bool {
+	vars := make(map[string]bool, allocator)
 	
 	// Find the block containing the call and collect all variables declared before it
 	for decl in doc_ctx.ast.decls {

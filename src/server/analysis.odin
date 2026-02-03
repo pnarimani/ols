@@ -1068,14 +1068,15 @@ get_proc_return_types :: proc(
 	symbol: analysis.Symbol,
 	call: ^ast.Call_Expr,
 	is_mutable: bool,
+	allocator := context.allocator,
 ) -> []^ast.Expr {
-	return_types := make([dynamic]^ast.Expr, context.temp_allocator)
+	return_types := make([dynamic]^ast.Expr, allocator)
 	if ret, ok := check_builtin_proc_return_type(ast_context, symbol, call, is_mutable); ok {
 		appended := false
 		if call, ok := ret.derived.(^ast.Call_Expr); ok {
 			symbol := analysis.Symbol{}
 			if ok := internal_resolve_type_expression(ast_context, call.expr, &symbol); ok {
-				return get_proc_return_types(ast_context, symbol, call, true)
+				return get_proc_return_types(ast_context, symbol, call, true, allocator)
 			}
 		}
 		append(&return_types, ret)
@@ -2083,7 +2084,7 @@ resolve_global_identifier :: proc(
 		if _, ok = v.expr.derived.(^ast.Basic_Directive); ok {
 			return_symbol, ok = resolve_call_directive(ast_context, v)
 		} else if ok = internal_resolve_type_expression(ast_context, v.expr, &return_symbol); ok {
-			return_types := get_proc_return_types(ast_context, return_symbol, v, .Mutable in global.flags)
+			return_types := get_proc_return_types(ast_context, return_symbol, v, .Mutable in global.flags, ast_context.allocator)
 			if len(return_types) > 0 {
 				ok = internal_resolve_type_expression(ast_context, return_types[0], &return_symbol)
 			}

@@ -417,26 +417,26 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 	}
 
 	if ols_config.checker_args != "" {
-		config.checker_args = strings.clone(ols_config.checker_args, context.allocator)
+		config.checker_args = strings.clone(ols_config.checker_args, common.config_storage.allocator)
 	}
 
 	for profile in ols_config.profiles {
 		if ols_config.profile == profile.name {
-			config.profile.checker_path = make([dynamic]string, len(profile.checker_path))
-			config.profile.exclude_path = make([dynamic]string, len(profile.exclude_path))
+			config.profile.checker_path = make([dynamic]string, len(profile.checker_path), common.config_storage.allocator)
+			config.profile.exclude_path = make([dynamic]string, len(profile.exclude_path), common.config_storage.allocator)
 
 			for checker_path, i in profile.checker_path {
-				config.profile.checker_path[i] = path.join(elems = {project_path, checker_path})
+				config.profile.checker_path[i] = path.join(elems = {project_path, checker_path}, allocator = common.config_storage.allocator)
 			}
 			for exclude_path, i in profile.exclude_path {
-				config.profile.exclude_path[i] = path.join(elems = {project_path, exclude_path})
+				config.profile.exclude_path[i] = path.join(elems = {project_path, exclude_path}, allocator = common.config_storage.allocator)
 			}
 
-			config.profile.os = strings.clone(profile.os)
-			config.profile.arch = strings.clone(profile.arch)
+			config.profile.os = strings.clone(profile.os, common.config_storage.allocator)
+			config.profile.arch = strings.clone(profile.arch, common.config_storage.allocator)
 
 			for key, value in profile.defines {
-				config.profile.defines[strings.clone(key)] = strings.clone(value)
+				config.profile.defines[strings.clone(key, common.config_storage.allocator)] = strings.clone(value, common.config_storage.allocator)
 			}
 
 			break
@@ -590,20 +590,20 @@ read_ols_initialize_options :: proc(config: ^common.Config, ols_config: OlsConfi
 	log.info(config.collections)
 }
 
-get_odin_directory :: proc() -> string {
+get_odin_directory :: proc(allocator := context.allocator) -> string {
 	root_buf: [1024]byte
 	root_slice := root_buf[:]
 	root_command := strings.concatenate({"odin", " root"})
 	code, ok, out := common.run_executable(root_command, &root_slice)
 	if ok && !strings.contains(string(out), "Usage") {
-		return strings.clone(string(out))
+		return strings.clone(string(out), allocator)
 	}
 	return ""
 }
 
 initialize_default_collections :: proc(config: ^common.Config, collections_dir: string = "") {
 	forward_path := collections_dir
-	forward_path = forward_path if forward_path != "" else get_odin_directory()
+	forward_path = forward_path if forward_path != "" else get_odin_directory(common.config_storage.allocator)
 
 	// base
 	if "base" not_in config.collections {

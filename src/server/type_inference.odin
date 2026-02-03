@@ -1,5 +1,6 @@
 package server
 
+import "base:runtime"
 import "src:documents"
 
 import "src:analysis"
@@ -13,6 +14,7 @@ InferenceContext :: struct {
 	ast_context:    ^AstContext,
 	// Variable types that have been discovered during analysis
 	variable_types: map[string]string, // variable name -> type string
+	allocator:      runtime.Allocator,
 }
 
 make_inference_context :: proc(
@@ -24,6 +26,7 @@ make_inference_context :: proc(
 		document = document,
 		ast_context = ast_context,
 		variable_types = make(map[string]string, allocator),
+		allocator = allocator,
 	}
 }
 
@@ -139,7 +142,7 @@ infer_unary_expr_type :: proc(ctx: ^InferenceContext, expr: ^ast.Unary_Expr) -> 
 		// Address-of operator - returns pointer to inner type
 		inner := infer_expr_type(ctx, expr.expr)
 		if inner != "" {
-			return strings.concatenate({"^", inner}, context.temp_allocator)
+			return strings.concatenate({"^", inner}, ctx.allocator)
 		}
 	case .Not:
 		// Logical not always returns bool
@@ -177,7 +180,7 @@ infer_call_type :: proc(ctx: ^InferenceContext, call: ^ast.Call_Expr) -> string 
 			if len(call.args) > 0 {
 				inner := expr_to_string(call.args[0])
 				if inner != "" {
-					return strings.concatenate({"^", inner}, context.temp_allocator)
+					return strings.concatenate({"^", inner}, ctx.allocator)
 				}
 			}
 			return ""
@@ -215,7 +218,7 @@ infer_call_type :: proc(ctx: ^InferenceContext, call: ^ast.Call_Expr) -> string 
 
 	// Get the return types using get_proc_return_types which handles builtin procs
 	// Pass true for is_mutable to get type names instead of literal values
-	return_types := get_proc_return_types(ctx.ast_context, symbol, call, true)
+	return_types := get_proc_return_types(ctx.ast_context, symbol, call, true, ctx.allocator)
 
 	if len(return_types) == 0 {
 		return ""
@@ -295,7 +298,7 @@ infer_slice_type :: proc(ctx: ^InferenceContext, expr: ^ast.Slice_Expr) -> strin
 		// Slicing an array [N]T returns []T
 		if strings.has_prefix(inner_type, "[") {
 			if idx := strings.index(inner_type, "]"); idx >= 0 {
-				return strings.concatenate({"[]", inner_type[idx + 1:]}, context.temp_allocator)
+				return strings.concatenate({"[]", inner_type[idx + 1:]}, ctx.allocator)
 			}
 		}
 		// Slicing a slice or string returns the same type

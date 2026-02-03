@@ -229,7 +229,7 @@ get_generic_assignment :: proc(
 		if symbol, ok := resolve_type_expression(ast_context, v.expr); ok {
 			#partial switch symbol_value in symbol.value {
 			case analysis.SymbolProcedureValue:
-				return_types := get_proc_return_types(ast_context, symbol, v, is_mutable)
+				return_types := get_proc_return_types(ast_context, symbol, v, is_mutable, ast_context.allocator)
 				for ret in return_types {
 					calls[len(results)] = {}
 					append(results, ret)

@@ -28,7 +28,7 @@ reset_position_context :: proc(position_context: ^DocumentPositionContext) {
 	position_context.index = nil
 }
 
-resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range) -> map[uintptr]analysis.SymbolAndNode {
+resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range, allocator := context.allocator) -> map[uintptr]analysis.SymbolAndNode {
 	// Build symbol cache for this request's packages
 	load_document_packages(doc_ctx)
 
@@ -37,16 +37,17 @@ resolve_ranged_file :: proc(doc_ctx: documents.Document, range: common.Range) ->
 		doc_ctx.imports,
 		doc_ctx.package_name,
 		doc_ctx.filepath,
+		allocator,
 	)
 
 	position_context: DocumentPositionContext
-	position_context.functions = make([dynamic]^ast.Proc_Lit)
+	position_context.functions = make([dynamic]^ast.Proc_Lit, allocator)
 
 	get_globals(doc_ctx.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
-	symbols := make(map[uintptr]analysis.SymbolAndNode, 10000)
+	symbols := make(map[uintptr]analysis.SymbolAndNode, 10000, allocator)
 
 	margin := 20
 
@@ -72,7 +73,7 @@ load_document_packages :: proc(doc: documents.Document) {
 	}
 }
 
-resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFlag.None) -> map[uintptr]analysis.SymbolAndNode {
+resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFlag.None, allocator := context.allocator) -> map[uintptr]analysis.SymbolAndNode {
 	load_document_packages(doc)
 
 	ast_context := make_ast_context(
@@ -80,16 +81,17 @@ resolve_entire_file :: proc(doc: documents.Document, flag := ResolveReferenceFla
 		doc.imports,
 		doc.package_name,
 		doc.filepath,
+		allocator,
 	)
 
 	position_context: DocumentPositionContext
-	position_context.functions = make([dynamic]^ast.Proc_Lit)
+	position_context.functions = make([dynamic]^ast.Proc_Lit, allocator)
 
 	get_globals(doc.ast, &ast_context)
 
 	ast_context.current_package = ast_context.document_package
 
-	symbols := make(map[uintptr]analysis.SymbolAndNode, 10000)
+	symbols := make(map[uintptr]analysis.SymbolAndNode, 10000, allocator)
 
 	for decl in doc.ast.decls {
 		if _, is_value := decl.derived.(^ast.Value_Decl); !is_value {

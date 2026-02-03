@@ -10,12 +10,12 @@ import "core:strings"
 	Returns the string representation of a type. This allows us to print the signature without storing it in the indexer as a string(saving memory).
 */
 
-node_to_string :: proc(node: ^ast.Node, remove_pointers := false) -> string {
+node_to_string :: proc(node: ^ast.Node, remove_pointers := false, allocator := context.allocator) -> string {
 	builder := strings.builder_make(context.temp_allocator)
 
 	build_string(node, &builder, remove_pointers)
 
-	return strings.to_string(builder)
+	return strings.clone(strings.to_string(builder), allocator)
 }
 
 build_string :: proc {

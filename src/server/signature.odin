@@ -42,9 +42,9 @@ ParameterInformation :: struct {
 	label: string,
 }
 
-seperate_proc_field_arguments :: proc(procedure: ^analysis.Symbol) {
+seperate_proc_field_arguments :: proc(procedure: ^analysis.Symbol, allocator := context.allocator) {
 	if value, ok := &procedure.value.(analysis.SymbolProcedureValue); ok {
-		types := make([dynamic]^ast.Field, context.temp_allocator)
+		types := make([dynamic]^ast.Field, allocator)
 
 		for arg, i in value.orig_arg_types {
 			if len(arg.names) == 1 {
@@ -53,8 +53,8 @@ seperate_proc_field_arguments :: proc(procedure: ^analysis.Symbol) {
 			}
 
 			for name in arg.names {
-				field: ^ast.Field = analysis.new_type(ast.Field, arg.pos, arg.end)
-				field.names = make([]^ast.Expr, 1)
+				field: ^ast.Field = analysis.new_type(ast.Field, arg.pos, arg.end, allocator)
+				field.names = make([]^ast.Expr, 1, allocator)
 				field.names[0] = name
 				field.type = arg.type
 				append(&types, field)

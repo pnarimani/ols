@@ -2892,7 +2892,7 @@ ast_generics_struct_poly :: proc(t: ^testing.T) {
 		cool: int,
 	}
 
-	select :: proc($T: typeid, search: []Pair(string, any), allocator := context.temp_allocator) -> []T {
+	select :: proc($T: typeid, search: []Pair(string, any), allocator := context.allocator) -> []T {
 
 	}
 

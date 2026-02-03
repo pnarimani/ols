@@ -22,10 +22,10 @@ get_or_create_package :: proc(collection: ^SymbolCollection, pkg_name: string) -
 	if pkg == nil || pkg.symbols == nil {
 		collection.packages[pkg_name] = {}
 		pkg = &collection.packages[pkg_name]
-		pkg.symbols = make(map[string]Symbol, 100)
-		pkg.methods = make(map[Method][dynamic]Symbol, 100)
-		pkg.objc_structs = make(map[string]ObjcStruct, 5)
-		pkg.proc_group_members = make(map[string]bool, 10)
+		pkg.symbols = make(map[string]Symbol, 100, collection.allocator)
+		pkg.methods = make(map[Method][dynamic]Symbol, 100, collection.allocator)
+		pkg.objc_structs = make(map[string]ObjcStruct, 5, collection.allocator)
+		pkg.proc_group_members = make(map[string]bool, 10, collection.allocator)
 	}
 	return pkg
 }
