@@ -12,10 +12,6 @@ get_interned_string :: proc(s: string) -> string {
 	return str
 }
 
-// ============================================================================
-// SymbolCollection management (private)
-// ============================================================================
-
 @(private = "package")
 get_or_create_package :: proc(collection: ^SymbolCollection, pkg_name: string) -> ^SymbolPackage {
 	pkg := &collection.packages[pkg_name]
@@ -29,10 +25,6 @@ get_or_create_package :: proc(collection: ^SymbolCollection, pkg_name: string) -
 	}
 	return pkg
 }
-
-// ============================================================================
-// Public Cache Accessors
-// ============================================================================
 
 // Lookup a symbol by name and package from the global cache.
 // Returns a copy of the symbol.
