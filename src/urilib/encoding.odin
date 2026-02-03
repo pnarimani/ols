@@ -377,7 +377,7 @@ path_to_file_uri :: proc(path: string, allocator := context.allocator) -> string
 // Input: "file:///C%3A/path/to/file.odin"
 // Output: "C:/path/to/file.odin"
 // Returns the decoded path and success boolean.
-file_uri_to_path :: proc(uri: string, allocator := context.allocator) -> (string, bool) {
+file_uri_to_path :: proc(uri: string, allocator := context.allocator) -> (string, bool) #optional_ok {
 	// Check for file:// prefix
 	prefix_with_slash := "file:///"
 	prefix_without_slash := "file://"
