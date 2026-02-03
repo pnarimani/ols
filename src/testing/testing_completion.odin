@@ -104,14 +104,14 @@ expect_completion_docs :: proc(
 
 	for flag, i in flags {
 		if flag != 1 {
-			log.errorf("Expected completion label %v, but received %v", expect_details[i], completion_list.items)
+			log.errorf("Expected completion label: \n%v\nbut received \n%v", expect_details[i], completion_list.items)
 		}
 	}
 
 	for expect_exclude in expect_excluded {
 		for completion in completion_list.items {
 			if expect_exclude == get_doc(completion.documentation) {
-				log.errorf("Expected completion label %v to not be included", expect_exclude)
+				log.errorf("Expected completion label: \n%v\nto not be included", expect_exclude)
 			}
 		}
 	}
