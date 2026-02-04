@@ -22,8 +22,7 @@ FileInPackage :: struct {
 	end_position:      common.Position, // For range selection tests
 	has_range:         bool, // True if {<} and {>} markers were found
 	encoded_locations: []common.Location,
-	document:          ^documents.DocumentData,
-	doc_ctx:           documents.Document,
+	skip_load:         bool, // If true, file is in workspace but not opened/loaded
 }
 
 Source :: struct {
@@ -36,7 +35,14 @@ Source :: struct {
 // Helper to create a RequestContext from a Source for testing
 make_test_request_context :: proc(src: ^Source) -> server.RequestContext {
 	primary := get_primary_file(src)
-	return server.RequestContext{doc = primary.doc_ctx, config = &src.config, position = primary.position}
+	doc_ctx := get_file_doc_ctx(src, primary)
+	return server.RequestContext{doc = doc_ctx, config = &src.config, position = primary.position}
+}
+
+// Get document context for a file, loading it on-demand if needed
+get_file_doc_ctx :: proc(src: ^Source, file: ^FileInPackage) -> documents.Document {
+	doc_ctx, _ := documents.get_context(file.fullpath, &src.config)
+	return doc_ctx
 }
 
 // Get the primary file (the one with cursor/range markers)
@@ -109,10 +115,13 @@ setup :: proc(src: ^Source) {
 
 		parse_position_markers(file, file.fullpath)
 		workspace.register_mock_file(file.fullpath, file.source)
-		file.document, _ = documents.open(file.fullpath, file.source)
-		file.doc_ctx, _ = documents.get_context(file.fullpath, &src.config)
+		if file.skip_load {
+			continue
+		}
+		documents.open(file.fullpath, file.source)
+		doc_ctx, _ := documents.get_context(file.fullpath, &src.config)
 		analysis.analyze_file(file.fullpath, file.source)
-		server.run_hint_diagnostics(file.doc_ctx, &src.config)
+		server.run_hint_diagnostics(doc_ctx, &src.config)
 	}
 }
 

@@ -9,13 +9,14 @@ expect_semantic_tokens :: proc(t: ^testing.T, src: ^Source, expected: []server.S
 	defer teardown(src)
 
 	primary := get_primary_file(src)
+	doc_ctx := get_file_doc_ctx(src, primary)
 	resolve_flag: server.ResolveReferenceFlag
-	symbols_and_nodes := server.resolve_entire_file(&primary.doc_ctx, resolve_flag)
+	symbols_and_nodes := server.resolve_entire_file(&doc_ctx, resolve_flag)
 
 	range := common.Range {
 		end = {line = 9000000},
 	} //should be enough
-	tokens := server.get_semantic_tokens(&primary.doc_ctx, range, symbols_and_nodes)
+	tokens := server.get_semantic_tokens(&doc_ctx, range, symbols_and_nodes)
 
 	testing.expectf(
 		t,

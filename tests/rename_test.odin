@@ -890,3 +890,235 @@ main :: proc() {
 
 	test.expect_rename_diff(t, "Crimson", &source)
 }
+
+// Tests for renaming symbols in unopened files (skip_load)
+// These verify that files in the workspace that haven't been opened by the LSP
+// still get updated when renaming symbols
+
+@(test)
+rename_unopened_file_same_package :: proc(t: ^testing.T) {
+	// The types file is opened (primary), the main file is NOT opened (skip_load)
+	// Renaming Foo should still update references in the unopened main file
+	source := test.Source {
+		files = {
+			{
+				source = `package test
+
+-Fo{*}o :: struct {
++Bar :: struct {
+	x: int,
+}
+`,
+			},
+			{
+				filename = "other",
+				skip_load = true,
+				source = `package test
+
+main :: proc() {
+-	f := Foo{}
++	f := Bar{}
+	f.x = 10
+}
+`,
+			},
+		},
+	}
+
+	test.expect_rename_diff(t, "Bar", &source)
+}
+
+@(test)
+rename_unopened_file_procedure :: proc(t: ^testing.T) {
+	// Renaming a procedure should update calls in unopened files
+	source := test.Source {
+		files = {
+			{
+				filename = "helpers",
+				source = `package test
+
+-hel{*}per :: proc() -> int {
++utility :: proc() -> int {
+	return 42
+}
+`,
+			},
+			{
+				filename = "main",
+				skip_load = true,
+				source = `package test
+
+main :: proc() {
+-	x := helper()
++	x := utility()
+-	y := helper() + 1
++	y := utility() + 1
+}
+`,
+			},
+		},
+	}
+
+	test.expect_rename_diff(t, "utility", &source)
+}
+
+@(test)
+rename_unopened_file_struct_field :: proc(t: ^testing.T) {
+	// Renaming a struct field should update field accesses in unopened files
+	source := test.Source {
+		files = {
+			{
+				filename = "types",
+				source = `package test
+
+Person :: struct {
+-	na{*}me: string,
++	full_name: string,
+	age: int,
+}
+`,
+			},
+			{
+				filename = "main",
+				skip_load = true,
+				source = `package test
+
+main :: proc() {
+	p := Person{}
+-	p.name = "Alice"
++	p.full_name = "Alice"
+}
+`,
+			},
+		},
+	}
+
+	test.expect_rename_diff(t, "full_name", &source)
+}
+
+@(test)
+rename_multiple_unopened_files :: proc(t: ^testing.T) {
+	// Renaming should update references across multiple unopened files
+	source := test.Source {
+		files = {
+			{
+				filename = "types",
+				source = `package test
+
+-Perso{*}n :: struct {
++User :: struct {
+	name: string,
+	age: int,
+}
+`,
+			},
+			{
+				filename = "utils",
+				skip_load = true,
+				source = `package test
+
+-create_person :: proc() -> Person {
++create_person :: proc() -> User {
+-	return Person{name = "Alice", age = 30}
++	return User{name = "Alice", age = 30}
+}
+`,
+			},
+			{
+				filename = "main",
+				skip_load = true,
+				source = `package test
+
+main :: proc() {
+-	p: Person
++	p: User
+	p = create_person()
+}
+`,
+			},
+		},
+	}
+
+	test.expect_rename_diff(t, "User", &source)
+}
+
+@(test)
+rename_unopened_cross_package :: proc(t: ^testing.T) {
+	// Renaming should update references in unopened files from different packages
+	packages := make([dynamic]test.FileInPackage, context.temp_allocator)
+
+	append(
+		&packages,
+		test.FileInPackage {
+			pkg = "my_package",
+			source = `package my_package
+
+-My_Stru{*}ct :: struct {
++Renamed_Struct :: struct {
+	value: int,
+}
+`,
+		},
+	)
+
+	inject_at(
+		&packages,
+		0,
+		test.FileInPackage {
+			skip_load = true,
+			source = `package test
+
+import "my_package"
+
+main :: proc() {
+-	s := my_package.My_Struct{}
++	s := my_package.Renamed_Struct{}
+	s.value = 42
+}
+`,
+		},
+	)
+
+	source := test.Source {
+		files = packages[:],
+	}
+
+	test.expect_rename_diff(t, "Renamed_Struct", &source)
+}
+
+@(test)
+rename_enum_field_unopened_files :: proc(t: ^testing.T) {
+	// Renaming an enum field should update usages in unopened files
+	source := test.Source {
+		files = {
+			{
+				filename = "types",
+				source = `package test
+
+Color :: enum {
+-	Re{*}d,
++	Crimson,
+	Green,
+	Blue,
+}
+`,
+			},
+			{
+				filename = "main",
+				skip_load = true,
+				source = `package test
+
+main :: proc() {
+-	c := Color.Red
++	c := Color.Crimson
+-	if c == .Red {
++	if c == .Crimson {
+	}
+}
+`,
+			},
+		},
+	}
+
+	test.expect_rename_diff(t, "Crimson", &source)
+}

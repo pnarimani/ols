@@ -26,8 +26,9 @@ expect_code_action_diff :: proc(
 	defer teardown(src)
 
 	primary := get_primary_file(src)
+	doc_ctx := get_file_doc_ctx(src, primary)
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&doc_ctx, input_range, &src.config)
 	if !ok {
 		testing.expect(t, false, "Failed to get code actions")
 		return
@@ -43,7 +44,8 @@ expect_code_action_diff :: proc(
 			edits, found := action.edit.changes[encoded_path]
 
 			if found {
-				source := string(file.doc_ctx.text)
+				file_doc_ctx := get_file_doc_ctx(src, &file)
+				source := string(file_doc_ctx.text)
 				file.source_actual = apply_text_edits(source, edits)
 			} else {
 				// No edits for this file - it should remain unchanged
@@ -72,8 +74,9 @@ expect_action_excludes :: proc(t: ^testing.T, src: ^Source, excluded_action_name
 	defer teardown(src)
 
 	primary := get_primary_file(src)
+	doc_ctx := get_file_doc_ctx(src, primary)
 	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
+	actions, ok := server.get_code_actions(&doc_ctx, input_range, &src.config)
 	if !ok {
 		log.error("Failed to find actions")
 	}

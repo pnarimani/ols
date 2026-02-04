@@ -60,12 +60,13 @@ expect_inlay_hints :: proc(t: ^testing.T, src: ^Source) {
 	setup(src)
 	defer teardown(src)
 
-	symbols_and_nodes := server.resolve_entire_file(&primary.doc_ctx)
+	doc_ctx := get_file_doc_ctx(src, primary)
+	symbols_and_nodes := server.resolve_entire_file(&doc_ctx)
 
 	range := common.Range {
 		end = {line = 9000000},
 	} //should be enough
-	hints, hints_ok := server.get_inlay_hints(primary.doc_ctx, range, symbols_and_nodes, &src.config)
+	hints, hints_ok := server.get_inlay_hints(doc_ctx, range, symbols_and_nodes, &src.config)
 	if !hints_ok {
 		log.error("Failed get_inlay_hints")
 		return

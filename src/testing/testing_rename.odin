@@ -10,7 +10,8 @@ expect_prepare_rename_range :: proc(t: ^testing.T, src: ^Source, expect_range: c
 	defer teardown(src)
 
 	primary := get_primary_file(src)
-	range, ok := server.get_prepare_rename(&primary.doc_ctx, primary.position)
+	doc_ctx := get_file_doc_ctx(src, primary)
+	range, ok := server.get_prepare_rename(&doc_ctx, primary.position)
 	if !ok {
 		log.error("Failed to find range")
 	}
@@ -41,7 +42,8 @@ expect_rename_diff :: proc(t: ^testing.T, new_name: string, src: ^Source) {
 	defer teardown(src)
 
 	primary := get_primary_file(src)
-	workspace_edit, ok := server.get_rename(&primary.doc_ctx, new_name, primary.position)
+	doc_ctx := get_file_doc_ctx(src, primary)
+	workspace_edit, ok := server.get_rename(&doc_ctx, new_name, primary.position)
 	if !ok {
 		testing.expect(t, false, "Failed to get rename edits")
 		return
@@ -53,7 +55,8 @@ expect_rename_diff :: proc(t: ^testing.T, new_name: string, src: ^Source) {
 		edits, found := workspace_edit.changes[encoded_path]
 
 		if found {
-			source := string(file.doc_ctx.text)
+			file_doc_ctx := get_file_doc_ctx(src, &file)
+			source := string(file_doc_ctx.text)
 			file.source_actual = apply_text_edits(source, edits)
 		} else {
 			// No edits for this file - use original source without markers
