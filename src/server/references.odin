@@ -1,6 +1,7 @@
 package server
 
 import "src:documents"
+import "src:workspace"
 
 import "base:runtime"
 import "src:analysis"
@@ -9,39 +10,11 @@ import "core:log"
 import "core:mem"
 import "core:odin/ast"
 import "core:odin/parser"
-import "core:os"
-import "core:path/filepath"
 import path "core:path/slashpath"
 import "core:slice"
 import "core:strings"
 
 import "src:common"
-
-WalkDirectoriesData :: struct {
-	doc_ctx:   ^documents.Document,
-	fullpaths: ^[dynamic]string,
-}
-
-walk_directories :: proc(info: os.File_Info, in_err: os.Errno, user_data: rawptr) -> (err: os.Error, skip_dir: bool) {
-	data := cast(^WalkDirectoriesData)user_data
-
-	if info.is_dir {
-		return nil, false
-	}
-
-	if info.fullpath == "" {
-		return nil, false
-	}
-
-	if strings.contains(info.name, ".odin") {
-		slash_path, _ := filepath.to_slash(info.fullpath, context.temp_allocator)
-		if slash_path != data.doc_ctx.filepath {
-			append(data.fullpaths, strings.clone(info.fullpath))
-		}
-	}
-
-	return nil, false
-}
 
 prepare_references :: proc(
 	doc_ctx: ^documents.Document,
@@ -281,15 +254,11 @@ resolve_references :: proc(
 		return locations[:], true
 	}
 
-	when !ODIN_TEST {
-		// doc_ctx is already a pointer, so we can use it directly
-		walk_data := WalkDirectoriesData {
-			doc_ctx   = doc_ctx,
-			fullpaths = &fullpaths,
-		}
-		for workspace in common.config.workspace_folders {
-			path, _ := common.uri_to_path(workspace.uri, context.temp_allocator)
-			filepath.walk(path, walk_directories, &walk_data)
+	// Get all workspace files (supports mocking in tests)
+	files := workspace.get_files(context.temp_allocator)
+	for file in files {
+		if file.fullpath != doc_ctx.filepath {
+			append(&fullpaths, file.fullpath)
 		}
 	}
 
