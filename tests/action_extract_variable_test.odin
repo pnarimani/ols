@@ -8,9 +8,9 @@ EXTRACT_VARIABLE_ACTION :: "Extract Variable"
 
 @(test)
 action_extract_variable_simple_binary_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 1
@@ -19,16 +19,17 @@ main :: proc() {
 +	extracted := x + y
 +	z := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_complex_arithmetic :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	a := 10
@@ -37,16 +38,17 @@ main :: proc() {
 +	extracted := a + b * 2
 +	c := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_call_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 helper :: proc(n: int) -> int { return n * 2 }
 
@@ -56,16 +58,17 @@ main :: proc() {
 +	extracted := helper(x)
 +	y := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_call_with_binary :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 helper :: proc(n: int) -> int { return n * 2 }
 
@@ -75,16 +78,17 @@ main :: proc() {
 +	extracted := helper(x) + 10
 +	y := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_nested_call :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 inner :: proc(n: int) -> int { return n + 1 }
 outer :: proc(n: int) -> int { return n * 2 }
@@ -95,16 +99,17 @@ main :: proc() {
 +	extracted := outer(inner(x))
 +	y := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_ternary_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -112,16 +117,17 @@ main :: proc() {
 +	extracted := x > 0 ? 1 : 0
 +	y := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_comparison_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -131,16 +137,17 @@ main :: proc() {
 		y := 1
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_logical_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -151,16 +158,17 @@ main :: proc() {
 		z := 1
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_selector_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 Point :: struct { x, y: int }
 
@@ -170,16 +178,17 @@ main :: proc() {
 +	extracted := p.x + p.y
 +	z := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_index_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	arr := [3]int{1, 2, 3}
@@ -188,16 +197,17 @@ main :: proc() {
 +	extracted := arr[i] + arr[0]
 +	z := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_unary_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -205,16 +215,17 @@ main :: proc() {
 +	extracted := -x
 +	y := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_paren_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	a := 1
@@ -223,16 +234,17 @@ main :: proc() {
 +	extracted := (a + b) * 2
 +	c := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_inner_paren_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	a := 1
@@ -241,16 +253,17 @@ main :: proc() {
 +	extracted := (a + b)
 +	c := extracted * 2
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_type_cast :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -258,16 +271,17 @@ main :: proc() {
 +	extracted := f32(x)
 +	y := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_compound_literal :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 Point :: struct { x, y: int }
 
@@ -278,16 +292,17 @@ main :: proc() {
 +	extracted := Point{x = a, y = b}
 +	p := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_len_call :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	arr := [3]int{1, 2, 3}
@@ -295,16 +310,17 @@ main :: proc() {
 +	extracted := len(arr)
 +	n := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_if_condition :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -315,9 +331,10 @@ main :: proc() {
 		z := 1
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
@@ -339,9 +356,9 @@ main :: proc() {
 
 @(test)
 action_extract_variable_in_for_condition_with_outer_vars :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	limit := 10
@@ -354,16 +371,17 @@ main :: proc() {
 		}
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_switch_condition :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -374,32 +392,34 @@ main :: proc() {
 	case 2:
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_return_stmt :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 compute :: proc(x: int) -> int {
 -	return {<}x * 2 + 1{>}
 +	extracted := x * 2 + 1
 +	return extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_assignment_rhs :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -408,16 +428,17 @@ main :: proc() {
 +	extracted := x * 2
 +	y = extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_slice_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	arr := [5]int{1, 2, 3, 4, 5}
@@ -425,16 +446,17 @@ main :: proc() {
 +	extracted := arr[1:3]
 +	slice := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_deref_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -443,16 +465,17 @@ main :: proc() {
 +	extracted := ptr^ + 1
 +	y := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_address_of_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -460,16 +483,17 @@ main :: proc() {
 +	extracted := &x
 +	ptr := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_map_access :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	m := make(map[string]int)
@@ -477,16 +501,17 @@ main :: proc() {
 +	extracted := m["key"]
 +	val := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_or_else_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	m := make(map[string]int)
@@ -494,16 +519,17 @@ main :: proc() {
 +	extracted := m["key"] or_else 0
 +	val := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_nested_selector :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 Inner :: struct { value: int }
 Outer :: struct { inner: Inner }
@@ -514,16 +540,17 @@ main :: proc() {
 +	extracted := o.inner.value + 1
 +	x := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_not_equal :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -533,16 +560,17 @@ main :: proc() {
 		y := 1
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_nested_comparison :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	a := 1
@@ -554,16 +582,17 @@ main :: proc() {
 		x := 1
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_nested_if :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -573,16 +602,17 @@ main :: proc() {
 +		y := extracted
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_else_block :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -594,16 +624,17 @@ main :: proc() {
 +		y := extracted
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_for_loop_body :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	for i := 0; i < 10; i += 1 {
@@ -612,17 +643,18 @@ main :: proc() {
 +		x := extracted
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_for_loop_body_outer_var :: proc(t: ^testing.T) {
 	// Using outer variable inside loop body - extraction still goes inside body
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	multiplier := 3
@@ -632,16 +664,17 @@ main :: proc() {
 +		x := extracted
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_range_loop_body :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	arr := [3]int{1, 2, 3}
@@ -651,16 +684,17 @@ main :: proc() {
 +		x := extracted
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_range_loop_body_outer_var :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	arr := [3]int{1, 2, 3}
@@ -671,16 +705,17 @@ main :: proc() {
 +		x := extracted
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_switch_case :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 1
@@ -692,9 +727,10 @@ main :: proc() {
 	case 2:
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 
@@ -804,25 +840,26 @@ main :: proc() {}
 action_extract_variable_partial_expr_matched :: proc(t: ^testing.T) {
 	// Selecting part of an expression that doesn't match exact node boundaries
 	// should still allow extraction - user explicitly wants a semantic change
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	x := 1 + {<}2 + 3{>}
 +	extracted := 2 + 3
 +	x := 1 + extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_complex_nested_expr :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	a := 1
@@ -832,16 +869,17 @@ main :: proc() {
 +	extracted := (c - 1) / 2
 +	d := (a + b) * extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_array_literal :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 1
@@ -850,16 +888,17 @@ main :: proc() {
 +	extracted := [3]int{x, y, 3}
 +	arr := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_inside_array_literal :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 1
@@ -868,18 +907,19 @@ main :: proc() {
 +	extracted := 3 + 5
 +	arr := [3]int{x, y, extracted}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_deeply_nested_scope :: proc(t: ^testing.T) {
 	// Extraction IS valid - the extracted variable goes INSIDE the innermost body
 	// where both `i` and `j` are still in scope
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	for i := 0; i < 10; i += 1 {
@@ -892,17 +932,18 @@ main :: proc() {
 		}
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_deeply_nested_scope_outer_var :: proc(t: ^testing.T) {
 	// Also valid - using outer variables inside nested loop body
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	a := 3
@@ -917,16 +958,17 @@ main :: proc() {
 		}
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_expr_stmt :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 do_something :: proc(n: int) {}
 
@@ -936,16 +978,17 @@ main :: proc() {
 +	extracted := x + 1
 +	do_something(extracted)
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_auto_cast :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x: f32 = 5
@@ -953,16 +996,17 @@ main :: proc() {
 +	extracted: i32 = auto_cast x
 +	y: i32 = extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_auto_cast_infer_type :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x: f32 = 5
@@ -971,16 +1015,17 @@ main :: proc() {
 +	extracted: i32 = auto_cast x
 +	y = extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_in_nested_block :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -990,16 +1035,17 @@ main :: proc() {
 +		y := extracted
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_dynamic_array_make :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	size := 10
@@ -1007,16 +1053,17 @@ main :: proc() {
 +	extracted := make([dynamic]int, size)
 +	arr := extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_complex_condition :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	a := 5
@@ -1028,16 +1075,17 @@ main :: proc() {
 		x := 1
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_part_of_complex_condition :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	a := 5
@@ -1049,17 +1097,18 @@ main :: proc() {
 		x := 1
 	}
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_multi_assign_first :: proc(t: ^testing.T) {
 	// Extract the first expression in a multiple value declaration
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -1068,17 +1117,18 @@ main :: proc() {
 +	extracted := x + 1
 +	a, b := extracted, y + 2
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_multi_assign_second :: proc(t: ^testing.T) {
 	// Extract the second expression in a multiple value declaration
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -1087,17 +1137,18 @@ main :: proc() {
 +	extracted := y + 2
 +	a, b := x + 1, extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_multi_assign_stmt_first :: proc(t: ^testing.T) {
 	// Extract the first expression in a multiple assignment statement
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -1108,17 +1159,18 @@ main :: proc() {
 +	extracted := x * 2
 +	a, b = extracted, y * 3
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_multi_assign_stmt_second :: proc(t: ^testing.T) {
 	// Extract the second expression in a multiple assignment statement
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -1129,17 +1181,18 @@ main :: proc() {
 +	extracted := y * 3
 +	a, b = x * 2, extracted
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_multi_assign_auto_cast :: proc(t: ^testing.T) {
 	// Extract auto_cast in a multiple assignment - should infer type from LHS
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x: f32 = 5
@@ -1150,17 +1203,18 @@ main :: proc() {
 +	extracted: i32 = auto_cast x
 +	a, b = extracted, y
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_multi_value_decl_auto_cast :: proc(t: ^testing.T) {
 	// Extract auto_cast in a multiple value declaration with type annotation
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x: f32 = 5
@@ -1169,17 +1223,18 @@ main :: proc() {
 +	extracted: i32 = auto_cast x
 +	a, b: i32 = extracted, y
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }
 
 @(test)
 action_extract_variable_triple_assign :: proc(t: ^testing.T) {
 	// Extract middle expression in a triple value declaration
-	test.expect_code_action_diff(
-		t,
-		EXTRACT_VARIABLE_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 1
@@ -1189,7 +1244,8 @@ main :: proc() {
 +	extracted := y * 10
 +	a, b, c := x, extracted, z
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, EXTRACT_VARIABLE_ACTION, &src)
 }

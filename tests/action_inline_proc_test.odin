@@ -12,9 +12,9 @@ INLINE_PROC_ACTION :: "Inline Proc"
 
 @(test)
 action_inline_proc_simple_call :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 add :: proc(a, b: int) -> int {
 	return a + b
@@ -24,16 +24,17 @@ main :: proc() {
 -	x := {*}add(1, 2)
 +	x := 1 + 2
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 @(test)
 action_inline_proc_call_with_complex_args :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 compute :: proc(n: int) -> int {
 	return n * 2
@@ -44,16 +45,17 @@ main :: proc() {
 -	y := {*}compute(x + 5)
 +	y := (x + 5) * 2
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 @(test)
 action_inline_proc_void_call :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 do_nothing :: proc() {
 }
@@ -62,16 +64,17 @@ main :: proc() {
 -	{*}do_nothing()
 +
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 @(test)
 action_inline_proc_call_as_argument :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 square :: proc(n: int) -> int {
 	return n * n
@@ -84,9 +87,10 @@ main :: proc() {
 -	print_int({*}square(4))
 +	print_int(4 * 4)
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 // ============================================================================
@@ -95,9 +99,9 @@ main :: proc() {
 
 @(test)
 action_inline_proc_multi_statement_body :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 compute_sum :: proc(a, b: int) -> int {
 	sum := a + b
@@ -109,16 +113,17 @@ main :: proc() {
 +	sum := 3 + 4
 +	x := sum
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 @(test)
 action_inline_proc_multi_statement_body_void :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 log_message :: proc(msg: string) {
 	prefix := "[LOG]: "
@@ -132,16 +137,17 @@ main :: proc() {
 +	full_msg := prefix + "Hello, World!"
 +	println(full_msg)
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 @(test)
 action_inline_proc_multi_statement_body_call_as_argument :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 compute :: proc(n: int) -> int {
 	calc := n * 2
@@ -156,16 +162,17 @@ main :: proc() {
 +	calc := 5 * 2
 +	print_int(calc + 3)
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 @(test)
 action_inline_proc_multi_statement_body_name_conflict :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 something :: proc(n: int) -> int {
 	temp := n * 2
@@ -178,16 +185,17 @@ main :: proc() {
 +	_something_temp := temp * 2
 +	x := _something_temp + 1
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 @(test)
 action_inline_proc_multi_statement_body_with_defer :: proc(t: ^testing.T) {
-    test.expect_code_action_diff(
-        t,
-        INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 cleanup :: proc() {
     println("Cleaning up")
 }
@@ -212,16 +220,17 @@ main :: proc() {
 +   }
     after()
 }
-`,
-        
-    )
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 @(test)
 action_inline_proc_multi_statement_body_with_double_nested_defer :: proc(t: ^testing.T) {
-    test.expect_code_action_diff(
-        t,
-        INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 cleanup :: proc() {
     println("Cleaning up")
 }
@@ -254,17 +263,18 @@ main :: proc() {
 +   }
     after()
 }
-`,
-        
-    )
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 
 @(test)
 action_inline_proc_multi_statement_body_with_nested_defer :: proc(t: ^testing.T) {
-    test.expect_code_action_diff(
-        t,
-        INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 cleanup :: proc() {
     println("Cleaning up")
 }
@@ -293,9 +303,10 @@ main :: proc() {
 +   println("after scope")
     after()
 }
-`,
-        
-    )
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 // ============================================================================
@@ -304,9 +315,9 @@ main :: proc() {
 
 @(test)
 action_inline_proc_from_definition_single_call :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 -{*}helper :: proc(n: int) -> int {
 -	return n + 1
@@ -316,16 +327,17 @@ main :: proc() {
 -	x := helper(10)
 +	x := 10 + 1
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 @(test)
 action_inline_proc_from_definition_multiple_calls :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INLINE_PROC_ACTION, `package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 -{*}double :: proc(n: int) -> int {
 -	return n * 2
@@ -339,9 +351,10 @@ main :: proc() {
 -	c := double(a)
 +	c := a * 2
 }
-`,
-		
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INLINE_PROC_ACTION, &src)
 }
 
 // ============================================================================

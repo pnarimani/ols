@@ -8,10 +8,9 @@ INVERT_IF_ACTION :: "Invert if"
 
 @(test)
 action_invert_if_simple :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -23,16 +22,17 @@ main :: proc() {
 +	}
 +	foo()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_with_else :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := 5
@@ -47,16 +47,17 @@ main :: proc() {
 +		foo()
 +	}
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_with_init :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	if x{*} := foo(); x < 0 {
@@ -67,8 +68,10 @@ main :: proc() {
 +	}
 +	bar()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
@@ -105,10 +108,9 @@ main :: proc() {
 
 @(test)
 action_invert_if_not_eq :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	if x{*} != 0 {
@@ -119,16 +121,17 @@ main :: proc() {
 +	}
 +	foo()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_lt :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	if x{*} < 5 {
@@ -139,16 +142,17 @@ main :: proc() {
 +	}
 +	foo()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_gt :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	if x{*} > 5 {
@@ -159,16 +163,17 @@ main :: proc() {
 +	}
 +	foo()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_le :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	if x{*} <= 5 {
@@ -179,16 +184,17 @@ main :: proc() {
 +	}
 +	foo()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_negated :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	if !x{*} {
@@ -199,16 +205,17 @@ main :: proc() {
 +	}
 +	foo()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_boolean :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	if x{*} {
@@ -219,16 +226,17 @@ main :: proc() {
 +	}
 +	foo()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_else_if_chain :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := something()
@@ -249,8 +257,10 @@ main :: proc() {
 +		statement1()
 +	}
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
@@ -296,10 +306,9 @@ main :: proc() {
 
 @(test)
 action_invert_if_nested_in_else_if_body :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := something()
@@ -317,16 +326,17 @@ main :: proc() {
 		statement3()
 	}
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_nested_in_else_if_body_with_trailing_stmt :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	x := something()
@@ -343,16 +353,17 @@ main :: proc() {
 	}
 	statement3()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_with_else_and_return_in_body :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	if x{*} == 0 {
@@ -366,16 +377,17 @@ main :: proc() {
 +	}
 +	foo()
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_in_loop_with_continue :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	for i in 0..<10 {
@@ -388,15 +400,16 @@ main :: proc() {
 +		foo()
 	}
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 @(test)
 action_invert_if_with_ok_pattern_to_or_continue :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	for i in 0..<10 {
@@ -407,16 +420,17 @@ main :: proc() {
 +		process(value)
 	}
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_with_ok_pattern_multiple_statements :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 	for item in items {
@@ -431,16 +445,17 @@ main :: proc() {
 +		third(data)
 	}
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_with_ok_pattern_to_or_return :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	{*}if value, ok := get_value(); ok {
@@ -449,16 +464,17 @@ main :: proc() {
 +	value := get_value() or_return
 +	process(value)
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_with_ok_pattern_to_or_return_multiple_statements :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 main :: proc() {
 -	{*}if data, ok := fetch_data(); ok {
@@ -471,16 +487,17 @@ main :: proc() {
 +	transform(data)
 +	save(data)
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_real_code_1 :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 get_hover_information :: proc(document: ^Document, position: common.Position) -> (Hover, bool, bool) {
 	if position_context.field_value != nil &&
@@ -525,16 +542,17 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 
 	return hover, false, true
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_real_code_2 :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 get_hover_information :: proc(document: ^Document, position: common.Position) -> (Hover, bool, bool) {
 	if position_context.field_value != nil &&
@@ -581,16 +599,17 @@ get_hover_information :: proc(document: ^Document, position: common.Position) ->
 
 	return hover, false, true
 }
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }
 
 @(test)
 action_invert_if_real_code_3 :: proc(t: ^testing.T) {
-	test.expect_code_action_diff(
-		t,
-		INVERT_IF_ACTION,
-		`package test
+	src := test.Source {
+		files = {
+			{source = `package test
 
 search_block_stmts :: proc(
 	inv_ctx: ^If_Inversion_Context,
@@ -620,6 +639,8 @@ search_block_stmts :: proc(
 	return false
 }
 
-`,
-	)
+`},
+		},
+	}
+	test.expect_code_action_diff(t, INVERT_IF_ACTION, &src)
 }

@@ -48,29 +48,19 @@ import "src:server"
 expect_code_action_diff :: proc(
 	t: ^testing.T,
 	action_name: string,
-	diff_source: string,
-	packages: []FileInPackage = {},
+	src: ^Source,
 ) {
-	files := make([dynamic]FileInPackage, context.temp_allocator)
-	append(&files, FileInPackage{source = diff_source})
-	for pkg in packages {
-		append(&files, pkg)
-	}
-	src := Source {
-		files = files[:],
-	}
-
-	parse_ok := parse_diff_source(&src)
+	parse_ok := parse_diff_source(src)
 	if !parse_ok {
 		testing.expect(t, false, "Failed to parse diff source")
 		return
 	}
 
-	setup(&src)
-	defer teardown(&src)
+	setup(src)
+	defer teardown(src)
 
-	primary := get_primary_file(&src)
-	input_range := build_action_range(&src)
+	primary := get_primary_file(src)
+	input_range := build_action_range(src)
 	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
 	if !ok {
 		testing.expect(t, false, "Failed to get code actions")
