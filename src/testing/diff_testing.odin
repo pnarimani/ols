@@ -51,20 +51,19 @@ expect_code_action_diff :: proc(
 	diff_source: string,
 	packages: []FileInPackage = {},
 ) {
-	before_code, expected_after, parse_ok := parse_diff_source(diff_source)
-	if !parse_ok {
-		testing.expect(t, false, "Failed to parse diff source")
-		return
-	}
-
-	// Create source with the "before" code
 	files := make([dynamic]FileInPackage, context.temp_allocator)
-	append(&files, FileInPackage{source = before_code})
+	append(&files, FileInPackage{source = diff_source})
 	for pkg in packages {
 		append(&files, pkg)
 	}
 	src := Source {
 		files = files[:],
+	}
+
+	parse_ok := parse_diff_source(&src)
+	if !parse_ok {
+		testing.expect(t, false, "Failed to parse diff source")
+		return
 	}
 
 	setup(&src)
@@ -81,30 +80,53 @@ expect_code_action_diff :: proc(
 	// Find the requested action
 	for action in actions {
 		if action.title != action_name do continue
-		encoded_path := common.path_to_uri(primary.doc_ctx.filepath, context.temp_allocator)
-		edits, found := action.edit.changes[encoded_path]
-		if !found {
-			testing.expect(t, false, "Action found but has no edits")
+
+		all_match := true
+
+		// Check edits for all files
+		for &file in src.files {
+			encoded_path := common.path_to_uri(file.fullpath, context.temp_allocator)
+			edits, found := action.edit.changes[encoded_path]
+
+			if found {
+				source := string(file.doc_ctx.text)
+				actual_after := apply_text_edits(source, edits)
+
+				normalized_expected := normalize_source(file.source_expected)
+				normalized_actual := normalize_source(actual_after)
+
+				if normalized_expected != normalized_actual {
+					testing.expectf(
+						t,
+						false,
+						"\nCode action result mismatch for file %s.\n\nExpected:\n%s\n\nActual:\n%s",
+						file.filename,
+						normalized_expected,
+						normalized_actual,
+					)
+					all_match = false
+				}
+			} else {
+				// No edits for this file - it should remain unchanged
+				normalized_expected := normalize_source(file.source_expected)
+				normalized_before := normalize_source(file.source)
+				if normalized_expected != normalized_before {
+					testing.expectf(
+						t,
+						false,
+						"\nFile %s expected changes but got none.\n\nExpected:\n%s\n\nActual:\n%s",
+						file.filename,
+						normalized_expected,
+						normalized_before,
+					)
+					all_match = false
+				}
+			}
+		}
+
+		if all_match {
 			return
 		}
-
-		source := string(primary.doc_ctx.text)
-
-		actual_after := apply_text_edits(source, edits)
-
-		normalized_expected := normalize_source(expected_after)
-		normalized_actual := normalize_source(actual_after)
-
-		if normalized_expected != normalized_actual {
-			testing.expectf(
-				t,
-				false,
-				"\nCode action result mismatch.\n\nExpected:\n%s\n\nActual:\n%s",
-				normalized_expected,
-				normalized_actual,
-			)
-		}
-		return
 	}
 
 	sb := strings.builder_make(context.temp_allocator)
@@ -117,59 +139,61 @@ expect_code_action_diff :: proc(
 	testing.expectf(t, false, "Action '%s' not found.\n%s", action_name, strings.to_string(sb))
 }
 
-// Parses a diff-formatted source into before and after code.
-// Returns: before_code (with markers), after_code (without markers), success
+// Parses diff-formatted sources in all files of the Source.
+// For each file, parses the diff from file.source:
+//   - Puts "before" code (with markers) back into file.source
+//   - Puts "after" code (expected result) into file.source_expected
+// Returns: success
 @(private = "file")
-parse_diff_source :: proc(diff_source: string) -> (before: string, after: string, ok: bool) {
-	before_builder := strings.builder_make(context.temp_allocator)
-	after_builder := strings.builder_make(context.temp_allocator)
+parse_diff_source :: proc(src: ^Source) -> bool {
+	for &file in src.files {
+		before_builder := strings.builder_make(context.temp_allocator)
+		after_builder := strings.builder_make(context.temp_allocator)
 
-	lines := strings.split_lines(diff_source, context.temp_allocator)
+		lines := strings.split_lines(file.source, context.temp_allocator)
 
-	for line in lines {
-		if len(line) == 0 {
-			// Empty line goes to both
-			strings.write_string(&before_builder, "\n")
-			strings.write_string(&after_builder, "\n")
-			continue
+		for line in lines {
+			if len(line) == 0 {
+				strings.write_string(&before_builder, "\n")
+				strings.write_string(&after_builder, "\n")
+				continue
+			}
+
+			first_char := line[0]
+			rest := line[1:] if len(line) > 1 else ""
+
+			switch first_char {
+			case '-':
+				strings.write_string(&before_builder, rest)
+				strings.write_string(&before_builder, "\n")
+			case '+':
+				strings.write_string(&after_builder, rest)
+				strings.write_string(&after_builder, "\n")
+			case ' ':
+				strings.write_string(&before_builder, rest)
+				strings.write_string(&before_builder, "\n")
+				strings.write_string(&after_builder, rest)
+				strings.write_string(&after_builder, "\n")
+			case:
+				strings.write_string(&before_builder, line)
+				strings.write_string(&before_builder, "\n")
+				strings.write_string(&after_builder, line)
+				strings.write_string(&after_builder, "\n")
+			}
 		}
 
-		first_char := line[0]
-		rest := line[1:] if len(line) > 1 else ""
+		before_code := strings.to_string(before_builder)
+		after_code := strings.to_string(after_builder)
 
-		switch first_char {
-		case '-':
-			// Only in "before"
-			strings.write_string(&before_builder, rest)
-			strings.write_string(&before_builder, "\n")
-		case '+':
-			// Only in "after"
-			strings.write_string(&after_builder, rest)
-			strings.write_string(&after_builder, "\n")
-		case ' ':
-			// Common to both (space prefix)
-			strings.write_string(&before_builder, rest)
-			strings.write_string(&before_builder, "\n")
-			strings.write_string(&after_builder, rest)
-			strings.write_string(&after_builder, "\n")
-		case:
-			// No prefix - treat as common (for convenience)
-			strings.write_string(&before_builder, line)
-			strings.write_string(&before_builder, "\n")
-			strings.write_string(&after_builder, line)
-			strings.write_string(&after_builder, "\n")
-		}
+		after_code, _ = strings.replace_all(after_code, "{<}", "", context.temp_allocator)
+		after_code, _ = strings.replace_all(after_code, "{>}", "", context.temp_allocator)
+		after_code, _ = strings.replace_all(after_code, "{*}", "", context.temp_allocator)
+
+		file.source = strings.clone(before_code, context.temp_allocator)
+		file.source_expected = strings.clone(after_code, context.temp_allocator)
 	}
 
-	before_code := strings.to_string(before_builder)
-	after_code := strings.to_string(after_builder)
-
-	// Remove selection markers from after_code (they shouldn't be there but just in case)
-	after_code, _ = strings.replace_all(after_code, "{<}", "", context.temp_allocator)
-	after_code, _ = strings.replace_all(after_code, "{>}", "", context.temp_allocator)
-	after_code, _ = strings.replace_all(after_code, "{*}", "")
-
-	return before_code, after_code, true
+	return true
 }
 
 // Apply text edits to source code and return the result.
@@ -301,38 +325,19 @@ expect_code_action_diff_multi_file :: proc(
 	main_diff: string,
 	extra_files: []FileInPackage = {},
 ) {
-	// Parse main file diff
-	main_before, main_expected, main_ok := parse_diff_source(main_diff)
-	if !main_ok {
-		testing.expect(t, false, "Failed to parse main file diff source")
-		return
-	}
-
-	// Build packages for Source from package_diffs (using before code)
-	files_before := make([]FileInPackage, len(extra_files), context.temp_allocator)
-	files_expected := make([]string, len(extra_files), context.temp_allocator)
-
-	for extra_file, i in extra_files {
-		before, expected, ok := parse_diff_source(extra_file.source)
-		if !ok {
-			testing.expectf(t, false, "Failed to parse diff for package '%s'", extra_file.pkg)
-			return
-		}
-		files_before[i] = FileInPackage {
-			pkg      = extra_file.pkg,
-			filename = extra_file.filename,
-			source   = before,
-		}
-		files_expected[i] = expected
-	}
-
 	files := make([dynamic]FileInPackage, context.temp_allocator)
-	append(&files, FileInPackage{source = main_before})
-	for file in files_before {
-		append(&files, file)
+	append(&files, FileInPackage{source = main_diff})
+	for extra_file in extra_files {
+		append(&files, extra_file)
 	}
 	src := Source {
 		files = files[:],
+	}
+
+	parse_ok := parse_diff_source(&src)
+	if !parse_ok {
+		testing.expect(t, false, "Failed to parse diff sources")
+		return
 	}
 
 	setup(&src)
@@ -350,63 +355,17 @@ expect_code_action_diff_multi_file :: proc(
 	for action in actions {
 		if action.title != action_name do continue
 
-		// Check main file edits
 		all_match := true
-		main_encoded_path := common.path_to_uri(primary.fullpath, context.temp_allocator)
 
-		edits, found := action.edit.changes[main_encoded_path]
-		if found {
-			actual_after := apply_text_edits(main_before, edits)
-			normalized_expected := normalize_source(main_expected)
-			normalized_actual := normalize_source(actual_after)
+		// Check edits for all files
+		for &file in src.files {
+			encoded_path := common.path_to_uri(file.fullpath, context.temp_allocator)
+			edits, found := action.edit.changes[encoded_path]
 
-			if normalized_expected != normalized_actual {
-				testing.expectf(
-					t,
-					false,
-					"\nCode action result mismatch for main file.\n\nExpected:\n%s\n\nActual:\n%s",
-					normalized_expected,
-					normalized_actual,
-				)
-				all_match = false
-			}
-		} else {
-			// No edits for main file - it should remain unchanged
-			normalized_expected := normalize_source(main_expected)
-			normalized_before := normalize_source(main_before)
-			if normalized_expected != normalized_before {
-				testing.expectf(
-					t,
-					false,
-					"\nMain file expected changes but got none.\n\nExpected:\n%s\n\nActual:\n%s",
-					normalized_expected,
-					normalized_before,
-				)
-				all_match = false
-			}
-		}
-
-		// Check package file edits
-		for _, i in extra_files {
-			// Access the file from src.files (index i+1 because index 0 is the main file)
-			file_before := src.files[i + 1]
-			file_expected := files_expected[i]
-
-			assert(file_before.pkg != "", "Package name cannot be empty")
-			assert(file_before.source != "", "File source cannot be empty")
-			assert(file_before.fullpath != "", "File fullpath cannot be empty")
-			assert(file_before.filename != "", "File filename cannot be empty")
-
-			assert(file_expected != "", "File expected source cannot be empty")
-
-			// Build expected path for this file
-			filename := file_before.filename
-			encoded_path := common.path_to_uri(file_before.fullpath, context.temp_allocator)
-
-			file_edits, file_found := action.edit.changes[encoded_path]
-			if file_found {
-				actual_after := apply_text_edits(file_before.source, file_edits)
-				normalized_expected := normalize_source(file_expected)
+			if found {
+				source := string(file.doc_ctx.text)
+				actual_after := apply_text_edits(source, edits)
+				normalized_expected := normalize_source(file.source_expected)
 				normalized_actual := normalize_source(actual_after)
 
 				if normalized_expected != normalized_actual {
@@ -414,8 +373,8 @@ expect_code_action_diff_multi_file :: proc(
 						t,
 						false,
 						"\nCode action result mismatch for package '%s' file '%s'.\n\nExpected:\n%s\n\nActual:\n%s\n--------",
-						file_before.pkg,
-						filename,
+						file.pkg,
+						file.filename,
 						normalized_expected,
 						normalized_actual,
 					)
@@ -423,15 +382,15 @@ expect_code_action_diff_multi_file :: proc(
 				}
 			} else {
 				// No edits for this file - it should remain unchanged
-				normalized_expected := normalize_source(file_expected)
-				normalized_before := normalize_source(file_before.source)
+				normalized_expected := normalize_source(file.source_expected)
+				normalized_before := normalize_source(file.source)
 				if normalized_expected != normalized_before {
 					testing.expectf(
 						t,
 						false,
 						"\nPackage '%s' file '%s' expected changes but got none.\n\nExpected:\n%s\n\nActual:\n%s\n--------",
-						file_before.pkg,
-						filename,
+						file.pkg,
+						file.filename,
 						normalized_expected,
 						normalized_before,
 					)

@@ -16,6 +16,7 @@ FileInPackage :: struct {
 	filename:          string,
 	fullpath:          string,
 	source:            string,
+	source_expected:   string,
 	position:          common.Position,
 	end_position:      common.Position, // For range selection tests
 	has_range:         bool, // True if {<} and {>} markers were found
