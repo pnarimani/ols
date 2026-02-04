@@ -360,19 +360,18 @@ B :: mem.Arena
 
 @(test)
 action_inline_alias_distinct_should_not_be_available :: proc(t: ^testing.T) {
-	// This test expects the action NOT to be available
-	test.expect_no_action(
-		t,
-		`package test
+	source := test.Source {
+		files = {{source = `package test
 
 MyInt {*}:: distinct int
 
 main :: proc() {
 	x: MyInt
 }
-`,
-		INLINE_ALIAS_ACTION,
-	)
+`}},
+	}
+	// This test expects the action NOT to be available
+	test.expect_action_excludes(t, &source, {INLINE_ALIAS_ACTION})
 }
 
 @(test)

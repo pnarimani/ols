@@ -1,53 +1,27 @@
 package ols_testing
 
+import "core:fmt"
+import "core:strings"
 import "core:log"
 import "core:testing"
 import "src:common"
 import "src:server"
 
-// Build the input range from source position markers
-@(private)
-build_action_range :: proc(src: ^Source) -> common.Range {
-	primary := get_primary_file(src)
-	if primary.has_range {
-		return common.Range{start = primary.position, end = primary.end_position}
-	}
-	return common.Range{start = primary.position, end = primary.position}
-}
-
-expect_no_action :: proc(t: ^testing.T, main: string, action_name: string, packages: []FileInPackage = {}) {
-	files := make([dynamic]FileInPackage, context.temp_allocator)
-	append(&files, FileInPackage{source = main})
-	for pkg in packages {
-		append(&files, pkg)
-	}
-	src := Source {
-		files = files[:],
-	}
-
-	setup(&src)
-	defer teardown(&src)
-
-	primary := get_primary_file(&src)
-	input_range := build_action_range(&src)
-	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
-	if !ok {
-		// No actions returned is fine for this test
+// Test a code action using diff format.
+// The diff_source contains:
+//   - Lines starting with "-": before only (contain selection markers {<} {>})
+//   - Lines starting with "+": after only (expected result)
+//   - Lines starting with " " or no prefix: common to both
+expect_code_action_diff :: proc(
+	t: ^testing.T,
+	action_name: string,
+	src: ^Source,
+) {
+	if !parse_diff_source(src){
+		testing.expect(t, false, "Failed to parse diff source")
 		return
 	}
 
-	// Check that the action_name is NOT present
-	for action in actions {
-		if action.title == action_name {
-			testing.expectf(t, false, "Action '%s' should not be available, but was found", action_name)
-			return
-		}
-	}
-
-	// Test passes - action was not found
-}
-
-expect_action :: proc(t: ^testing.T, src: ^Source, expect_action_names: []string) {
 	setup(src)
 	defer teardown(src)
 
@@ -55,28 +29,42 @@ expect_action :: proc(t: ^testing.T, src: ^Source, expect_action_names: []string
 	input_range := build_action_range(src)
 	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
 	if !ok {
-		log.error("Failed to find actions")
+		testing.expect(t, false, "Failed to get code actions")
+		return
 	}
 
-	if len(expect_action_names) == 0 && len(actions) > 0 {
-		log.errorf("Expected empty actions, but received %v", actions)
-	}
+	// Find the requested action
+	for action in actions {
+		if action.title != action_name do continue
 
-	flags := make([]int, len(expect_action_names), context.temp_allocator)
+		// Store actual results in source_actual for each file
+		for &file in src.files {
+			encoded_path := common.path_to_uri(file.fullpath, context.temp_allocator)
+			edits, found := action.edit.changes[encoded_path]
 
-	for name, i in expect_action_names {
-		for action, j in actions {
-			if action.title == name {
-				flags[i] += 1
+			if found {
+				source := string(file.doc_ctx.text)
+				file.source_actual = apply_text_edits(source, edits)
+			} else {
+				// No edits for this file - it should remain unchanged
+				file.source_actual = file.source
 			}
 		}
-	}
 
-	for flag, i in flags {
-		if flag != 1 {
-			log.errorf("Expected action %v, but received %v", expect_action_names[i], actions)
+		// Verify all files match expected results
+		if assert_files_match_expected(t, src) {
+			return
 		}
 	}
+
+	sb := strings.builder_make(context.temp_allocator)
+	strings.write_string(&sb, "Available actions:\n")
+	for action in actions {
+		strings.write_string(&sb, fmt.tprintf(" - %s\n", action.title))
+	}
+	strings.write_string(&sb, "----")
+
+	testing.expectf(t, false, "Action '%s' not found.\n%s", action_name, strings.to_string(sb))
 }
 
 expect_action_excludes :: proc(t: ^testing.T, src: ^Source, excluded_action_names: []string) {
@@ -99,112 +87,12 @@ expect_action_excludes :: proc(t: ^testing.T, src: ^Source, excluded_action_name
 	}
 }
 
-expect_action_with_edit :: proc(t: ^testing.T, src: ^Source, action_name: string, expected_texts: ..string) {
-	setup(src)
-	defer teardown(src)
-
+// Build the input range from source position markers
+@(private)
+build_action_range :: proc(src: ^Source) -> common.Range {
 	primary := get_primary_file(src)
-	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
-	if !ok {
-		log.error("Failed to find actions")
-		return
+	if primary.has_range {
+		return common.Range{start = primary.position, end = primary.end_position}
 	}
-
-	for action in actions {
-		if action.title == action_name {
-			// Get the text edits for the document
-			encoded_path := common.path_to_uri(primary.doc_ctx.filepath, context.temp_allocator)
-			if edits, found := action.edit.changes[encoded_path]; found {
-				if len(edits) != len(expected_texts) {
-					log.errorf("Expected %d edits but got %d", len(expected_texts), len(edits))
-					return
-				}
-
-				for expected, i in expected_texts {
-					actual := edits[i].newText
-					testing.expectf(
-						t,
-						actual == expected,
-						"\nEdit [%d] mismatch.\nExpected:\n%s\n\nGot:\n%s",
-						i,
-						expected,
-						actual,
-					)
-				}
-				return
-			}
-			log.errorf("Action '%s' found but has no edits", action_name)
-			return
-		}
-	}
-
-	log.errorf("Action '%s' not found in actions: %v", action_name, actions)
-}
-
-// Like expect_action_with_edit but also checks that an edit is placed at or after a specific line
-expect_action_with_edit_at_line :: proc(
-	t: ^testing.T,
-	src: ^Source,
-	action_name: string,
-	edit_index: int,
-	min_line: int,
-	expected_texts: ..string,
-) {
-	setup(src)
-	defer teardown(src)
-
-	primary := get_primary_file(src)
-	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
-	if !ok {
-		log.error("Failed to find actions")
-		testing.expect(t, false, "Failed to find actions")
-		return
-	}
-
-	for action in actions {
-		if action.title == action_name {
-			// Get the text edits for the document
-			encoded_path := common.path_to_uri(primary.doc_ctx.filepath, context.temp_allocator)
-			if edits, found := action.edit.changes[encoded_path]; found {
-				if len(edits) != len(expected_texts) {
-					testing.expectf(t, false, "Expected %d edits but got %d", len(expected_texts), len(edits))
-					return
-				}
-
-				// Check edit positions
-				if edit_index < len(edits) {
-					actual_line := edits[edit_index].range.start.line
-					testing.expectf(
-						t,
-						actual_line >= min_line,
-						"\nEdit [%d] placed at wrong line.\nExpected: line >= %d\nGot: line %d",
-						edit_index,
-						min_line,
-						actual_line,
-					)
-				}
-
-				// Check edit content
-				for expected, i in expected_texts {
-					actual := edits[i].newText
-					testing.expectf(
-						t,
-						actual == expected,
-						"\nEdit [%d] mismatch.\nExpected:\n%s\n\nGot:\n%s",
-						i,
-						expected,
-						actual,
-					)
-				}
-				return
-			}
-			log.errorf("Action '%s' found but has no edits", action_name)
-			testing.expect(t, false, "Action found but has no edits")
-			return
-		}
-	}
-
-	testing.expectf(t, false, "Action '%s' not found", action_name)
+	return common.Range{start = primary.position, end = primary.position}
 }

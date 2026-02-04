@@ -1,6 +1,5 @@
 package ols_testing
 
-import "core:log"
 // ============================================================================
 // Diff-based Code Action Testing
 // ============================================================================
@@ -31,102 +30,35 @@ import "core:log"
 //   3. Apply the code action to "before"
 //   4. Verify result matches "after"
 
-import "core:fmt"
 import "core:strings"
 import "core:testing"
 
-import "src:analysis"
 import "src:common"
-import "src:documents"
 import "src:server"
 
-// Test a code action using diff format.
-// The diff_source contains:
-//   - Lines starting with "-": before only (contain selection markers {<} {>})
-//   - Lines starting with "+": after only (expected result)
-//   - Lines starting with " " or no prefix: common to both
-expect_code_action_diff :: proc(
-	t: ^testing.T,
-	action_name: string,
-	src: ^Source,
-) {
-	parse_ok := parse_diff_source(src)
-	if !parse_ok {
-		testing.expect(t, false, "Failed to parse diff source")
-		return
-	}
+// Asserts that all files' source_actual matches source_expected.
+// Returns true if all files match, false otherwise.
+assert_files_match_expected :: proc(t: ^testing.T, src: ^Source) -> bool {
+	all_match := true
 
-	setup(src)
-	defer teardown(src)
+	for &file in src.files {
+		normalized_expected := normalize_source(file.source_expected)
+		normalized_actual := normalize_source(file.source_actual)
 
-	primary := get_primary_file(src)
-	input_range := build_action_range(src)
-	actions, ok := server.get_code_actions(&primary.doc_ctx, input_range, &src.config)
-	if !ok {
-		testing.expect(t, false, "Failed to get code actions")
-		return
-	}
-
-	// Find the requested action
-	for action in actions {
-		if action.title != action_name do continue
-
-		all_match := true
-
-		// Check edits for all files
-		for &file in src.files {
-			encoded_path := common.path_to_uri(file.fullpath, context.temp_allocator)
-			edits, found := action.edit.changes[encoded_path]
-
-			if found {
-				source := string(file.doc_ctx.text)
-				actual_after := apply_text_edits(source, edits)
-
-				normalized_expected := normalize_source(file.source_expected)
-				normalized_actual := normalize_source(actual_after)
-
-				if normalized_expected != normalized_actual {
-					testing.expectf(
-						t,
-						false,
-						"\nCode action result mismatch for file %s.\n\nExpected:\n%s\n\nActual:\n%s",
-						file.filename,
-						normalized_expected,
-						normalized_actual,
-					)
-					all_match = false
-				}
-			} else {
-				// No edits for this file - it should remain unchanged
-				normalized_expected := normalize_source(file.source_expected)
-				normalized_before := normalize_source(file.source)
-				if normalized_expected != normalized_before {
-					testing.expectf(
-						t,
-						false,
-						"\nFile %s expected changes but got none.\n\nExpected:\n%s\n\nActual:\n%s",
-						file.filename,
-						normalized_expected,
-						normalized_before,
-					)
-					all_match = false
-				}
-			}
-		}
-
-		if all_match {
-			return
+		if normalized_expected != normalized_actual {
+			testing.expectf(
+				t,
+				false,
+				"\nCode action result mismatch for file %s.\n\nExpected:\n%s\n\nActual:\n%s",
+				file.filename,
+				normalized_expected,
+				normalized_actual,
+			)
+			all_match = false
 		}
 	}
 
-	sb := strings.builder_make(context.temp_allocator)
-	strings.write_string(&sb, "Available actions:\n")
-	for action in actions {
-		strings.write_string(&sb, fmt.tprintf(" - %s\n", action.title))
-	}
-	strings.write_string(&sb, "----")
-
-	testing.expectf(t, false, "Action '%s' not found.\n%s", action_name, strings.to_string(sb))
+	return all_match
 }
 
 // Parses diff-formatted sources in all files of the Source.
@@ -134,7 +66,6 @@ expect_code_action_diff :: proc(
 //   - Puts "before" code (with markers) back into file.source
 //   - Puts "after" code (expected result) into file.source_expected
 // Returns: success
-@(private = "file")
 parse_diff_source :: proc(src: ^Source) -> bool {
 	for &file in src.files {
 		before_builder := strings.builder_make(context.temp_allocator)
@@ -188,7 +119,6 @@ parse_diff_source :: proc(src: ^Source) -> bool {
 
 // Apply text edits to source code and return the result.
 // Edits are sorted and applied from end to start to preserve positions.
-@(private = "file")
 apply_text_edits :: proc(source: string, edits: []server.TextEdit) -> string {
 	if len(edits) == 0 {
 		return source

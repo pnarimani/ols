@@ -84,9 +84,8 @@ main :: proc() {
 }
 `}},
 	}
-
 	// Should not have the invert action when not on an if statement
-	test.expect_action(t, &source, {})
+	test.expect_action_excludes(t, &source, {INVERT_IF_ACTION})
 }
 
 
@@ -102,8 +101,7 @@ main :: proc() {
 }
 `}},
 	}
-
-	test.expect_action(t, &source, {})
+	test.expect_action_excludes(t, &source, {INVERT_IF_ACTION})
 }
 
 @(test)
@@ -299,9 +297,8 @@ main :: proc() {
 }
 `}},
 	}
-
 	// Should not have the invert action when in the else block (not on an if)
-	test.expect_action(t, &source, {})
+	test.expect_action_excludes(t, &source, {INVERT_IF_ACTION})
 }
 
 @(test)
